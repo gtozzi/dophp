@@ -1,4 +1,5 @@
 <?php
+
 /**
 * @file Db.php
 * @author Gabriele Tozzi <gabriele@tozzi.eu>
