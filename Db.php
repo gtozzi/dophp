@@ -25,11 +25,23 @@ class Db {
 	* @param $pass string: Password to access DBMS
 	*/
 	public function __construct($dsn, $user, $pass) {
-		$this->_pdo = new PDO($dsn, $user, $pass);
-		$this->_pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-		$this->_pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
+		$this->_pdo = new \PDO($dsn, $user, $pass);
+		$this->_pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
+		$this->_pdo->setAttribute(\PDO::ATTR_DEFAULT_FETCH_MODE, \PDO::FETCH_ASSOC);
 		$this->_pdo->exec('SET sql_mode = \'TRADITIONAL,STRICT_ALL_TABLES,NO_AUTO_VALUE_ON_ZERO,NO_ZERO_DATE,NO_ZERO_IN_DATE\'');
 		$this->_pdo->exec('SET NAMES utf8');
+	}
+
+	/**
+	* Prepares a statement, executes it with given parameters and returns it
+	*
+	* @param $query string: The query to be executed
+	* @param $params array: Array containing the parameters
+	*/
+	protected function _run($query, $params=array()) {
+		$st = $this->_pdo->prepare($query);
+		$st->execute($params);
+		return $st;
 	}
 
 }
