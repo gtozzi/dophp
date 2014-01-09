@@ -10,7 +10,7 @@
 namespace dophp;
 
 /**
-* Simple class for database connecition handling
+* Simple class for database connection handling
 */
 class Db {
 
