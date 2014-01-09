@@ -68,11 +68,15 @@ class DoPhp {
 
 		if(array_key_exists($key, $_REQUEST) && $_REQUEST[$key] && !strpos($_REQUEST[$key], '/') && file_exists($inc_file))
 			$page = $_REQUEST[$key];
-		else {
+		elseif( $def ) {
 			$to = dophp\Utils::fullPageUrl($def, $key);
 			header("HTTP/1.1 301 Moved Permanently");
 			header("Location: $to");
 			echo $to;
+			return;
+		}else{
+			header("HTTP/1.1 400 Bad Request");
+			echo('Unknown Page');
 			return;
 		}
 
@@ -92,7 +96,7 @@ class DoPhp {
 			if( ! $pobj instanceof dophp\PageInterface )
 				throw new Exception('Wrong page type');
 			$out = $pobj->run();
-		} catch( PageError $e ) {
+		} catch( dophp\PageError $e ) {
 			header("HTTP/1.1 400 Bad Request");
 			echo $e->getMessage();
 			error_log($e->getMessage());

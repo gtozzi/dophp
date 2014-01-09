@@ -123,6 +123,80 @@ abstract class PageSmarty extends PageBase implements PageInterface {
 }
 
 /**
+* Implements a RPC method, expecting a JSON-Based request
+*/
+abstract class JsonRpcMethod extends PageBase implements PageInterface {
+
+	/** Associative array defining accepted parameters, used for request
+	    validation. Keys are names of the parameters, while the content
+	    describes the type. MUST be overridden.
+	*/
+	protected $_params;
+
+	/** Default headers for JSON output */
+	protected $_headers = array(
+		'Content-type' => 'application/json',
+	);
+
+	/**
+	* Prepares the enviroment and passes excution to _build()
+	*
+	* @see PageInterface::run
+	*/
+	public function run() {
+		$req = json_decode(file_get_contents("php://input"), true);
+		$pars = array();
+		foreach( $this->_params as $k => $p )
+			if( $req && array_key_exists($k, $req) )
+				$pars[$k] = $this->__getParam($req, $k);
+			else
+				throw new PageError("Missing parameter $k");
+		
+		$res = $this->_build($pars);
+		
+		$opt = JSON_NUMERIC_CHECK;
+		if(PHP_VERSION_ID >= 50303)
+			$opt |= JSON_PRETTY_PRINT;
+		return json_encode($res, $opt);
+	}
+
+	/**
+	* Build method to be overridden
+	*
+	* @param $req mixed: JSON validated request decoded as array
+	* @return mixed: The response to be JSON-Encoded
+	*/
+	abstract protected function _build(& $req);
+
+	/**
+	* Reads and validate a parameter
+	*/
+	private function __getParam(& $request, $name) {
+		if( ! array_key_exists($name, $this->_params) )
+			throw new PageError("No validation rules defined for param $name");
+
+		$type = $this->_params[$name];
+		$val = $request[$name];
+
+		switch( $type ) {
+		case 'int':
+		case 'double':
+		case 'string':
+			if( gettype($val) != $type )
+				throw new PageError("Wrong type for parameter $name");
+			break;
+		case 'date':
+			$val = new \DateTime($val);
+			break;
+		default:
+			throw new PageError("Unvalid type $type");
+		}
+
+		return $val;
+	}
+}
+
+/**
 * Exception raised if something goes wrong during page rendering
 */
 class PageError extends \Exception {
