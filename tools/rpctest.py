@@ -62,5 +62,5 @@ res = conn.getresponse()
 
 # Show result
 print(res.status, res.reason)
-print(res.read())
+print(res.read().decode('utf8'))
 sys.exit(0)

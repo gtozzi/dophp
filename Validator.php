@@ -4,7 +4,7 @@
 * @file Validator.php
 * @author Gabriele Tozzi <gabriele@tozzi.eu>
 * @package DoPhp
-* @brief Classes for validating form data
+* @brief Classes for validating POST data (form or JSON)
 */
 
 namespace dophp;
@@ -12,7 +12,7 @@ namespace dophp;
 /**
 * Parse and validate form data
 *
-* @version 0.3
+* @version 0.4
 * @see __construct
 */
 class Validator {
@@ -47,7 +47,7 @@ class Validator {
 		$data = array();
 		$errors = array();
 		foreach( $this->__rules as $k => $v ) {
-			$vname = $v[0] . '_validator';
+			$vname = 'dophp\\' . $v[0] . '_validator';
 			if( substr($v[0],0,4) == 'file' )
 				$validator = new $vname($this->__files[$k], $v[1], $this->__files);
 			else
@@ -97,7 +97,9 @@ abstract class base_validator implements field_validator {
 		$this->__value = $value;
 		$this->__values = & $values;
 		$this->__options = $options;
-		$this->__cleaned = $this->do_clean($value);
+		$nullified = $this->nullify($value);
+		// Null doesn't need to be cleaned
+		$this->__cleaned = $nullified === null ? $nullified : $this->do_clean($nullified);
 	}
 	public function clean() {
 		return $this->__cleaned;
@@ -129,16 +131,25 @@ abstract class base_validator implements field_validator {
 		return null;
 	}
 
-	protected function do_clean($val) {
-		$val = trim($val);
-		if( $val === '' )
+	/**
+	* Sets the value to null if empty, leave null unmolested
+	*/
+	protected function nullify($val) {
+		if( $val === '' || $val === null )
 			return null;
 		return $val;
 	}
 
+	/**
+	* Cleans the value and converts it to right type before being validated
+	*/
+	protected function do_clean($val) {
+		return $this->nullify(trim($val));
+	}
+
 	protected function check_required($val) {
-		if( ! $val )
-			return "Campo obbligatorio.";
+		if( $val === null )
+			return "Field can't be empty.";
 		return false;
 	}
 
@@ -163,10 +174,10 @@ class string_validator extends base_validator {
 		}
 	}
 	protected function check_email($val) {
-		if( strlen($val) == 0 )
-			return null;
+		if( $val === null )
+			return false;
 		if( ! preg_match('/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,4}$/i', $val) )
-			return "Email non valida.";
+			return "Unvalid eMail.";
 	}
 }
 
@@ -178,6 +189,8 @@ class string_validator extends base_validator {
 class int_validator extends base_validator {
 
 	protected function do_clean($val) {
+		if( gettype($val) == 'integer' )
+			return $val;
 		return (int)trim($val);
 	}
 }
@@ -190,6 +203,8 @@ class int_validator extends base_validator {
 class double_validator extends base_validator {
 
 	protected function do_clean($val) {
+		if( gettype($val) == 'double' )
+			return $val;
 		$val = str_replace(',', '.', trim($val));
 		return (double)$val;
 	}
@@ -203,13 +218,11 @@ class double_validator extends base_validator {
 class bool_validator extends base_validator {
 
 	protected function do_clean($val) {
+		if( gettype($val) == 'boolean' )
+			return $val;
 		return (bool)trim($val);
 	}
-	protected function check_required($val) {
-		if( $val === null || $val === '' )
-			return "Campo obbligatorio.";
-		return false;
-	}
+
 }
 
 /**
@@ -220,6 +233,8 @@ class bool_validator extends base_validator {
 class date_validator extends base_validator {
 
 	protected function do_clean($val) {
+		if( gettype($val) == 'object' && $val instanceof DateTime )
+			return $val;
 		try {
 			$date = new DateTime($val);
 		} catch( Exception $e ) {
@@ -243,9 +258,9 @@ class file_validator extends base_validator {
 	}
 	protected function check_required($val) {
 		if( ! $val )
-			return "Campo obbligatorio.";
+			return "Field can't be empty.";
 		if( ! (int)$val['size'] )
-			return "Dimensione immagine ({$val['size']}) non valida.";
+			return "Unvalid file size ({$val['size']}).";
 		return false;
 	}
 	protected function do_validate( &$v, &$o ) {
@@ -257,6 +272,6 @@ class file_validator extends base_validator {
 	}
 	protected function check_type($type, $types) {
 		if( ! in_array( $type, $types ) )
-			return "Formato file $type non supportato.";
+			return "Unsupported file type: $type.";
 	}
 }

@@ -127,9 +127,11 @@ abstract class PageSmarty extends PageBase implements PageInterface {
 */
 abstract class JsonRpcMethod extends PageBase implements PageInterface {
 
-	/** Associative array defining accepted parameters, used for request
-	    validation. Keys are names of the parameters, while the content
-	    describes the type. MUST be overridden.
+	/**
+	* Associative array defining accepted parameters, used for request
+	* validation.
+	*
+	* @see dophp\Validator
 	*/
 	protected $_params;
 
@@ -145,12 +147,14 @@ abstract class JsonRpcMethod extends PageBase implements PageInterface {
 	*/
 	public function run() {
 		$req = json_decode(file_get_contents("php://input"), true);
-		$pars = array();
-		foreach( $this->_params as $k => $p )
-			if( $req && array_key_exists($k, $req) )
-				$pars[$k] = $this->__getParam($req, $k);
-			else
-				throw new PageError("Missing parameter $k");
+		$val = new Validator($req, $_FILES, $this->_params);
+		list($pars, $errors) = $val->validate();
+		if( $errors ) {
+			$mex = "Unvalid arguments:<br/>\n";
+			foreach( $errors as $n=>$e )
+				$mex .= "- <b>$n</b>: $e<br/>\n";
+			throw new PageError($mex);
+		}
 		
 		$res = $this->_build($pars);
 		
