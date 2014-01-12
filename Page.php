@@ -56,7 +56,7 @@ abstract class PageBase {
 	protected $_headers = array();
 
 	/**
-	* Contrsuctor
+	* Constructor
 	*
 	* @see PageInterface::__construct
 	*/
@@ -127,9 +127,9 @@ abstract class PageSmarty extends PageBase implements PageInterface {
 }
 
 /**
-* Implements a RPC method, expecting a JSON-Based request
+* Implements a RPC method, returning JSON response
 */
-abstract class JsonRpcMethod extends PageBase implements PageInterface {
+abstract class JsonBaseMethod extends PageBase implements PageInterface {
 
 	/**
 	* Associative array defining accepted parameters, used for request
@@ -137,7 +137,7 @@ abstract class JsonRpcMethod extends PageBase implements PageInterface {
 	*
 	* @see dophp\Validator
 	*/
-	protected $_params;
+	protected $_params = array();
 
 	/** Default headers for JSON output */
 	protected $_headers = array(
@@ -150,7 +150,7 @@ abstract class JsonRpcMethod extends PageBase implements PageInterface {
 	* @see PageInterface::run
 	*/
 	public function run() {
-		$req = json_decode(file_get_contents("php://input"), true);
+		$req = $this->_getInput();
 		$val = new Validator($req, $_FILES, $this->_params);
 		list($pars, $errors) = $val->validate();
 		if( $errors ) {
@@ -169,12 +169,11 @@ abstract class JsonRpcMethod extends PageBase implements PageInterface {
 	}
 
 	/**
-	* Build method to be overridden
+	* Returns input parameters
 	*
-	* @param $req mixed: JSON validated request decoded as array
-	* @return mixed: The response to be JSON-Encoded
+	* @return array Input data
 	*/
-	abstract protected function _build(& $req);
+	abstract protected function _getInput();
 
 	/**
 	* Reads and validate a parameter
@@ -202,6 +201,34 @@ abstract class JsonRpcMethod extends PageBase implements PageInterface {
 
 		return $val;
 	}
+}
+
+/**
+* Implements a RPC method, expecting a JSON-Based request
+*/
+abstract class JsonRpcMethod extends JsonBaseMethod {
+
+	/**
+	* Parses input JSON
+	*/
+	public function _getInput() {
+		return json_decode(file_get_contents("php://input"), true);
+	}
+
+}
+
+/**
+* Implements a RPC method, expecting a standard POST request
+*/
+abstract class HybridRpcMethod extends JsonBaseMethod {
+
+	/**
+	* Returns $_POST
+	*/
+	public function _getInput() {
+		return $_POST;
+	}
+
 }
 
 /**
