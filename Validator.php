@@ -233,11 +233,11 @@ class bool_validator extends base_validator {
 class date_validator extends base_validator {
 
 	protected function do_clean($val) {
-		if( gettype($val) == 'object' && $val instanceof DateTime )
+		if( gettype($val) == 'object' && $val instanceof \DateTime )
 			return $val;
 		try {
-			$date = new DateTime($val);
-		} catch( Exception $e ) {
+			$date = new \DateTime($val);
+		} catch( \Exception $e ) {
 			return null;
 		}
 		return $date;
