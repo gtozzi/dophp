@@ -8,6 +8,7 @@
 */
 
 require_once(__DIR__ . '/Db.php');
+require_once(__DIR__ . '/Auth.php');
 require_once(__DIR__ . '/Page.php');
 require_once(__DIR__ . '/Validator.php');
 require_once(__DIR__ . '/Utils.php');
@@ -40,11 +41,12 @@ class DoPhp {
 	*                     'pwd'=> Database password
 	*                 )
 	* @param $locale string: The locale to set with setlocale()
-	* @param $def    string: Default page name, used when received missing or unvalid page
 	* @param $db     string: Name of the class to use for the database connection
+	* @param $auth   string: Name of the class to use for user authentication
+	* @param $def    string: Default page name, used when received missing or unvalid page
 	* @param $key    string: the key containing the page name
 	*/
-	public function __construct($conf=null, $locale=null, $db='dophp\Db', $def='home', $key=self::BASE_KEY) {
+	public function __construct($conf=null, $locale=null, $db='dophp\Db', $auth=null, $def='home', $key=self::BASE_KEY) {
 
 		// Build default config
 		if( ! $conf['paths'] )
@@ -61,6 +63,15 @@ class DoPhp {
 		// Creates database connection, if needed
 		if( array_key_exists('db', $conf) )
 			$db = new $db($conf['db']['dsn'], $conf['db']['user'], $conf['db']['pass']);
+
+		// Authenticates the user, if applicable
+		$user = null;
+		if( $auth ) {
+			$user = new $auth($conf, $db);
+			if( ! $user instanceof dophp\AuthInterface )
+				throw new Exception('Wrong auth interface');
+			$user->login();
+		}
 
 		// Calculates the name of the page to be loaded
 		$base_file = basename($_SERVER['PHP_SELF'], '.php');
@@ -92,7 +103,7 @@ class DoPhp {
 				}
 			if( ! $classname )
 				throw new Exception('Page class not found');
-			$pobj = new $classname($conf, $db, null, $page );
+			$pobj = new $classname($conf, $db, $user, $page );
 			if( ! $pobj instanceof dophp\PageInterface )
 				throw new Exception('Wrong page type');
 			$out = $pobj->run();

@@ -25,12 +25,9 @@ interface AuthInterface {
 	/**
 	* Method called to log in an user
 	*
-	* @param $headers array: The headers
-	* @param $post array: The $_POST data
-	* @param $data array: The full sent data to be validated (if supported)
 	* @return boolean: True on success or False on failure
 	*/
-	public function login($headers, & $post, $data);
+	public function login();
 
 	/**
 	* Method called to get the current user's ID
@@ -88,29 +85,48 @@ abstract class AuthBase {
 *
 * Authenticates against X-Auth-Username and X-Auth-Sign headers.
 * X-Auth-Username: the username
-* X-Auth-Sign: sha1($username . $password . $raw_content)
+* X-Auth-Sign: sha1($username . SEP . $password . SEP . $raw_content)
 *
 * Database MUST implement a getUserPwd($user) method returning the user's
 * password (maybe encrypted)
 */
 class AuthSign extends AuthBase implements AuthInterface {
 
+	/** Separator to use for hash concatenation */
+	const SEP = '~';
+
 	/**
 	* @see AuthInterface::login
 	*/
-	public function login($headers, & $post, $data) {
-		$user = $headers['X-Auth-Username'];
+	public function login() {
+		if( $this->_uid )
+			throw new \Exception('Must logout first');
+		$headers = apache_request_headers();
+		$data = file_get_contents("php://input");
+
+		$user = $headers['X-Auth-User'];
 		$sign = $headers['X-Auth-Sign'];
-		$pwd = $this->_db->getUserPwd($user);
+		list($uid, $pwd) = $this->_getUserPwd($user);
 
 		if( ! $user || ! $sign || ! $pwd )
 			return false;
 
-		$countersign = sha1($user . $password . $raw_content);
+		$countersign = sha1($user . self::SEP . $pwd . self::SEP . $data);
 		if( $sign !== $countersign )
 			return false;
 
+		$this->_uid = $uid;
 		return true;
+	}
+
+	/**
+	* Reads user's ID and password from database, may be overridden
+	*
+	* @param $user string: The username
+	* @return array: (id, password: may be hashed)
+	*/
+	protected function _getUserPwd($user) {
+		return $this->_db->getUserPwd($user);
 	}
 
 }
