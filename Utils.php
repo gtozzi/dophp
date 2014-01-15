@@ -24,7 +24,7 @@ class Utils {
 
         # Check number of resulting parts
         if( count($parts) > 3 || count($parts) < 1)
-            throw new Exception("Unvalid number of parts: " . count($parts));
+            throw new \Exception("Unvalid number of parts: " . count($parts));
 
         # Convert each part to a number and pad it back again
         foreach($parts as &$p)
@@ -47,7 +47,7 @@ class Utils {
     * @return string: The formatted time
     */
     public static function formatTime($str, $format='H:i') {
-        $time = new DateTime($str);
+        $time = new \DateTime($str);
         return $time->format($format);
     }
 
