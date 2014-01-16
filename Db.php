@@ -57,11 +57,12 @@ class Db {
 	protected function _insert($table, $params) {
 		$cols = array();
 		$vals = array();
-		foreach( $params as $k => $v ) {
+		foreach( $params as $k => & $v ) {
 			$cols[] = "`$k`";
-			if( is_array($v) )
+			if( is_array($v) ) {
 				$vals[] = str_replace('?', ":$k", $v[1]);
-			else
+				$v = $v[0];
+			}else
 				$vals[] = ":$k";
 		}
 		$cols = implode(',', $cols);
