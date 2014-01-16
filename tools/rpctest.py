@@ -10,8 +10,12 @@
 import sys
 import argparse
 import re
+import hashlib
 import http.client, urllib.parse
 import json
+
+# Separator for authentication
+SEP = '~'
 
 class ParamAction(argparse.Action):
 	pre = re.compile(r'=')
@@ -35,6 +39,8 @@ class ParamAction(argparse.Action):
 parser = argparse.ArgumentParser(description='Call an RPC method on server')
 parser.add_argument('url', help='base server URL')
 parser.add_argument('method', help='name of the method to call')
+parser.add_argument('-a', '--auth', nargs=2, metavar=('USER','PASS'),
+		help='username and password for authentication')
 parser.add_argument('param', nargs='*', action=ParamAction,
 		help='adds a parameter <name>=<value>')
 
@@ -57,6 +63,16 @@ headers = {
 	'Content-Type': 'application/json',
 }
 url = baseUrl.path + '?do=' + args.method
+if args.auth:
+	# Build authentication
+	sign = hashlib.sha1()
+	sign.update(args.auth[0].encode('utf-8'))
+	sign.update(SEP.encode('utf-8'))
+	sign.update(args.auth[1].encode('utf-8'))
+	sign.update(SEP.encode('utf-8'))
+	sign.update(body.encode('utf-8'))
+	headers['X-Auth-User'] = args.auth[0]
+	headers['X-Auth-Sign'] = sign.hexdigest()
 conn.request('POST', url, body, headers)
 res = conn.getresponse()
 
