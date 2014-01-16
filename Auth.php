@@ -19,8 +19,9 @@ interface AuthInterface {
 	*
 	* @param $config array: Global config array
 	* @param $db     object: Database instance
+	* @param $sess   boolean: If true, use session-aware auth
 	*/
-	public function __construct(& $config, $db);
+	public function __construct(& $config, $db, $sess);
 
 	/**
 	* Method called to log in an user
@@ -47,22 +48,55 @@ interface AuthInterface {
 */
 abstract class AuthBase {
 
+	/** Name of the session variable */
+	const SESS_VAR = 'DoPhpAuthUid';
+
 	/** Config array */
 	protected $_config;
 	/** Database instance */
 	protected $_db;
 	/** Current user's ID */
 	protected $_uid = null;
+	/** If true, use session for authentication caching */
+	protected $_sess = null;
 
 	/**
 	* Contrsuctor
 	*
 	* @see AuthInterface::__construct
 	*/
-	public function __construct(& $config, $db) {
+	public function __construct(& $config, $db, $sess) {
 		$this->_config = $config;
 		$this->_db = $db;
+		$this->_sess = $sess;
+
+		if( $this->_sess )
+			$this->_uid = $_SESSION[self::SESS_VAR];
 	}
+
+	/**
+	* @see AuthInterface::login
+	*/
+	public function login() {
+		if( $this->_uid )
+			throw new \Exception('Must logout first');
+
+		$uid = $this->_doLogin();
+		if( ! $uid )
+			return false;
+
+		$this->_uid = $uid;
+		if( $this->_sess )
+			$_SESSION[self::SESS_VAR] = $this->_uid;
+		return true;
+	}
+
+	/**
+	* Called from login(), does the real login job. Must be overridden.
+	*
+	* @return int: The user's ID on success or null on failure
+	*/
+	abstract protected function _doLogin();
 
 	/**
 	* @see AuthInterface::getUid
@@ -76,6 +110,52 @@ abstract class AuthBase {
 	*/
 	public function logout() {
 		$this->_uid = null;
+		if( $this->_sess )
+			$_SESSION[self::SESS_VAR] = null;
+	}
+
+}
+
+/**
+* Class for username/password authentication
+*
+* Checks $_REQUEST for 'username' and 'password' variables. 'login' must be true
+* for security reasons
+*
+* Database MUST implement a login($user, $password) method returning the user's
+* ID on succesfull login
+*/
+class AuthPlain extends AuthBase implements AuthInterface {
+
+	/**
+	* @see AuthBase::_doLogin
+	*/
+	protected function _doLogin() {
+		if( ! $_REQUEST['login'] )
+			return null;
+
+		$user = $_REQUEST['username'];
+		$pwd = $_REQUEST['password'];
+
+		if( ! $user || ! $pwd )
+			return null;
+
+		$uid = $this->_login($user, $pwd);
+		if( ! $uid )
+			return null;
+
+		return $uid;
+	}
+
+	/**
+	* Reads user's ID from database, if password is correct
+	*
+	* @param $user string: The username
+	* @param $pwd string: The password
+	* @return integer The user's ID on success
+	*/
+	protected function _login($user, $pwd) {
+		return $this->_db->login($user, $pwd);
 	}
 
 }
@@ -96,11 +176,9 @@ class AuthSign extends AuthBase implements AuthInterface {
 	const SEP = '~';
 
 	/**
-	* @see AuthInterface::login
+	* @see AuthBase::_doLogin
 	*/
-	public function login() {
-		if( $this->_uid )
-			throw new \Exception('Must logout first');
+	public function _doLogin() {
 		$headers = apache_request_headers();
 		$data = file_get_contents("php://input");
 
@@ -109,14 +187,13 @@ class AuthSign extends AuthBase implements AuthInterface {
 		list($uid, $pwd) = $this->_getUserPwd($user);
 
 		if( ! $user || ! $sign || ! $pwd )
-			return false;
+			return null;
 
 		$countersign = sha1($user . self::SEP . $pwd . self::SEP . $data);
 		if( $sign !== $countersign )
-			return false;
+			return null;
 
-		$this->_uid = $uid;
-		return true;
+		return $uid;
 	}
 
 	/**

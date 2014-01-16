@@ -43,10 +43,16 @@ class DoPhp {
 	* @param $locale string: The locale to set with setlocale()
 	* @param $db     string: Name of the class to use for the database connection
 	* @param $auth   string: Name of the class to use for user authentication
+	* @param $sess   boolean: If true, starts the session and uses it
 	* @param $def    string: Default page name, used when received missing or unvalid page
 	* @param $key    string: the key containing the page name
 	*/
-	public function __construct($conf=null, $locale=null, $db='dophp\Db', $auth=null, $def='home', $key=self::BASE_KEY) {
+	public function __construct($conf=null, $locale=null, $db='dophp\Db', $auth=null,
+			$sess=true, $def='home', $key=self::BASE_KEY) {
+
+		// Start the session
+		if( $sess )
+			session_start();
 
 		// Build default config
 		if( ! $conf['paths'] )
@@ -67,10 +73,11 @@ class DoPhp {
 		// Authenticates the user, if applicable
 		$user = null;
 		if( $auth ) {
-			$user = new $auth($conf, $db);
+			$user = new $auth($conf, $db, $sess);
 			if( ! $user instanceof dophp\AuthInterface )
 				throw new Exception('Wrong auth interface');
-			$user->login();
+			if( ! $user->getUid() )
+				$user->login();
 		}
 
 		// Calculates the name of the page to be loaded

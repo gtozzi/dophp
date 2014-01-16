@@ -113,6 +113,7 @@ abstract class PageSmarty extends PageBase implements PageInterface {
 		foreach( $this->_config['paths'] as $k => $v )
 			$this->_smarty->assign($k, $v);
 		$this->_smarty->assign('config', $this->_config);
+		$this->_smarty->assignByRef('user', $this->_user);
 
 		$this->_build();
 
