@@ -44,4 +44,33 @@ class Db {
 		return $st;
 	}
 
+	/**
+	* Runs an INSERT statement from an associative array and returns ID of the
+	* last auto_increment value
+	*
+	* @param $table string: The name of the table
+	* @param $params array: Associative array with parameters. Key is the name
+	*                       of the column. If the data is an array, 2nd key is
+	*                       the custom placeholder to use. By example:
+	*                       'password' => [ '123456', 'SHA1(?)' ]
+	*/
+	protected function _insert($table, $params) {
+		$cols = array();
+		$vals = array();
+		foreach( $params as $k => $v ) {
+			$cols[] = "`$k`";
+			if( is_array($v) )
+				$vals[] = str_replace('?', ":$k", $v[1]);
+			else
+				$vals[] = ":$k";
+		}
+		$cols = implode(',', $cols);
+		$vals = implode(',', $vals);
+
+		$q = "INSERT INTO `$table` ($cols) VALUES($vals)";
+
+		$this->_run($q, $params);
+		return $this->_pdo->lastInsertId();
+	}
+
 }
