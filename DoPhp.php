@@ -76,8 +76,7 @@ class DoPhp {
 			$user = new $auth($conf, $db, $sess);
 			if( ! $user instanceof dophp\AuthInterface )
 				throw new Exception('Wrong auth interface');
-			if( ! $user->getUid() )
-				$user->login();
+			$user->login();
 		}
 
 		// Calculates the name of the page to be loaded
