@@ -114,6 +114,18 @@ class DoPhp {
 			if( ! $pobj instanceof dophp\PageInterface )
 				throw new Exception('Wrong page type');
 			$out = $pobj->run();
+		} catch( dophp\PageDenied $e ) {
+			if( $def ) {
+				$to = dophp\Utils::fullPageUrl($def, $key);
+				header("HTTP/1.1 303 Login Required");
+				header("Location: $to");
+				echo $e->getMessage();
+				echo "\nPlease login at: $to";
+			} else {
+				header("HTTP/1.1 403 Forbidden");
+				echo $e->getMessage();
+				exit();
+			}
 		} catch( dophp\PageError $e ) {
 			header("HTTP/1.1 400 Bad Request");
 			echo $e->getMessage();

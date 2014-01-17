@@ -76,6 +76,18 @@ abstract class PageBase {
 		return $this->_headers;
 	}
 
+	/**
+	* Utility function: checks that a valid user is logged in.
+	*
+	* @throws PageDenied
+	*/
+	protected function _requireLogin() {
+		if( $this->_user->getUid() )
+			return;
+
+		throw new PageDenied('Invalid login');
+	}
+
 }
 
 /**
@@ -236,4 +248,10 @@ abstract class HybridRpcMethod extends JsonBaseMethod {
 * Exception raised if something goes wrong during page rendering
 */
 class PageError extends \Exception {
+}
+
+/**
+* Exception raised when user is not authorized to see the page
+*/
+class PageDenied extends PageError {
 }

@@ -49,7 +49,7 @@ interface AuthInterface {
 abstract class AuthBase {
 
 	/** Name of the session variable */
-	const SESS_VAR = 'DoPhpAuthUid';
+	const SESS_VAR = 'DoPhpAuth_';
 
 	/** Config array */
 	protected $_config;
@@ -69,9 +69,6 @@ abstract class AuthBase {
 		$this->_config = $config;
 		$this->_db = $db;
 		$this->_sess = $sess;
-
-		if( $this->_sess )
-			$this->_uid = $_SESSION[self::SESS_VAR];
 	}
 
 	/**
@@ -86,13 +83,12 @@ abstract class AuthBase {
 			return false;
 
 		$this->_uid = $uid;
-		if( $this->_sess )
-			$_SESSION[self::SESS_VAR] = $this->_uid;
 		return true;
 	}
 
 	/**
 	* Called from login(), does the real login job. Must be overridden.
+	* Must also take care of session save and login, if $this->_sess
 	*
 	* @return int: The user's ID on success or null on failure
 	*/
@@ -111,7 +107,9 @@ abstract class AuthBase {
 	public function logout() {
 		$this->_uid = null;
 		if( $this->_sess )
-			$_SESSION[self::SESS_VAR] = null;
+			foreach( $_SESSION as $k => $v )
+				if( substr($k,0,strlen(self::SESS_VAR)) == self::SESS_VAR )
+					unset($_SESSION[$k]);
 	}
 
 }
@@ -134,8 +132,13 @@ class AuthPlain extends AuthBase implements AuthInterface {
 		if( ! $_REQUEST['login'] )
 			return null;
 
-		$user = $_REQUEST['username'];
-		$pwd = $_REQUEST['password'];
+		if( $_REQUEST['username'] || $_REQUEST['password'] ) {
+			$user = $_REQUEST['username'];
+			$pwd = $_REQUEST['password'];
+		} elseif( $this->_sess ) {
+			$user = $_SESSION[self::SESS_VAR.'username'];
+			$pwd = $_SESSION[self::SESS_VAR.'password'];
+		}
 
 		if( ! $user || ! $pwd )
 			return null;
@@ -143,6 +146,11 @@ class AuthPlain extends AuthBase implements AuthInterface {
 		$uid = $this->_login($user, $pwd);
 		if( ! $uid )
 			return null;
+
+		if( $this->_sess ) {
+			$_SESSION[self::SESS_VAR.'username'] = $user;
+			$_SESSION[self::SESS_VAR.'password'] = $pwd;
+		}
 
 		return $uid;
 	}
@@ -182,8 +190,13 @@ class AuthSign extends AuthBase implements AuthInterface {
 		$headers = apache_request_headers();
 		$data = file_get_contents("php://input");
 
-		$user = $headers['X-Auth-User'];
-		$sign = $headers['X-Auth-Sign'];
+		if( $headers['X-Auth-User'] || $headers['X-Auth-Sign'] ) {
+			$user = $headers['X-Auth-User'];
+			$sign = $headers['X-Auth-Sign'];
+		}elseif( $this->_sess ) {
+			$user = $_SESSION[self::SESS_VAR.'user'];
+			$sign = $_SESSION[self::SESS_VAR.'sign'];
+		}
 		list($uid, $pwd) = $this->_getUserPwd($user);
 
 		if( ! $user || ! $sign || ! $pwd )
@@ -192,6 +205,11 @@ class AuthSign extends AuthBase implements AuthInterface {
 		$countersign = sha1($user . self::SEP . $pwd . self::SEP . $data);
 		if( $sign !== $countersign )
 			return null;
+
+		if( $this->_sess ) {
+			$_SESSION[self::SESS_VAR.'user'] = $user;
+			$_SESSION[self::SESS_VAR.'sign'] = $sign;
+		}
 
 		return $uid;
 	}
