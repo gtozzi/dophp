@@ -74,4 +74,16 @@ class Db {
 		return $this->_pdo->lastInsertId();
 	}
 
+	/**
+	* Runs FOUND_ROWS() and returns result
+	*
+	* @return int: Number of found rows
+	*/
+	protected function _foundRows() {
+		$q = "SELECT FOUND_ROWS() AS `fr`";
+
+		$res = $this->_run($q)->fetch();
+		return $res['fr'] !== null ? (int)$res['fr'] : null;
+	}
+
 }
