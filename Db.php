@@ -36,9 +36,11 @@ class Db {
 	* Prepares a statement, executes it with given parameters and returns it
 	*
 	* @param $query string: The query to be executed
-	* @param $params array: Array containing the parameters
+	* @param $params mixed: Array containing the parameters or single parameter
 	*/
 	protected function _run($query, $params=array()) {
+		if( ! is_array($params) )
+			$params = array($params);
 		$st = $this->_pdo->prepare($query);
 		$st->execute($params);
 		return $st;
