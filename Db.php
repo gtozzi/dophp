@@ -50,30 +50,29 @@ class Db {
 	* Runs an INSERT statement from an associative array and returns ID of the
 	* last auto_increment value
 	*
-	* @param $table string: The name of the table
-	* @param $params array: Associative array with parameters. Key is the name
-	*                       of the column. If the data is an array, 2nd key is
-	*                       the custom placeholder to use. By example:
-	*                       'password' => [ '123456', 'SHA1(?)' ]
+	* @see __buildInsUpdQuery
 	*/
 	protected function _insert($table, $params) {
-		$cols = array();
-		$vals = array();
-		foreach( $params as $k => & $v ) {
-			$cols[] = "`$k`";
-			if( is_array($v) ) {
-				$vals[] = str_replace('?', ":$k", $v[1]);
-				$v = $v[0];
-			}else
-				$vals[] = ":$k";
-		}
-		$cols = implode(',', $cols);
-		$vals = implode(',', $vals);
+		list($q,$p) = $this->__buildInsUpdQuery('ins', $table, $params);
 
-		$q = "INSERT INTO `$table` ($cols) VALUES($vals)";
-
-		$this->_run($q, $params);
+		$this->_run($q, $p);
 		return $this->_pdo->lastInsertId();
+	}
+
+	/**
+	* Runs an UPDATE statement from an associative array
+	*
+	* @see __buildInsUpdQuery
+	* @param $where array: where conditions
+	*/
+	protected function _update($table, $params, $where) {
+		list($s,$ps) = $this->__buildInsUpdQuery('upd', $table, $params);
+		list($w,$pw) = $this->__buildParams($where);
+
+		$q = "$s WHERE $w";
+		$p = array_merge($ps, $pw);
+
+		$this->_run($q, $p);
 	}
 
 	/**
@@ -86,6 +85,60 @@ class Db {
 
 		$res = $this->_run($q)->fetch();
 		return $res['fr'] !== null ? (int)$res['fr'] : null;
+	}
+
+	/**
+	* Builds a partial query suitable for insert or update in the format
+	* "SET col1 = val1, col2 = val2, ..."
+	*
+	* @param $type string: The query type (ins, upd)
+	* @param $table string: The name of the table
+	* @see __buildParams
+	* @return array [query string, params]
+	*/
+	private function __buildInsUpdQuery($type, $table, $params) {
+		switch( $type ) {
+		case 'ins':
+			$q = 'INSERT INTO';
+			break;
+		case 'upd':
+			$q = 'UPDATE';
+			break;
+		default:
+			throw \Exception("Unknown type $type");
+		}
+
+		list($cols, $p) = $this->__buildParams($params);
+		$q .= " `$table` SET $cols" ;
+		return array($q, $p);
+	}
+
+	/**
+	* Formats an associative array of parameters into a query string and an
+	* associative array ready to be passed to pdo
+	*
+	* @param $params array: Associative array with parameters. Key is the name
+	*                       of the column. If the data is an array, 2nd key is
+	*                       the custom placeholder to use. By example:
+	*                       'password' => [ '123456', 'SHA1(?)' ]
+	* @return array [query string, params]
+	*/
+	private function __buildParams($params) {
+		$cols = array();
+		$vals = array();
+		foreach( $params as $k => $v ) {
+			$c = "`$k` = ";
+			if( is_array($v) ) {
+				$c .= str_replace('?', ":$k", $v[1]);
+				if( $v[0] !== null )
+					$vals[$k] = $v[0];
+			} else {
+				$c .= ":$k";
+				$vals[$k] = $v;
+			}
+			$cols[] = $c;
+		}
+		return array(implode(', ', $cols), $vals);
 	}
 
 }
