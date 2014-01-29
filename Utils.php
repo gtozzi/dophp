@@ -87,4 +87,25 @@ class Utils {
 		return "$url?$key=$page";
 	}
 
+	
+	/**
+	* Returns all request headers as associative array, on any webserver
+	*/
+	public static function headers() {
+		if( function_exists('apache_request_headers') )
+			return apache_request_headers();
+
+		$headers = array();
+		foreach( $_SERVER as $name => $value )
+			if( substr($name,0,5) == 'HTTP_' ) {
+				$h = str_replace(' ','-',ucwords(strtolower(str_replace('_',' ',substr($name,5))))); 
+				$headers[$h] = $value;
+			} else if( $name == 'CONTENT_TYPE' )
+				$headers['Content-Type'] = $value;
+			else if( $name == 'CONTENT_LENGTH' )
+				$headers['Content-Length'] = $value;
+
+		return $headers;
+	}
+
 }

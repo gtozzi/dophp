@@ -184,7 +184,7 @@ class AuthSign extends AuthBase implements AuthInterface {
 	* @see AuthBase::_doLogin
 	*/
 	public function _doLogin() {
-		$headers = apache_request_headers();
+		$headers = Utils::headers();
 		$data = file_get_contents("php://input");
 
 		if( $headers['X-Auth-User'] || $headers['X-Auth-Sign'] ) {
