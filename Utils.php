@@ -79,6 +79,8 @@ class Utils {
         $port = $s['SERVER_PORT'];
         $port = ((!$ssl && $port=='80') || ($ssl && $port=='443')) ? '' : ':'.$port;
         $host = isset($s['HTTP_X_FORWARDED_HOST']) ? $s['HTTP_X_FORWARDED_HOST'] : isset($s['HTTP_HOST']) ? $s['HTTP_HOST'] : $s['SERVER_NAME'];
+		$host = explode(':', $host);
+		$host = $host[0];
         $uri = $protocol . '://' . $host . $port . $s['REQUEST_URI'];
         $segments = explode('?', $uri, 2);
         $url = $segments[0];
