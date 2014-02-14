@@ -103,9 +103,6 @@ abstract class PageSmarty extends PageBase implements PageInterface {
 	/** Smarty instance */
 	protected $_smarty;
 
-	/** Array describing menu: name => attributes (associative array) */
-	protected $_menu = array();
-
 	/**
 	* Prepares the template system and passes execution to _build()
 	*
@@ -129,7 +126,6 @@ abstract class PageSmarty extends PageBase implements PageInterface {
 			$this->_smarty->assign($k, $v);
 		$this->_smarty->assign('config', $this->_config);
 		$this->_smarty->assignByRef('user', $this->_user);
-		$this->_smarty->assign('menu', $this->_menu);
 
 		$this->_build();
 
