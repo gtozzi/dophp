@@ -141,4 +141,29 @@ class Db {
 		return array(implode(', ', $cols), $vals);
 	}
 
+	/**
+	* Builds a "limit" statement
+	*
+	* @param $limit mixed: If True, returns only first element,
+	*                      if int, returns first $limit elements
+	* @param $skip integer: Number of records to skip
+	* @return string: the LIMIT statement
+	*/
+	protected function _buildLimit($limit=null, $skip=0) {
+		if( $skip || $limit )
+			$lim = 'LIMIT ';
+		else
+			$lim = '';
+
+		if( $skip )
+			$lim .= (int)$skip . ',';
+
+		if( $limit === true )
+			$lim .= '1';
+		elseif( $limit )
+			$lim = (int)$limit;
+
+		return $lim;
+	}
+
 }
