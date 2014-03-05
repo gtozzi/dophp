@@ -65,6 +65,17 @@ class Utils {
 	}
 
 	/**
+	* Return a formatted version of a boolean
+	*
+	* @return string: The formatted version of the boolean
+	*/
+	public static function formatBool($bool) {
+		if( $bool === null )
+			return null;
+		return $bool ? 'Yes' : 'No';
+	}
+
+	/**
 	* Returns the full URL of a page
 	*
 	* @param $page string: The page name
