@@ -99,7 +99,13 @@ abstract class base_validator implements field_validator {
 		$this->__options = $options;
 		$nullified = $this->nullify($value);
 		// Null doesn't need to be cleaned
-		$this->__cleaned = $nullified === null ? $nullified : $this->do_clean($nullified);
+		if( $nullified === null ) {
+			if( array_key_exists('default',$this->__options) )
+				$this->__cleaned = $this->__options['default'];
+			else
+				$this->__cleaned = $nullified;
+		}else
+			$this->__cleaned = $this->do_clean($nullified);
 	}
 	public function clean() {
 		return $this->__cleaned;
