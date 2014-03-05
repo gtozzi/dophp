@@ -41,6 +41,12 @@ class Db {
 	protected function _run($query, $params=array()) {
 		if( ! is_array($params) )
 			$params = array($params);
+		foreach($params as & $p)
+			if( gettype($p) == 'boolean' ) // PDO would convert false into null otherwise
+				if( $p === true )
+					$p = 1;
+				elseif( $p === false )
+					$p = 0;
 		$st = $this->_pdo->prepare($query);
 		$st->execute($params);
 		return $st;
