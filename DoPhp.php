@@ -65,6 +65,9 @@ class DoPhp {
 		if( $locale )
 			if( ! setlocale(LC_ALL, $locale) )
 				throw new Exception('Unable to set locale');
+		$domain = 'messages';
+		bindtextdomain($domain, __DIR__ . '/locale');
+		textdomain($domain);
 
 		// Creates database connection, if needed
 		if( array_key_exists('db', $conf) )

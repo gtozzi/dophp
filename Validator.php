@@ -155,7 +155,7 @@ abstract class base_validator implements field_validator {
 
 	protected function check_required($val) {
 		if( $val === null )
-			return "Field can't be empty.";
+			return _("Field can't be empty") . '.';
 		return false;
 	}
 
@@ -183,7 +183,7 @@ class string_validator extends base_validator {
 		if( $val === null )
 			return false;
 		if( ! preg_match('/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,4}$/i', $val) )
-			return "Unvalid eMail.";
+			return _("Unvalid eMail.");
 	}
 }
 
@@ -264,9 +264,9 @@ class file_validator extends base_validator {
 	}
 	protected function check_required($val) {
 		if( ! $val )
-			return "Field can't be empty.";
+			return _("Field can't be empty") . '.';
 		if( ! (int)$val['size'] )
-			return "Unvalid file size ({$val['size']}).";
+			return _("Unvalid file size") . " ({$val['size']}).";
 		return false;
 	}
 	protected function do_validate( &$v, &$o ) {
@@ -278,6 +278,6 @@ class file_validator extends base_validator {
 	}
 	protected function check_type($type, $types) {
 		if( ! in_array( $type, $types ) )
-			return "Unsupported file type: $type.";
+			return _("Unsupported file type") . ': ' . $type;
 	}
 }

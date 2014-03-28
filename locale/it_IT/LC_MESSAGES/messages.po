@@ -1,0 +1,36 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: DoPhp\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2014-03-28 14:58+0100\n"
+"PO-Revision-Date: 2014-03-28 15:00+0100\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: Gabriele Tozzi <tozzi@despammed.com>\n"
+"Language: Italian\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: Poedit 1.5.4\n"
+"X-Poedit-SourceCharset: UTF-8\n"
+"X-Poedit-Basepath: ../../../\n"
+
+#: Validator.php:158 Validator.php:267
+msgid "Field can't be empty"
+msgstr "Il campo non può essere vuoto"
+
+#: Validator.php:186
+msgid "Unvalid eMail."
+msgstr "eMail non valida"
+
+#: Validator.php:269
+msgid "Unvalid file size"
+msgstr "Dimensione file non valida"
+
+#: Validator.php:281
+msgid "Unsupported file type"
+msgstr "Tipo file non supportato"
