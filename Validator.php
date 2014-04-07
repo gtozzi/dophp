@@ -85,6 +85,9 @@ interface field_validator {
 *               'custom'=>lambda($field_values, $all_values).
 *               validates using custom function. Must return string error or
 *               null on success.
+*               'default'=>specify a default value to be used in place of null
+*               'process'=>lambda($value)
+*               Lambda function to post-proces the final value after validation
 */
 abstract class base_validator implements field_validator {
 
@@ -107,9 +110,11 @@ abstract class base_validator implements field_validator {
 		}else
 			$this->__cleaned = $this->do_clean($nullified);
 	}
+
 	public function clean() {
 		return $this->__cleaned;
 	}
+
 	public function validate() {
 		$v = & $this->__cleaned;
 		$o = & $this->__options;
@@ -133,6 +138,10 @@ abstract class base_validator implements field_validator {
 		$err = $this->do_validate($v, $o);
 		if( $err )
 			return $err;
+
+		// Run post-processor
+		if( $o['process'] )
+			$v = $o['process']($v);
 
 		return null;
 	}
