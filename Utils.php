@@ -98,7 +98,18 @@ class Utils {
 		return "$url?$key=$page";
 	}
 
-	
+	/**
+	* Returns the file name for a given page to be included
+	*
+	* @param $conf array: The configuration variable
+	* @param $page string: The page name
+	* @return string: The path
+	*/
+	public static function pagePath($conf, $page) {
+		$base_file = basename($_SERVER['PHP_SELF'], '.php');
+		return "{$conf['paths']['inc']}/$base_file.$page.php";
+	}
+
 	/**
 	* Returns all request headers as associative array, on any webserver
 	*/

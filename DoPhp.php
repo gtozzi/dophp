@@ -83,8 +83,7 @@ class DoPhp {
 		}
 
 		// Calculates the name of the page to be loaded
-		$base_file = basename($_SERVER['PHP_SELF'], '.php');
-		$inc_file = "{$conf['paths']['inc']}/$base_file.{$_REQUEST[$key]}.php";
+		$inc_file = dophp\Utils::pagePath($conf, $_REQUEST[$key]);
 
 		if(array_key_exists($key, $_REQUEST) && $_REQUEST[$key] && !strpos($_REQUEST[$key], '/') && file_exists($inc_file))
 			$page = $_REQUEST[$key];
@@ -106,7 +105,7 @@ class DoPhp {
 			$classes = get_declared_classes();
 			$classname = null;
 			foreach( $classes as $c )
-				if( strtolower($c) == strtolower(self::BASE_KEY . $page) ) {
+				if( strtolower($c) == strtolower(self::className($page)) ) {
 					$classname = $c;
 					break;
 				}
@@ -150,4 +149,15 @@ class DoPhp {
 		//Output the content
 		echo $out;
 	}
+
+	/**
+	* Returns class name for a given page
+	*
+	* @param $page string: The page name
+	* @return string: The class name
+	*/
+	public static function className($page) {
+		return self::BASE_KEY . ucfirst($page);
+	}
+
 }

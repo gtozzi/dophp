@@ -121,6 +121,7 @@ abstract class PageSmarty extends PageBase implements PageInterface {
 		$this->_smarty->registerPlugin('modifier', 'formatNumber', 'dophp\Utils::formatNumber');
 
 		// Assign utility variables
+		$this->_smarty->assign('this', $this);
 		$this->_smarty->assign('page', $this->_name);
 		foreach( $this->_config['paths'] as $k => $v )
 			$this->_smarty->assign($k, $v);
