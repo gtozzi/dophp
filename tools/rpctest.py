@@ -92,13 +92,21 @@ if __name__ == '__main__':
 	parser.add_argument('-a', '--auth', nargs=2, metavar=('USER','PASS'),
 			help='username and password for authentication')
 	parser.add_argument('param', nargs='*', action=ParamAction,
-			help='adds a parameter <name>=<value>')
+			help='adds a parameter <name>=<value> (use [] to specify a list)')
 
 	args = parser.parse_args()
+	
+	params = {}
+	if args.param:
+		for k, v in args.param.items():
+			if v[0] == '[':
+				params[k] = json.loads(v)
+			else:
+				params[k] = v
 
 	rpc = RpcTest(args.url)
-	if args.param:
-		res = rpc.run(args.method, args.auth, **args.param)
+	if params:
+		res = rpc.run(args.method, args.auth, **params)
 	else:
 		res = rpc.run(args.method, args.auth)
 

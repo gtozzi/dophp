@@ -28,12 +28,25 @@ class Validator {
 	* @param array $_FILES data, passed byRef
 	* @param array The rules, associative array with format:
 	*              'field_name' => array('field_type', array('options'))
+	*              Special case: if field name is (int)0 and 'multiple' option
+	*              is true, that rule will be applied to any other numeric index
+	*              if $post
 	* @see <type>_validator
 	*/
 	public function __construct( &$post, &$files, $rules) {
 		$this->__post = & $post;
 		$this->__files = & $files;
-		$this->__rules = $rules;
+
+		// Handle multiple validator: copy 0 validator over all numeric data
+		$multi = array();
+		foreach( $rules as $f => $r ) {
+			if( $f===0 && array_key_exists('multiple',$r[1]) && $r[1]['multiple'] )
+				foreach($post as $k => $v)
+					if( is_int($k) && ! array_key_exists($k, $rules) )
+						$multi[$k] = $r;
+			break;
+		}
+		$this->__rules = array_merge($multi, $rules);
 	}
 
 	/**
@@ -50,6 +63,8 @@ class Validator {
 			$vname = 'dophp\\' . $v[0] . '_validator';
 			if( substr($v[0],0,4) == 'file' )
 				$validator = new $vname($this->__files[$k], $v[1], $this->__files);
+			elseif( substr($v[0],0,5) == 'array' )
+				$validator = new $vname($this->__post[$k], $v[1], $this->__post);
 			else
 				$validator = new $vname(trim($this->__post[$k]), $v[1], $this->__post);
 			$data[$k] = $validator->clean();
@@ -288,5 +303,46 @@ class file_validator extends base_validator {
 	protected function check_type($type, $types) {
 		if( ! in_array( $type, $types ) )
 			return _("Unsupported file type") . ': ' . $type;
+	}
+}
+
+/**
+* Validate an array as a container of different elements
+*
+* Custom validation rules: 'rules': array list of array elements to check for,
+*                                   like on main rules
+*                          'required': if true, an array must be present
+*/
+class array_validator implements field_validator {
+
+	private $__value = null;
+	private $__error = null;
+
+	public function __construct($value, $options, & $values) {
+		if( ! $value ) {
+			if( array_key_exists('required',$options) && $options['required'] )
+				$this->__error = _("Field can't be empty") . '.';
+
+		}elseif( ! is_array($value) ) {
+			$this->__error = _("Must be an array") . '.';
+
+		}elseif( array_key_exists('rules',$options) && $options['rules'] ) {
+			$val = array();
+			$val = new Validator($value, $_FILES, $options['rules']);
+			list($pars, $errors) = $val->validate();
+			$this->__value = $pars;
+			if( $errors )
+				$this->__error = print_r($errors, true);
+
+		}else
+			$this->__value = $value;
+	}
+
+	public function clean() {
+		return $this->__value;
+	}
+
+	public function validate() {
+		return $this->__error;
 	}
 }
