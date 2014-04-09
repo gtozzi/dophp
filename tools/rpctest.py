@@ -96,7 +96,11 @@ if __name__ == '__main__':
 
 	args = parser.parse_args()
 
-	res = RpcTest(args.url).run(args.method, args.auth, **args.param)
+	rpc = RpcTest(args.url)
+	if args.param:
+		res = rpc.run(args.method, args.auth, **args.param)
+	else:
+		res = rpc.run(args.method, args.auth)
 
 	# Show result
 	print(res.status, res.reason)
