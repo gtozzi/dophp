@@ -130,4 +130,34 @@ class Utils {
 		return $headers;
 	}
 
+	/**
+	* Cleans an array according to template array
+	* @param $array array: The input array
+	* @param $template array: Associative array <key>=><type>
+	*
+	* @return array: the parsed array. Cointains the keys specified on both
+	*                input and template, type is casted according to template.
+	*/
+	public static function cleanArray($array, $template) {
+		$out = array();
+		foreach( $template as $k => $t )
+			if( array_key_exists($k, $array) )
+				switch($t) {
+				case 'string':
+					$out[$k] = (string)$array[$k];
+					break;
+				case 'int':
+					$out[$k] = (int)$array[$k];
+					break;
+				case 'double':
+					$out[$k] = (double)$array[$k];
+					break;
+				case 'bool':
+					$out[$k] = (bool)$array[$k];
+					break;
+				default:
+					throw new Exception("Uknown type $t");
+				}	
+		return $out;
+	}
 }
