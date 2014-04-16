@@ -141,23 +141,27 @@ class Utils {
 	public static function cleanArray($array, $template) {
 		$out = array();
 		foreach( $template as $k => $t )
-			if( array_key_exists($k, $array) )
-				switch($t) {
-				case 'string':
-					$out[$k] = (string)$array[$k];
-					break;
-				case 'int':
-					$out[$k] = (int)$array[$k];
-					break;
-				case 'double':
-					$out[$k] = (double)$array[$k];
-					break;
-				case 'bool':
-					$out[$k] = (bool)$array[$k];
-					break;
-				default:
-					throw new Exception("Uknown type $t");
-				}	
+			if( array_key_exists($k, $array) ) {
+				if( $array[$k] === null )
+					$out[$k] = null;
+				else
+					switch($t) {
+					case 'string':
+						$out[$k] = (string)$array[$k];
+						break;
+					case 'int':
+						$out[$k] = (int)$array[$k];
+						break;
+					case 'double':
+						$out[$k] = (double)$array[$k];
+						break;
+					case 'bool':
+						$out[$k] = (bool)$array[$k];
+						break;
+					default:
+						throw new Exception("Uknown type $t");
+					}
+			}
 		return $out;
 	}
 }
