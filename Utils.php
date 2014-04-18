@@ -134,6 +134,8 @@ class Utils {
 	* Cleans an array according to template array
 	* @param $array array: The input array
 	* @param $template array: Associative array <key>=><type>
+	*                         If key is (int)0 multiple items are expected
+	*                         If type is array, a sub-array is expected
 	*
 	* @return array: the parsed array. Cointains the keys specified on both
 	*                input and template, type is casted according to template.
@@ -141,8 +143,14 @@ class Utils {
 	public static function cleanArray($array, $template) {
 		$out = array();
 		foreach( $template as $k => $t )
-			if( array_key_exists($k, $array) ) {
-				if( $array[$k] === null )
+			if( $k === 0 ) {
+				foreach( $array as $n => $v )
+					if( is_int($n) )
+						$out[$n] = self::cleanArray($v, $t);
+			}elseif( array_key_exists($k, $array) ) {
+				if( is_array($t) )
+					$out[$k] = self::cleanArray($array[$k], $t);
+				elseif( $array[$k] === null )
 					$out[$k] = null;
 				else
 					switch($t) {
