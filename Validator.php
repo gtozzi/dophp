@@ -135,7 +135,7 @@ abstract class base_validator implements field_validator {
 		$o = & $this->__options;
 
 		// Perform common validation tasks
-		if( $o['required'] ) {
+		if( array_key_exists('required',$o) && $o['required'] ) {
 			// Convert lambda
 			$req = is_callable($o['required']) ? $o['required']($v, $this->__values) : $o['required'];
 			if( $req ) {
@@ -144,7 +144,7 @@ abstract class base_validator implements field_validator {
 					return $err;
 			}
 		}
-		if( $o['custom'] )
+		if( array_key_exists('custom',$o) && $o['custom'] )
 			$err = $o['custom']($v, $this->__values);
 			if( $err )
 				return $err;
@@ -155,7 +155,7 @@ abstract class base_validator implements field_validator {
 			return $err;
 
 		// Run post-processor
-		if( $o['process'] )
+		if( array_key_exists('process',$o) && $o['process'] )
 			$v = $o['process']($v);
 
 		return null;
