@@ -198,7 +198,7 @@ abstract class base_validator implements field_validator {
 class string_validator extends base_validator {
 
 	protected function do_validate( &$v, &$o ) {
-		if( $o['email'] ) {
+		if( array_key_exists('email',$o) && $o['email'] ) {
 			if( $err = $this->check_email($v) )
 				return $err;
 		}
@@ -294,7 +294,7 @@ class file_validator extends base_validator {
 		return false;
 	}
 	protected function do_validate( &$v, &$o ) {
-		if( $o['type'] ) {
+		if( array_key_exists('type',$o) && $o['type'] ) {
 			$err = $this->check_type($v['type'], $o['type']);
 			if( $err )
 				return $err;
