@@ -135,7 +135,7 @@ abstract class base_validator implements field_validator {
 		$o = & $this->__options;
 
 		// Perform common validation tasks
-		if( $o['required'] ) {
+		if( array_key_exists('required',$o) && $o['required'] ) {
 			// Convert lambda
 			$req = is_callable($o['required']) ? $o['required']($v, $this->__values) : $o['required'];
 			if( $req ) {
@@ -144,7 +144,7 @@ abstract class base_validator implements field_validator {
 					return $err;
 			}
 		}
-		if( $o['custom'] )
+		if( array_key_exists('custom',$o) && $o['custom'] )
 			$err = $o['custom']($v, $this->__values);
 			if( $err )
 				return $err;
@@ -155,7 +155,7 @@ abstract class base_validator implements field_validator {
 			return $err;
 
 		// Run post-processor
-		if( $o['process'] )
+		if( array_key_exists('process',$o) && $o['process'] )
 			$v = $o['process']($v);
 
 		return null;
@@ -198,7 +198,7 @@ abstract class base_validator implements field_validator {
 class string_validator extends base_validator {
 
 	protected function do_validate( &$v, &$o ) {
-		if( $o['email'] ) {
+		if( array_key_exists('email',$o) && $o['email'] ) {
 			if( $err = $this->check_email($v) )
 				return $err;
 		}
@@ -294,7 +294,7 @@ class file_validator extends base_validator {
 		return false;
 	}
 	protected function do_validate( &$v, &$o ) {
-		if( $o['type'] ) {
+		if( array_key_exists('type',$o) && $o['type'] ) {
 			$err = $this->check_type($v['type'], $o['type']);
 			if( $err )
 				return $err;
