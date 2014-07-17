@@ -132,6 +132,7 @@ class Utils {
 
 	/**
 	* Cleans an array according to template array
+	*
 	* @param $array array: The input array
 	* @param $template array: Associative array <key>=><type>
 	*                         If key is (int)0 multiple items are expected
@@ -171,5 +172,69 @@ class Utils {
 					}
 			}
 		return $out;
+	}
+
+	/**
+	* Determines the language to be used based on Accept-Language HTTP header
+	*
+	* @param $supported array: List of supported languages, in the form
+	*                          'en' or 'it_IT'
+	* @return The preferred language, if any matched, or the first of the
+	*         supported ones, if no match found
+	*/
+	public static function getBrowserLanguage($supported) {
+		if( ! array_key_exists('HTTP_ACCEPT_LANGUAGE',$_SERVER) || ! $_SERVER['HTTP_ACCEPT_LANGUAGE'] )
+			return $supported[0];
+
+		// Prepare a sorted array of accepted languages in the format
+		// [ [<name>,<country>], <quality> ], ...
+		// es. [ ['en', null], 1.0 ], [ ['it', 'IT'], 0.8 ], ...
+		$prefs = explode(',', trim($_SERVER['HTTP_ACCEPT_LANGUAGE']));
+		foreach( $prefs as & $p ) {
+			$p = array_slice(explode(';', $p), 0, 2);
+
+			if( count($p) < 2 )
+				$p[1] = 1.0;
+			else
+				$p[1] = (float)trim($p[1], " \t\n\r\0\x0Ba..zA..Z=");
+
+			$p[0] = array_slice(explode('-', trim($p[0])), 0, 2);
+			$p[0][0] = strtolower(trim($p[0][0]));
+			if( count($p[0]) > 1 )
+				$p[0][1] = strtoupper(trim($p[0][1]));
+			else
+				$p[0][1] = null;
+		}
+		function cmp($a, $b) {
+			if($a[1] < $b[1])
+				return -1;
+			if($a[1] > $b[1])
+				return 1;
+			return 0;
+		}
+		usort($prefs, 'dophp\\cmp');
+
+		// Does the matching
+		$partial_match = null;
+		$sup_low = array_map('strtolower', $supported);
+		function sub(& $item) {
+			$item = substr($item, 0, 2);
+		}
+		$sup_sub = $sup_low;
+		array_walk($sup_sub, 'dophp\\sub');
+		foreach( $prefs as $p ) {
+			$lang = strtolower($p[0][0] . ( $p[0][1] ? '_'.$p[0][1] : '' ));
+
+			if( $idx = array_search($lang, $sup_low) )
+				return $supported[$idx]; //Exact match
+
+			if( ! $partial_match && strlen($lang) == 2 && array_search($lang, $sup_sub) )
+				$partial_match = $supported[$idx]; //Matched only language code
+		}
+		if( $partial_match )
+			return $partial_match;
+
+		// Nothing found
+		return $supported[0];
 	}
 }

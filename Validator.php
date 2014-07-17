@@ -36,6 +36,7 @@ class Validator {
 	public function __construct( &$post, &$files, $rules) {
 		$this->__post = & $post;
 		$this->__files = & $files;
+		\DoPhp::lang()->dophpDomain();
 
 		// Handle multiple validator: copy 0 validator over all numeric data
 		$multi = array();
@@ -47,6 +48,7 @@ class Validator {
 			break;
 		}
 		$this->__rules = array_merge($multi, $rules);
+		\DoPhp::lang()->restoreDomain();
 	}
 
 	/**
@@ -57,6 +59,8 @@ class Validator {
 	*         contains validation errors. All fields are automatically trimmed.
 	*/
 	public function validate() {
+		\DoPhp::lang()->dophpDomain();
+
 		$data = array();
 		$errors = array();
 		foreach( $this->__rules as $k => $v ) {
@@ -71,6 +75,7 @@ class Validator {
 			if( $err = $validator->validate() )
 				$errors[$k] = $err;
 		}
+		\DoPhp::lang()->restoreDomain();
 		return array( $data, $errors );
 	}
 
