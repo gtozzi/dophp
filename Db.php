@@ -180,7 +180,7 @@ class Db {
 */
 class Table {
 
-	/** Database table name, may be overridden is sub-class or passed by constructor */
+	/** Database table name, may be overridden in sub-class or passed by constructor */
 	protected $_name = null;
 	/** Database object instance, passed by constructor */
 	protected $_db = null;
@@ -275,7 +275,7 @@ class Table {
 	/**
 	* Runs a select query
 	*
-	* @param $params array See dophp\Db::buildParams
+	* @param $params array See dophp\Db::buildParams. Null to select all.
 	* @param $cols array Names of the columns. null to select all. true to
 	*                    select only PKs.
 	* @param $limit mixed Numeric limit, boolean TRUE means 1. If array,
@@ -286,7 +286,7 @@ class Table {
 	* @see dophp\Db::buildLimit
 	* @return mixed The single fetched row or array(fetched rows, number of records found)
 	*/
-	public function select($params, $cols=null, $limit=null) {
+	public function select($params=null, $cols=null, $limit=null) {
 		$q = "SELECT\n\t";
 		if( ! $cols )
 			$q .= "\t*";
@@ -308,9 +308,11 @@ class Table {
 
 		$q .= "FROM `{$this->_name}`\n";
 
-		$q .= "WHERE ";
-		list($w, $p) = $this->_db->buildParams($params, ' AND ');
-		$q .= "$w\n";
+		if( $params ) {
+			$q .= "WHERE ";
+			list($w, $p) = $this->_db->buildParams($params, ' AND ');
+			$q .= "$w\n";
+		}
 
 		if( is_array($limit) )
 			list($limit, $skip) = $limit;
@@ -322,7 +324,7 @@ class Table {
 		if( $limit === true || $limit === 1 )
 			return $st->fetch();
 		else
-			return array($st->fetchAll(), $this->_foundRows());
+			return array($st->fetchAll(), $this->_db->foundRows());
 	}
 
 }
