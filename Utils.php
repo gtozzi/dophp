@@ -237,4 +237,19 @@ class Utils {
 		// Nothing found
 		return $supported[0];
 	}
+
+	/**
+	* Find a class name case-insensitive
+	*
+	* @param $name The class name to search for
+	* @return string: The found class name, null on failure
+	*/
+	public static function findClass($name) {
+		$classes = get_declared_classes();
+		foreach( $classes as $c )
+			if( strtolower($c) == strtolower($name) )
+				return $c;
+		return null;
+	}
+
 }

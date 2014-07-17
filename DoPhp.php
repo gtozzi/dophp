@@ -13,6 +13,7 @@ require_once(__DIR__ . '/Auth.php');
 require_once(__DIR__ . '/Page.php');
 require_once(__DIR__ . '/Validator.php');
 require_once(__DIR__ . '/Utils.php');
+require_once(__DIR__ . '/Model.php');
 require_once(__DIR__ . '/smarty/libs/Smarty.class.php');
 
 /**
@@ -20,14 +21,18 @@ require_once(__DIR__ . '/smarty/libs/Smarty.class.php');
 */
 class DoPhp {
 
-	/** This is the base for $_GET parameters and page classes */
+	/** This is the base for $_GET parameters and prefix for page classes */
 	const BASE_KEY = 'do';
 	/** This is the text domain used by the framework */
 	const TEXT_DOMAIN = 'dophp';
+	/** This is the prefix used for model classes */
+	const MODEL_PREFIX = 'm';
 
 	/** Stores the current instance */
 	private static $__instance = null;
 
+	/** The configuration array */
+	private $__conf = null;
 	/** The Database object instance */
 	private $__db = null;
 	/** The Authentication object instance */
@@ -42,8 +47,9 @@ class DoPhp {
 	* page to be loaded, then loads <inc_path>/<my_name>.<do>.php
 	*
 	* @param $conf array: Configuration associative array. Keys:
-	*                 'paths' => array( //Where files are located
+	*                 'paths' => array( //Where files are located, defaults to key name
 	*                     'inc'=> include files (page php files)
+	*                     'mod'=> model files
 	*                     'med'=> media files (images, music, ...) and static files
 	*                     'tpl'=> template files (for Smarty)
 	*                     'cac'=> cache folder (must be writable)
@@ -84,24 +90,25 @@ class DoPhp {
 			session_start();
 
 		// Build default config
-		if( ! array_key_exists('paths', $conf) )
-			$conf['paths'] = array();
-		foreach( array('inc','med','tpl','cac') as $k )
-			if( ! array_key_exists($k, $conf['paths'] ) )
-				$conf['paths'][$k] = $k;
+		$this->__conf = $conf;
+		if( ! array_key_exists('paths', $this->__conf) )
+			$this->__conf['paths'] = array();
+		foreach( array('inc','mod','med','tpl','cac') as $k )
+			if( ! array_key_exists($k, $this->__conf['paths'] ) )
+				$this->__conf['paths'][$k] = $k;
+		if( ! array_key_exists('lang', $this->__conf) )
+			$this->__conf['lang'] = array();
+		if( ! array_key_exists('supported', $this->__conf['lang']) )
+			$this->__conf['lang']['supported'] = array();
+		if( ! array_key_exists('coding', $this->__conf['lang']) )
+			$this->__conf['lang']['coding'] = null;
+		if( ! array_key_exists('texts', $this->__conf['lang']) )
+			$this->__conf['lang']['texts'] = array();
 
 		//Set the locale
-		if( ! array_key_exists('lang', $conf) )
-			$conf['lang'] = array();
-		if( ! array_key_exists('supported', $conf['lang']) )
-			$conf['lang']['supported'] = array();
-		if( ! array_key_exists('coding', $conf['lang']) )
-			$conf['lang']['coding'] = null;
-		if( ! array_key_exists('texts', $conf['lang']) )
-			$conf['lang']['texts'] = array();
 		bindtextdomain(self::TEXT_DOMAIN, __DIR__ . '/locale');
 		$def_domain = null;
-		foreach( $conf['lang']['texts'] as $n => $d ) {
+		foreach( $this->__conf['lang']['texts'] as $n => $d ) {
 			if( ! $def_domain )
 				$def_domain = $n;
 			bindtextdomain($n, $d);
@@ -109,22 +116,22 @@ class DoPhp {
 		if( ! $def_domain )
 			$def_domain = self::TEXT_DOMAIN;
 		textdomain($def_domain);
-		$this->__lang = new $lang($conf['lang']['supported'], $conf['lang']['coding']);
+		$this->__lang = new $lang($this->__conf['lang']['supported'], $this->__conf['lang']['coding']);
 
 		// Creates database connection, if needed
-		if( array_key_exists('db', $conf) )
-			$this->__db = new $db($conf['db']['dsn'], $conf['db']['user'], $conf['db']['pass']);
+		if( array_key_exists('db', $this->__conf) )
+			$this->__db = new $db($this->__conf['db']['dsn'], $this->__conf['db']['user'], $this->__conf['db']['pass']);
 
 		// Authenticates the user, if applicable
 		if( $auth ) {
-			$this->__auth = new $auth($conf, $this->__db, $sess);
+			$this->__auth = new $auth($this->__conf, $this->__db, $sess);
 			if( ! $this->__auth instanceof dophp\AuthInterface )
 				throw new Exception('Wrong auth interface');
 			$this->__auth->login();
 		}
 
 		// Calculates the name of the page to be loaded
-		$inc_file = dophp\Utils::pagePath($conf, $_REQUEST[$key]);
+		$inc_file = dophp\Utils::pagePath($this->__conf, $_REQUEST[$key]);
 
 		if(array_key_exists($key, $_REQUEST) && $_REQUEST[$key] && !strpos($_REQUEST[$key], '/') && file_exists($inc_file))
 			$page = $_REQUEST[$key];
@@ -143,16 +150,10 @@ class DoPhp {
 		// Init return var and execute page
 		try {
 			require $inc_file;
-			$classes = get_declared_classes();
-			$classname = null;
-			foreach( $classes as $c )
-				if( strtolower($c) == strtolower(self::className($page)) ) {
-					$classname = $c;
-					break;
-				}
+			$classname = dophp\Utils::findClass(self::className($page));
 			if( ! $classname )
 				throw new Exception('Page class not found');
-			$pobj = new $classname($conf, $this->__db, $this->__auth, $page );
+			$pobj = new $classname($this->__conf, $this->__db, $this->__auth, $page );
 			if( ! $pobj instanceof dophp\PageInterface )
 				throw new Exception('Wrong page type');
 			$out = $pobj->run();
@@ -238,6 +239,27 @@ class DoPhp {
 		if( ! self::$__instance->__lang )
 			throw new Exception('Language support is not available');
 		return self::$__instance->__lang;
+	}
+
+	/**
+	* Returns a model by name
+	*
+	* @param $name The case-sensitive model's name (without prefix)
+	* @return object: A model's instance
+	*/
+	public static function model($name) {
+		if( ! self::$__instance )
+			throw new Exception('Must instatiate DoPhp first');
+
+		require self::$__instance->__conf['paths']['mod'] . '/' . ucfirst($name) . '.php';
+		$classname = dophp\Utils::findClass(self::MODEL_PREFIX . $name);
+		if( ! $classname )
+			throw new Exception('Model class not found');
+		$mobj = new $classname(self::$__instance->__db);
+		if( ! $mobj instanceof dophp\Model )
+			throw new Exception('Wrong model type');
+
+		return $mobj;
 	}
 
 }
