@@ -100,8 +100,8 @@ class Lang {
 	* later
 	*/
 	public function dophpDomain() {
-		$this->__oldDomain = textdomain();
-		textdomain(DoPhp::TEXT_DOMAIN);
+		$this->__oldDomain = textdomain(null);
+		textdomain(\DoPhp::TEXT_DOMAIN);
 	}
 
 	/**

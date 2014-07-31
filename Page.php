@@ -159,7 +159,7 @@ abstract class JsonBaseMethod extends PageBase implements PageInterface {
 	);
 
 	/** JSON options */
-	protected $_jsonOpts = JSON_PRETTY_PRINT;
+	protected $_jsonOpts = array(JSON_PRETTY_PRINT);
 
 	/**
 	* Prepares the enviroment and passes excution to _build()
@@ -179,7 +179,9 @@ abstract class JsonBaseMethod extends PageBase implements PageInterface {
 		
 		$res = $this->_build($pars);
 		
-		$opt = $this->_jsonOpts;
+		$opt = 0;
+		foreach( $this->_jsonOpts as $o );
+			$opt |= $o;
 		if(PHP_VERSION_ID < 50303)
 			$opt ^= JSON_PRETTY_PRINT;
 		return json_encode($res, $opt);
