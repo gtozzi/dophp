@@ -337,7 +337,9 @@ class Table {
 	*                appropriate type
 	*/
 	public function cast($res) {
-		if( $res === null )
+		// PDOStatement::fetch returns false when no results are found,
+		// this is a bug in my opinion, so working around it
+		if( $res === null || $res === false )
 			return null;
 		$ret = array();
 		
