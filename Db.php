@@ -422,6 +422,15 @@ class Table {
 		return $ret;
 	}
 
+	/**
+	* Returns the table's primary key
+	*
+	* @return array: List of fields composing the primary key
+	*/
+	public function getPk() {
+		return $this->_pk;
+	}
+
 }
 
 /**

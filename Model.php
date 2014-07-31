@@ -133,4 +133,29 @@ abstract class Model {
 		return $ret;
 	}
 
+	/**
+	* Extracts the primary key from a row and formats it into a string
+	*
+	* @param $row array: Associative array, row (must include PK fields)
+	* @return string: The PK formatted as string
+	*/
+	public function formatPk( $row ) {
+		$pk = $this->_table->getPk();
+		
+		foreach( $pk as $k )
+			if( ! isset($row[$k]) )
+				throw new \Exception("PK Column $k is not part of row");
+		
+		if( count($pk) < 2 )
+			return (string)$row[$pk[0]];
+		
+		$ret = '[';
+		foreach( $pk as $k )
+			$ret .= $row[$k] . ',';
+		rtrim($ret, ',');
+		$ret .= ']';
+		
+		return $ret;
+	}
+
 }
