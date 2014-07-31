@@ -213,6 +213,7 @@ class Table {
 				`COLUMN_DEFAULT`,
 				`IS_NULLABLE`,
 				`DATA_TYPE`,
+				`COLUMN_TYPE`,
 				`CHARACTER_MAXIMUM_LENGTH`,
 				`NUMERIC_PRECISION`,
 				`NUMERIC_SCALE`,
@@ -269,7 +270,7 @@ class Table {
 			$q .= "`$k` = ?";
 			$p[] = $v;
 		}
-		return $this->_db->run($q,$p)->fetch();
+		return $this->cast($this->_db->run($q,$p)->fetch());
 	}
 
 	/**
@@ -285,6 +286,7 @@ class Table {
 	* @see dophp\Db::buildParams
 	* @see dophp\Db::buildLimit
 	* @return mixed The single fetched row or array(fetched rows, number of records found)
+	*         every element is converted to the right data type
 	*/
 	public function select($params=null, $cols=null, $limit=null) {
 		$q = "SELECT\n\t";
@@ -322,9 +324,129 @@ class Table {
 		
 		$st = $this->_db->run($q, $p);
 		if( $limit === true || $limit === 1 )
-			return $st->fetch();
+			return $this->cast($st->fetch());
 		else
-			return array($st->fetchAll(), $this->_db->foundRows());
+			return array($this->castMany($st->fetchAll()), $this->_db->foundRows());
 	}
 
+	/**
+	* Put every res element into the right type according to column definition
+	*
+	* @param $res array: Associative array representing a row
+	* @return array: Associative array, with values correctly casted into the
+	*                appropriate type
+	*/
+	public function cast($res) {
+		if( $res === null )
+			return null;
+		$ret = array();
+		
+		foreach( $res as $k => $v ) {
+			
+			$dtype = strtoupper($this->_cols[$k]['DATA_TYPE']);
+			$ctype = strtoupper($this->_cols[$k]['COLUMN_TYPE']);
+			
+			if( $v !== null )
+				switch($dtype) {
+				case 'SMALLINT':
+				case 'MEDIUMINT':
+				case 'INT':
+				case 'INTEGER':
+				case 'BIGINT':
+					$v = (int)$v;
+					break;
+				case 'BIT':
+				case 'TINYINT':
+				case 'BOOL':
+				case 'BOOLEAN':
+					if( $ctype == 'TINYINT(1)' )
+						$v = $v && $v != -1 ? true : false;
+					else
+						$v = (int)$v;
+					break;
+				case 'FLOAT':
+				case 'DOUBLE':
+					$v = (double)$v;
+					break;
+				case 'DECIMAL':
+				case 'DEC':
+					$v = new Decimal($v);
+					break;
+				case 'CHAR':
+				case 'VARCHAR':
+				case 'BINARY':
+				case 'VARBINARY':
+				case 'TINYBLOB':
+				case 'BLOB':
+				case 'MEDIUMBLOB':
+				case 'LONGBLOB':
+				case 'TINYTEXT':
+				case 'TEXT':
+				case 'MEDIUMTEXT':
+				case 'LONGTEXT':
+				case 'ENUM':
+					$v = (string)$v;
+					break;
+				case 'DATE':
+					$v = new Date($v);
+					break;
+				case 'DATETIME':
+				case 'TIMESTAMP':
+					$v = new \DateTime($v);
+					break;
+				case 'TIME':
+					$v = new Time($v);
+					break;
+				default:
+					throw new \Exception("Unsupported column type $dtype");
+				}
+
+			$ret[$k] = $v;
+		}
+
+		return $ret;
+	}
+
+	/**
+	* Similar to cast, but expects an array of rows instead of a single one.
+	* @see cast
+	* @param $res array: Rows data
+	* @return array: Casted rows data
+	*/
+	public function castMany($res) {
+		$ret = array();
+		foreach( $res as $i => $r )
+			$ret[$i] = $this->cast($r);
+		return $ret;
+	}
+
+}
+
+/**
+* Represents a Decimal, since PHP doesn't really support it
+*/
+class Decimal {
+	/** String value, to maintain precision */
+	private $__val;
+
+	/**
+	* Construct from string value
+	*
+	* @param $val string: The string decimal value
+	*/
+	public function __construct($val) {
+		$this->__val = $val;
+	}
+}
+
+/**
+* Represents a Date without time
+*/
+class Date extends \DateTime {
+}
+
+/**
+* Represents a time without a date
+*/
+class Time extends \DateTime {
 }

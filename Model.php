@@ -96,4 +96,41 @@ abstract class Model {
 		return $this->_table;
 	}
 
+	/**
+	* Formats a row into human-readable values
+	*
+	* @param $row array: Associative array, row to be formatted
+	* @return array: Associative array of string, the formatted values
+	*/
+	public function format( $row ) {
+		$ret = array();
+		foreach( $row as $k => $v ) {
+			
+			$type = gettype($v);
+			$lc = localeconv();
+
+			if( $type == 'NULL' )
+				$v = '-';
+			elseif( $type == 'string' )
+				$v;
+			elseif( $v instanceof Time )
+				$v = $v->format('H:i:s');
+			elseif( $v instanceof Date )
+				$v = $v->format('d.m.Y');
+			elseif( $v instanceof \DateTime )
+				$v = $v->format('d.m.Y');
+			elseif( $type == 'boolean' )
+				$v = $v ? _('Yes') : _('No');
+			elseif( $type == 'integer' )
+				$v = number_format($v, 0, $lc['decimal_point'], $lc['thousands_sep']);
+			elseif( $type == 'double' )
+				$v = number_format($v, -1, $lc['decimal_point'], $lc['thousands_sep']);
+			else
+				throw new \Exception("Unsupported type $type");
+			
+			$ret[$k] = $v;
+		}
+		return $ret;
+	}
+
 }
