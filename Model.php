@@ -23,11 +23,27 @@ abstract class Model {
 	*/
 	protected $_table = null;
 	/**
-	* Human-readable labels for columns, should be overriden in sub-class
-	* defining an associative array in the format [ <column> => <label> ]
-	* @see initLabels()
+	* Field description array, should be overriden in sub-class
+	* defining an associative array or arrays in the format [ <column_id> => [
+	*   'label'    => string: The label to display for this field
+	*   'descr'    => string: Long description
+	*   'rtype'    => string: The field renderring type:
+	*                         - <null> [or missing]: The field is not rendered at all
+	*                         - label: The field is rendered as a label
+	*                         - select: The field is rendered as a select box
+	*                         - check: The field is rendered as a checkbox
+	*                         - auto: The field is renderes as a suggest (autocomplete)
+	*                         - text: The field is rendered as a text box
+	*   'dtype'    => string: The data type, used for validation, see Validator::__construct
+	*                         If null or missing, the field is automatically set
+	*                         from database and omitted in insert/update queries
+	*   'dopts'    => array:  Data Validation options, see Validator::__construct
+	*                         If null or missing, defaults to an empty array
+	*   'refer'    => class:  Name of the referenced model, if applicable
+	* ]
+	* @see initFields()
 	*/
-	protected $_labels = null;
+	protected $_fields = null;
 	/**
 	* Hunam-readable names for table items, singular and plural forms
 	* (es. ['user', 'users']), should be overriden in sub-class
@@ -41,28 +57,38 @@ abstract class Model {
 	* @param $db object: Database instance
 	*/
 	public function __construct($db) {
-		if( $this->_labels === null )
-			$this->_labels = $this->initLabels();
+		if( $this->_fields === null )
+			$this->_fields = $this->initFields();
 		if( $this->_names === null )
 			$this->_names = $this->initNames();
 		$this->_table = new Table($db, $this->_table);
+		
+		// Clean the fields array
+		foreach( $this->_fields as $f => & $d ) {
+			if( ! isset($d['rtype']) )
+				$d['rtype'] = null;
+			if( ! isset($d['dtype']) )
+				$d['dtype'] = null;
+			if( ! isset($d['dopts']) )
+				$d['dopts'] = array();
+		}
 	}
 
 	/**
-	* Returns labels for this table, called when $this->_labels is not defined.
-	* This way of loading labels allows the usage of gettext.
+	* Returns fields for this table, called when $this->_fields is not defined.
+	* This way of loading fields allows the usage of gettext.
 	*
-	* @return array in $_labels valid format
-	* @see $_labels
+	* @return array in $_fields valid format
+	* @see $_fields
 	*/
-	protected function initLabels() {
+	protected function initFields() {
 		throw new Exception('Unimplemented');
 	}
 
 	/**
 	* Returns names for this table's items, called when $this->_names is not
 	* defined.
-	* This way of loading labels allows the usage of gettext.
+	* This way of loading names allows the usage of gettext.
 	*
 	* @return array in $_names valid format
 	* @see $_names
@@ -86,7 +112,48 @@ abstract class Model {
 	* @return array Associative array of column [ <name> => <label> ]
 	*/
 	public function getLabels() {
-		return $this->_labels;
+		$labels = array();
+		foreach( $this->_fields as $k => $f )
+			if( isset($f['label']) )
+				$labels[$k] = $f['label'];
+		return $labels;
+	}
+
+	/**
+	* Returns the data for rendering an edit form
+	*
+	* @param $pk mixed: The PK to select the record to be edited
+	* @return array Associative array of column [ <name> => <label> ]
+	*/
+	public function edit($pk) {
+		$record = $this->_table->get($pk);
+
+		$fields = array();
+		foreach( $this->_fields as $k => $f ) {
+			if( ! $f['rtype'] )
+				continue;
+
+			$fields[$k] = array(
+				'label' => $f['label'],
+				'type'  => $f['rtype'],
+				'descr' => $f['descr'],
+				'value' => $record[$k],
+				'data'  => null,
+			);
+
+			if( $f['rtype'] == 'select' || $f['rtype'] == 'auto' ) {
+				// Reads related data
+				if( ! isset($f['refer']) )
+					throw new \Exception('Missing referred model');
+				$ref = \DoPhp::model($f['refer']);
+				$fields[$k]['data'] = $ref->summary();
+			}
+
+			if( $f['rtype'] == 'password' ) // Do not show password
+				$fields[$k]['value'] = '';
+		}
+
+		return $fields;
 	}
 
 	/**
@@ -155,6 +222,39 @@ abstract class Model {
 		rtrim($ret, ',');
 		$ret .= ']';
 		
+		return $ret;
+	}
+
+	/**
+	* Validates form data
+	* @see dophp\Validator
+	*/
+	public function validate() {
+		$val = new Validator($_POST, $_FILES, $this->_rules);
+		return $val->validate();
+	}
+
+	/**
+	* Returns a short representation of model content, to be used in a select box
+	* By default, only selects first non-hidden field
+	*
+	* @return array: Associative array [ <pk> => <description> ]
+	*/
+	public function summary() {
+		$pks = $this->_table->getPk();
+		$cols = array(implode('-', $pks));
+		foreach( $this->_fields as $n => $f )
+			if( ! in_array($n,$cols) && $f['rtype'] ) {
+				$cols[] = $n;
+				break;
+			}
+		list($res, $cnt) = $this->_table->select(null, $cols);
+		$ret = array();
+		foreach( $res as $r )
+			if( count($cols) > 1 )
+				$ret[$r[$cols[0]]] = $r[$cols[1]];
+			else
+				$ret[$r[$cols[0]]] = $r[$cols[0]];
 		return $ret;
 	}
 
