@@ -120,14 +120,47 @@ abstract class Model {
 	}
 
 	/**
+	* Returns validation rules
+	*
+	* @return array Associative array [ <name> => [<type>, [<rules>]] ]
+	*/
+	public function getRules() {
+		$rules = array();
+		foreach( $this->_fields as $k => $f )
+			if( isset($f['dtype']) )
+				$rules[$k] = array($f['dtype'], $f['dopts']);
+		return $rules;
+	}
+
+	/**
 	* Returns the data for rendering an edit form
 	*
 	* @param $pk mixed: The PK to select the record to be edited
-	* @return array Associative array of column [ <name> => <label> ]
+	* @param $post array: Associative array of data, usually $_POST
+	* @param $post array: Associative array of file data, usually $_FILES
+	* @return array Associative array of column [ <name> => <label> ] or
+	*         null on success
 	*/
-	public function edit($pk) {
+	public function edit($pk, & $post, & $files) {
+
+		// Check if data has been submitted
+		$data = null;
+		$errors = null;
+		if( $post ) {
+			// Data has been submitted
+			list($data,$errors) = $this->validate($post, $files);
+
+			if( ! $errors ) {
+				// Data is good
+				$this->_table->update($pk, $data);
+				return null;
+			}
+		}
+
+		// Retrieve hard data from the DB
 		$record = $this->_table->get($pk);
 
+		// Build fields array
 		$fields = array();
 		foreach( $this->_fields as $k => $f ) {
 			if( ! $f['rtype'] )
@@ -137,7 +170,8 @@ abstract class Model {
 				'label' => $f['label'],
 				'type'  => $f['rtype'],
 				'descr' => $f['descr'],
-				'value' => $record[$k],
+				'value' => $data&&isset($data[$k]) ? $data[$k] : $record[$k],
+				'error' => $errors&&isset($errors[$k]) ? $errors[$k] : null,
 				'data'  => null,
 			);
 
@@ -229,8 +263,8 @@ abstract class Model {
 	* Validates form data
 	* @see dophp\Validator
 	*/
-	public function validate() {
-		$val = new Validator($_POST, $_FILES, $this->_rules);
+	public function validate(&$post, &$files) {
+		$val = new Validator($post, $files, $this->getRules());
 		return $val->validate();
 	}
 
