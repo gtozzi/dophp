@@ -238,38 +238,15 @@ class Table {
 	* @return The fetched row
 	*/
 	public function get($pk) {
-		// Check parameters
-		if( ! $this->_pk )
-			throw new \Exception('Table doesn\'t have a Primary Key');
-		if( ! is_array($pk) )
-			$pk = array($pk);
-		if( count($this->_pk) != count($pk) )
-			throw new \Exception('Number of columns in Primary Key doesn\'t match');
-
-		// Match arguments, replace numeric with associative array elements
-		foreach( $pk as $k => $v )
-			if( is_int($k) ) {
-				$pk[$this->_pk[$k]] = $v;
-				unset($pk[$k]);
-			} else
-				if( ! array_key_exists($k, $this->_pk) )
-					throw new \Exception("Unknown column name in PK: $k");
+		$pk = $this->_parsePkArgs($pk);
 		
-		// Build and run the query
+		list($w, $p) = $this->_db->buildParams($pk, ' AND ');
 		$q = "
 			SELECT *
 			FROM `{$this->_name}`
-			WHERE ";
-		$p = array();
-		$first = true;
-		foreach( $pk as $k => $v ) {
-			if( $first )
-				$first = false;
-			else
-				$q ."\n\tAND ";
-			$q .= "`$k` = ?";
-			$p[] = $v;
-		}
+			WHERE $w
+		";
+
 		return $this->cast($this->_db->run($q,$p)->fetch());
 	}
 
@@ -327,6 +304,29 @@ class Table {
 			return $this->cast($st->fetch());
 		else
 			return array($this->castMany($st->fetchAll()), $this->_db->foundRows());
+	}
+
+	/**
+	* Runs an update query for a single record
+	*
+	* @param $pk   mixed: The primary key, array if composite (associative or numeric)
+	* @param $data array: Associative array of <column>=><data> to update
+	* @return true on success
+	*/
+	public function update($pk, $data) {
+		$pk = $this->_parsePkArgs($pk);
+
+		list($s, $ps) = $this->_db->buildParams($data, ', ');
+		list($w, $pw) = $this->_db->buildParams($pk, ' AND ');
+		$q = "
+			UPDATE `{$this->_name}`
+			SET $s
+			WHERE $w
+		";
+		$p = array_merge($ps, $pw);
+
+		$this->_db->run($q, $p);
+		return true;
 	}
 
 	/**
@@ -429,6 +429,33 @@ class Table {
 	*/
 	public function getPk() {
 		return $this->_pk;
+	}
+
+	/**
+	* Gets a primary key argument and format them into associative array
+	*
+	* @param $pk mixed: The primary key, array if composite (associative or numeric)
+	* @return array: Associative array with PK arguments
+	*/
+	protected function _parsePkArgs($pk) {
+		// Check parameters
+		if( ! $this->_pk )
+			throw new \Exception('Table doesn\'t have a Primary Key');
+		if( ! is_array($pk) )
+			$pk = array($pk);
+		if( count($this->_pk) != count($pk) )
+			throw new \Exception('Number of columns in Primary Key doesn\'t match');
+
+		// Match arguments, replace numeric with associative array elements
+		foreach( $pk as $k => $v )
+			if( is_int($k) ) {
+				$pk[$this->_pk[$k]] = $v;
+				unset($pk[$k]);
+			} else
+				if( ! array_key_exists($k, $this->_pk) )
+					throw new \Exception("Unknown column name in PK: $k");
+
+		return $pk;
 	}
 
 }
