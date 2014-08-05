@@ -78,8 +78,8 @@ class Utils {
 	/**
 	* Returns the full URL of a page
 	*
-	* @param $page string: The page name
-	* @param $key string: The name of the page parameter
+	* @param $page string: The page name or relative url (if $do is null)
+	* @param $key string: The name of the page parameter. If null, do not append any
 	* @return string: The Full page URL
 	*/
 	public static function fullPageUrl($page, $key='do') {
@@ -95,7 +95,10 @@ class Utils {
 		$uri = $protocol . '://' . $host . $port . $s['REQUEST_URI'];
 		$segments = explode('?', $uri, 2);
 		$url = $segments[0];
-		return "$url?$key=$page";
+		if( $key === null )
+			return "$url$page";
+		else
+			return "$url?$key=$page";
 	}
 
 	/**
