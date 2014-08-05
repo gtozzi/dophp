@@ -135,15 +135,40 @@ abstract class Model {
 	}
 
 	/**
-	* Returns the data for rendering an edit form
+	* Returns the data for rendering an insert form and runs the insert query
+	* when data is submitted
 	*
-	* @param $pk mixed: The PK to select the record to be edited
+	* @see _insertOrEdit()
+	*/
+	public function insert(& $post, & $files) {
+		return $this->_insertOrEdit(null, $post, $files);
+	}
+
+	/**
+	* Returns the data for rendering an edit form and runs the update query
+	* when data is submitted
+	*
+	* @see _insertOrEdit()
+	*/
+	public function edit($pk, & $post, & $files) {
+		return $this->_insertOrEdit($pk, $post, $files);
+	}
+
+	/**
+	* Returns the data for rendering an insert or edit form and runs the
+	* insert or update query when data is submitted
+	*
+	* @param $pk mixed: The PK to select the record to be edited, null on insert
 	* @param $post array: Associative array of data, usually $_POST
 	* @param $post array: Associative array of file data, usually $_FILES
 	* @return array Associative array of column [ <name> => <label> ] or
 	*         null on success
 	*/
-	public function edit($pk, & $post, & $files) {
+	protected function _insertOrEdit($pk, & $post, & $files) {
+		if( $pk === null )
+			$mode = 'insert';
+		else
+			$mode = 'edit';
 
 		// Check if data has been submitted
 		$data = null;
@@ -156,7 +181,7 @@ abstract class Model {
 				foreach( $this->_fields as $k => $f ) {
 
 					// Do not update empty password fields
-					if( $f['rtype'] == 'password' && array_key_exists($k,$data) && ! $data[$k] )
+					if( $mode == 'edit' && $f['rtype'] == 'password' && array_key_exists($k,$data) && ! $data[$k] )
 						unset($data[$k]);
 
 					// Runs postprocessors
@@ -165,13 +190,20 @@ abstract class Model {
 				}
 
 				// Data is good, write the update
-				$this->_table->update($pk, $data);
+				if( $mode == 'edit' )
+					$this->_table->update($pk, $data);
+				elseif( $mode == 'insert' )
+					$this->_table->insert($data);
+				else
+					throw new \Exception('This should never happen');
+
 				return null;
 			}
 		}
 
 		// Retrieve hard data from the DB
-		$record = $this->_table->get($pk);
+		if( $mode == 'edit' )
+			$record = $this->_table->get($pk);
 
 		// Build fields array
 		$fields = array();
@@ -183,7 +215,7 @@ abstract class Model {
 				'label' => $f['label'],
 				'type'  => $f['rtype'],
 				'descr' => $f['descr'],
-				'value' => $data&&isset($data[$k]) ? $data[$k] : $record[$k],
+				'value' => $data&&isset($data[$k]) ? $data[$k] : (isset($record)?$record[$k]:null),
 				'error' => $errors&&isset($errors[$k]) ? $errors[$k] : null,
 				'data'  => null,
 			);
