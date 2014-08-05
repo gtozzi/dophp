@@ -40,6 +40,8 @@ abstract class Model {
 	*   'dopts'    => array:  Data Validation options, see Validator::__construct
 	*                         If null or missing, defaults to an empty array
 	*   'refer'    => class:  Name of the referenced model, if applicable
+	*   'postp'    => func:   Post-processor: parses the data before saving it,
+	*                         if applicable
 	* ]
 	* @see initFields()
 	*/
@@ -151,7 +153,18 @@ abstract class Model {
 			list($data,$errors) = $this->validate($post, $files);
 
 			if( ! $errors ) {
-				// Data is good
+				foreach( $this->_fields as $k => $f ) {
+
+					// Do not update empty password fields
+					if( $f['rtype'] == 'password' && array_key_exists($k,$data) && ! $data[$k] )
+						unset($data[$k]);
+
+					// Runs postprocessors
+					if( isset($f['postp']) && array_key_exists($k,$data) )
+						$data[$k] = $f['postp']($data[$k]);
+				}
+
+				// Data is good, write the update
 				$this->_table->update($pk, $data);
 				return null;
 			}
