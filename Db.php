@@ -59,7 +59,7 @@ class Db {
 	* @see __buildInsUpdQuery
 	*/
 	public function insert($table, $params) {
-		list($q,$p) = $this->__buildInsUpdQuery('ins', $table, $params);
+		list($q,$p) = $this->buildInsUpdQuery('ins', $table, $params);
 
 		$this->run($q, $p);
 		return $this->_pdo->lastInsertId();
@@ -73,7 +73,7 @@ class Db {
 	*/
 	public function update($table, $params, $where) {
 		list($s,$ps) = $this->buildInsUpdQuery('upd', $table, $params);
-		list($w,$pw) = $this->buildParams($where);
+		list($w,$pw) = $this->buildParams($where, ' AND ');
 
 		$q = "$s WHERE $w";
 		$p = array_merge($ps, $pw);
@@ -311,22 +311,18 @@ class Table {
 	*
 	* @param $pk   mixed: The primary key, array if composite (associative or numeric)
 	* @param $data array: Associative array of <column>=><data> to update
-	* @return true on success
 	*/
 	public function update($pk, $data) {
-		$pk = $this->_parsePkArgs($pk);
+		$this->_db->update($this->_name, $data, $this->_parsePkArgs($pk));
+	}
 
-		list($s, $ps) = $this->_db->buildParams($data, ', ');
-		list($w, $pw) = $this->_db->buildParams($pk, ' AND ');
-		$q = "
-			UPDATE `{$this->_name}`
-			SET $s
-			WHERE $w
-		";
-		$p = array_merge($ps, $pw);
-
-		$this->_db->run($q, $p);
-		return true;
+	/**
+	* Runs an insert query for a single record
+	*
+	* @param $data array: Associative array of <column>=><data> to insert
+	*/
+	public function insert($data) {
+		$this->_db->insert($this->_name, $data);
 	}
 
 	/**
