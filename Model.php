@@ -42,6 +42,8 @@ abstract class Model {
 	*   'refer'    => class:  Name of the referenced model, if applicable
 	*   'postp'    => func:   Post-processor: parses the data before saving it,
 	*                         if applicable
+	*   'i18n'     => bool:   If true, this field is "multiplied" for every
+	*                         supported language. Default: false
 	* ]
 	* @see initFields()
 	*/
@@ -73,6 +75,8 @@ abstract class Model {
 				$d['dtype'] = null;
 			if( ! isset($d['dopts']) )
 				$d['dopts'] = array();
+			if( ! isset($d['i18n']) )
+				$d['i18n'] = false;
 		}
 	}
 
@@ -129,8 +133,19 @@ abstract class Model {
 	public function getRules() {
 		$rules = array();
 		foreach( $this->_fields as $k => $f )
-			if( isset($f['dtype']) )
+			if( isset($f['dtype']) ) {
+
+				if( $f['i18n'] ) {
+					// Copy main rule to all childs
+					$sub = array();
+					foreach( \DoPhp::lang()->getSupportedLanguages() as $l )
+						$sub[$l] = array($f['dtype'], $f['dopts']);
+					$rules[$k] = array($sub, array());
+					continue;
+				}
+
 				$rules[$k] = array($f['dtype'], $f['dopts']);
+			}
 		return $rules;
 	}
 
@@ -199,6 +214,7 @@ abstract class Model {
 
 				return null;
 			}
+
 		}
 
 		// Retrieve hard data from the DB
@@ -211,28 +227,50 @@ abstract class Model {
 			if( ! $f['rtype'] )
 				continue;
 
-			$fields[$k] = array(
-				'label' => $f['label'],
-				'type'  => $f['rtype'],
-				'descr' => $f['descr'],
-				'value' => $data&&isset($data[$k]) ? $data[$k] : (isset($record)?$record[$k]:null),
-				'error' => $errors&&isset($errors[$k]) ? $errors[$k] : null,
-				'data'  => null,
-			);
-
-			if( $f['rtype'] == 'select' || $f['rtype'] == 'auto' ) {
-				// Reads related data
-				if( ! isset($f['refer']) )
-					throw new \Exception('Missing referred model');
-				$ref = \DoPhp::model($f['refer']);
-				$fields[$k]['data'] = $ref->summary();
+			if( $f['i18n'] ) {
+				// Explode l18n field
+				foreach( \DoPhp::lang()->getSupportedLanguages() as $l ) {
+					$fl = $f;
+					$fl['label'] .= ' (' . \Locale::getDisplayLanguage($l) . ')';
+					$val = $data&&isset($data[$k][$l]) ? $data[$k][$l] : null;
+					$err = $errors&&isset($errors[$k][$l]) ? $errors[$k][$l] : null;
+					$fields["{$k}[{$l}]"] = $this->__buildField($fl, $val, $err);
+				}
+			} else {
+				$val = $data&&isset($data[$k]) ? $data[$k] : (isset($record)?$record[$k]:null);
+				$err = $errors&&isset($errors[$k]) ? $errors[$k] : null;
+				$fields[$k] = $this->__buildField($f, $val, $err);
 			}
-
-			if( $f['rtype'] == 'password' ) // Do not show password
-				$fields[$k]['value'] = '';
 		}
 
 		return $fields;
+	}
+
+	/**
+	* Builds a single field, internal function
+	*/
+	private function __buildField($f, $val, $err) {
+		$field = array(
+			'label' => $f['label'],
+			'type'  => $f['rtype'],
+			'descr' => $f['descr'],
+			'value' => $val,
+			'error' => $err,
+			'data'  => null,
+		);
+
+		if( $f['rtype'] == 'select' || $f['rtype'] == 'auto' ) {
+			// Reads related data
+			if( ! isset($f['refer']) )
+				throw new \Exception('Missing referred model');
+			$ref = \DoPhp::model($f['refer']);
+			$field['data'] = $ref->summary();
+		}
+
+		if( $f['rtype'] == 'password' ) // Do not show password
+			$field['value'] = '';
+
+		return $field;
 	}
 
 	/**
