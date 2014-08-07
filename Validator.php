@@ -24,13 +24,15 @@ class Validator {
 	/**
 	* Main costructor
 	*
-	* @param array $_POST data, passed byRef
-	* @param array $_FILES data, passed byRef
-	* @param array The rules, associative array with format:
-	*              'field_name' => array('field_type', array('options'))
-	*              Special case: if field name is (int)0 and 'multiple' option
-	*              is true, that rule will be applied to any other numeric index
-	*              if $post
+	* @param $post array: $_POST data (usually), passed byRef
+	* @param $files array: $_FILES data (usually), passed byRef
+	* @param $rules The rules, associative array with format:
+	*               'field_name' => array('field_type', array('options'))
+	*               - If field_type is an associative array, handles it as a
+	*                 sub-validator: expects data to be an array too.
+	*               - If field_name is (int)0 and 'multiple' option is true,
+	*                 that rule will be applied to any other numerical index
+	*                 of $post
 	* @see <type>_validator
 	*/
 	public function __construct( &$post, &$files, $rules) {
@@ -39,8 +41,12 @@ class Validator {
 		\DoPhp::lang()->dophpDomain();
 
 		// Handle multiple validator: copy 0 validator over all numeric data
+		// Also checks for rule consistency
 		$multi = array();
 		foreach( $rules as $f => $r ) {
+			if( ! is_array($r) || array_keys($r) !== array(0,1) )
+				throw new \Exception("Unvalid rule format for $f:\n" . print_r($r,true));
+
 			if( $f===0 && array_key_exists('multiple',$r[1]) && $r[1]['multiple'] )
 				foreach($post as $k => $v)
 					if( is_int($k) && ! array_key_exists($k, $rules) )
@@ -64,13 +70,24 @@ class Validator {
 		$data = array();
 		$errors = array();
 		foreach( $this->__rules as $k => $v ) {
-			$vname = 'dophp\\' . $v[0] . '_validator';
-			if( substr($v[0],0,4) == 'file' )
-				$validator = new $vname($this->__files[$k], $v[1], $this->__files);
-			elseif( substr($v[0],0,5) == 'array' )
-				$validator = new $vname($this->__post[$k], $v[1], $this->__post);
+			list($type, $options) = $v;
+
+			if( is_array($type) ) {
+				// Sub-validator
+				$subpost = isset($this->__post[$k]) ? $this->__post[$k] : array();
+				$subfiles = isset($this->__files[$k]) ? $this->__files[$k] : array();
+				$subv = new Validator( $subpost, $subfiles, $type );
+				list($data[$k], $errors[$k]) = $subv->validate();
+				continue;
+			}
+
+			$vname = 'dophp\\' . $type . '_validator';
+			if( substr($type,0,4) == 'file' )
+				$validator = new $vname($this->__files[$k], $options, $this->__files);
+			elseif( substr($type,0,5) == 'array' )
+				$validator = new $vname($this->__post[$k], $options, $this->__post);
 			else
-				$validator = new $vname(trim($this->__post[$k]), $v[1], $this->__post);
+				$validator = new $vname(trim($this->__post[$k]), $options, $this->__post);
 			$data[$k] = $validator->clean();
 			if( $err = $validator->validate() )
 				$errors[$k] = $err;
