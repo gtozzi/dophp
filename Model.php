@@ -78,6 +78,7 @@ abstract class Model {
 			if( ! isset($d['i18n']) )
 				$d['i18n'] = false;
 		}
+		unset($d);
 	}
 
 	/**
@@ -207,9 +208,17 @@ abstract class Model {
 				// Data is good, write the update
 				if( $mode == 'edit' )
 					$this->_table->update($pk, $data);
-				elseif( $mode == 'insert' )
+				elseif( $mode == 'insert' ) {
+					foreach( $data as $k => & $v )
+						if( $this->_fields[$k]['i18n'] ) {
+							// Insert text into text table and replace l18n field
+							// with its text ID
+							$txtid = \DoPhp::lang()->newText($v);
+							$v = $txtid;
+						}
+					unset($v);
 					$this->_table->insert($data);
-				else
+				} else
 					throw new \Exception('This should never happen');
 
 				return null;

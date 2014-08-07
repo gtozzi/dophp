@@ -59,19 +59,26 @@ class DoPhp {
 	*                     'usr'=> Database username
 	*                     'pwd'=> Database password
 	*                 )
-	*                 'lang' => array(
+	*                 'lang' => array( //see Lang class description
 	*                     'supported' => array() List of supported languages,
 	*                                    in the form 'en' or 'en_US'. First one is
-	*                                    assumed as default one.
+	*                                    assumed as default one. If tables is specified,
+	*                                    overrides this setting
 	*                     'coding' => Character coding to use for all languages.
 	*                     'texts' => associative array (name => directory) containing
 	*                                the list of text domains to bind. 'dophp' is
 	*                                used for framework strings. First one is
 	*                                initially set as default.
+	*                     'tables' => associative array containing the list of
+	*                                 database table to use:
+	*                                 - lang: the table containing the list of supported
+	*                                         languages
+	*                                 - idx: the table containing the text indexes
+	*                                 - txt: the table containing the texts itself
 	*                 )
 	* @param $db     string: Name of the class to use for the database connection
 	* @param $auth   string: Name of the class to use for user authentication
-	* @param $lang   string: Name of the class to use for mumtilanguage handling
+	* @param $lang   string: Name of the class to use for multilanguage handling
 	* @param $sess   boolean: If true, starts the session and uses it
 	* @param $def    string: Default page name, used when received missing or unvalid page
 	* @param $key    string: the key containing the page name
@@ -104,6 +111,8 @@ class DoPhp {
 			$this->__conf['lang']['coding'] = null;
 		if( ! array_key_exists('texts', $this->__conf['lang']) )
 			$this->__conf['lang']['texts'] = array();
+		if( ! array_key_exists('tables', $this->__conf['lang']) )
+			$this->__conf['lang']['tables'] = array();
 
 		//Set the locale
 		bindtextdomain(self::TEXT_DOMAIN, __DIR__ . '/locale');
@@ -116,11 +125,13 @@ class DoPhp {
 		if( ! $def_domain )
 			$def_domain = self::TEXT_DOMAIN;
 		textdomain($def_domain);
-		$this->__lang = new $lang($this->__conf['lang']['supported'], $this->__conf['lang']['coding']);
 
 		// Creates database connection, if needed
 		if( array_key_exists('db', $this->__conf) )
 			$this->__db = new $db($this->__conf['db']['dsn'], $this->__conf['db']['user'], $this->__conf['db']['pass']);
+
+		// Creates the locale object
+		$this->__lang = new $lang($this->__db, $this->__conf['lang']['supported'], $this->__conf['lang']['coding'], $this->__conf['lang']['tables']);
 
 		// Authenticates the user, if applicable
 		if( $auth ) {
