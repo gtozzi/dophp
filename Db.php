@@ -320,9 +320,10 @@ class Table {
 	* Runs an insert query for a single record
 	*
 	* @param $data array: Associative array of <column>=><data> to insert
+	* @return int: Last Insert ID
 	*/
 	public function insert($data) {
-		$this->_db->insert($this->_name, $data);
+		return $this->_db->insert($this->_name, $data);
 	}
 
 	/**
@@ -425,6 +426,15 @@ class Table {
 	*/
 	public function getPk() {
 		return $this->_pk;
+	}
+
+	/**
+	* Returns the list of table's columns
+	*
+	* @return array: List of columns
+	*/
+	public function getCols() {
+		return array_keys($this->_cols);
 	}
 
 	/**
