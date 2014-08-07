@@ -77,7 +77,11 @@ class Validator {
 				$subpost = isset($this->__post[$k]) ? $this->__post[$k] : array();
 				$subfiles = isset($this->__files[$k]) ? $this->__files[$k] : array();
 				$subv = new Validator( $subpost, $subfiles, $type );
-				list($data[$k], $errors[$k]) = $subv->validate();
+				list($d, $e) = $subv->validate();
+				if( $d )
+					$data[$k] = $d;
+				if( $e )
+					$errors[$k] = $e;
 				continue;
 			}
 
