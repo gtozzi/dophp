@@ -235,14 +235,17 @@ class Table {
 	* Gets a record by PK
 	*
 	* @param $pk mixed The primary key, array if composite (associative or numeric)
+	* @param $cols array Names of the columns. null to select all. true to
+	*                    select only PKs.
 	* @return The fetched row
 	*/
-	public function get($pk) {
+	public function get($pk, $cols=null) {
 		$pk = $this->_parsePkArgs($pk);
 		
 		list($w, $p) = $this->_db->buildParams($pk, ' AND ');
 		$q = "
-			SELECT *
+			SELECT
+		" . $this->_buildColumList($cols) . "
 			FROM `{$this->_name}`
 			WHERE $w
 		";
@@ -267,23 +270,8 @@ class Table {
 	*/
 	public function select($params=null, $cols=null, $limit=null) {
 		$q = "SELECT\n\t";
-		if( ! $cols )
-			$q .= "\t*";
-		else {
-			if( $cols === true )
-				$cols = $this->_pk;
-			$first = true;
-			foreach( $cols as $c ) {
-				if( ! array_key_exists($c, $this->_cols) )
-					throw new \Exception("Unknown column name: $c");
-				if( $first )
-					$first = false;
-				else
-					$q .= ",\n\t";
-				$q .= "`$c`";
-			}
-		}
-		$q .= "\n";
+
+		$q .= $this->_buildColumList($cols);
 
 		$q .= "FROM `{$this->_name}`\n";
 
@@ -462,6 +450,35 @@ class Table {
 					throw new \Exception("Unknown column name in PK: $k");
 
 		return $pk;
+	}
+
+	/**
+	* Builds a column list for a select query
+	*
+	* @param $cols array List of columns to select. Null to select all. True to
+	*                    select only PK columns
+	*/
+	protected function _buildColumList($cols) {
+		if( ! $cols )
+			return "\t*";
+		
+		if( $cols === true )
+			$cols = $this->_pk;
+
+		$cl = '';
+		$first = true;
+		foreach( $cols as $c ) {
+			if( ! array_key_exists($c, $this->_cols) )
+				throw new \Exception("Unknown column name: $c");
+			if( $first )
+				$first = false;
+			else
+				$cl .= ",\n\t";
+			$cl .= "`$c`";
+		}
+		$cl .= "\n";
+
+		return $cl;
 	}
 
 }
