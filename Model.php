@@ -259,7 +259,7 @@ abstract class Model {
 	* Returns the data for rendering a display page
 	*
 	* @param $pk mixed: The PK to select the record to be read
-	* @return Array of of label => value pairs
+	* @return Array of label => value pairs
 	*/
 	public function read($pk) {
 		if( ! $pk )
@@ -277,6 +277,37 @@ abstract class Model {
 				$data[$this->_fields[$k]['label']] = $v;
 
 		return $data;
+	}
+
+	/**
+	* Returns the data for rendering a summary table
+	*
+	* @todo Will supporto filtering, ordering, etc...
+	* @return Array of <data>: associative array of data as <pk> => <item>
+	*                  <count>: total number of records found
+	*                  <heads>: column headers
+	*/
+	public function table() {
+		list($items, $count) = $this->_table->select();
+
+		$lang = \DoPhp::lang();
+		$data = array();
+		foreach( $items as $i ) {
+			$for = $this->format($i);
+			foreach( $for as $k => & $v )
+				if( $this->_fields[$k]['i18n'] ) {
+					$ll = $lang->getTextLangs($v);
+					foreach( $ll as & $l )
+						$l = $lang->getCountryCode($l);
+					unset($l);
+					$v = $lang->getText($v, $lang->getDefaultLanguage()) . ' (' . implode(',',$ll) . ')';
+				}
+			unset($v);
+
+			$data[$this->formatPk($i)] = $for;
+		}
+
+		return array($data, $count, $this->getLabels());
 	}
 
 	/**
