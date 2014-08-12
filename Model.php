@@ -240,7 +240,7 @@ abstract class Model {
 				// Explode l18n field
 				foreach( \DoPhp::lang()->getSupportedLanguages() as $l ) {
 					$fl = $f;
-					$fl['label'] .= ' (' . \Locale::getDisplayLanguage($l) . ')';
+					$fl['label'] .= $this->__buildLangLabel($fl['label'], $l);
 					$val = $data&&isset($data[$k][$l]) ? $data[$k][$l] : null;
 					$err = $errors&&isset($errors[$k][$l]) ? $errors[$k][$l] : null;
 					$fields["{$k}[{$l}]"] = $this->__buildField($fl, $val, $err);
@@ -253,6 +253,37 @@ abstract class Model {
 		}
 
 		return $fields;
+	}
+
+	/**
+	* Returns the data for rendering a display page
+	*
+	* @param $pk mixed: The PK to select the record to be read
+	* @return Array of of label => value pairs
+	*/
+	public function read($pk) {
+		if( ! $pk )
+			throw new \Exception('Unvalid or missing pk');
+		$res = $this->format($this->_table->get($pk));
+
+		$data = array();
+		foreach( $res as $k => $v )
+			if( $this->_fields[$k]['i18n'] )
+				foreach( \DoPhp::lang()->getSupportedLanguages() as $l ) {
+					$label = $this->__buildLangLabel($this->_fields[$k]['label'], $l);
+					$data[$label] = \DoPhp::lang()->getText($v, $l);
+				}
+			else
+				$data[$this->_fields[$k]['label']] = $v;
+
+		return $data;
+	}
+
+	/**
+	* Builds a localized label
+	*/
+	private function __buildLangLabel($label, $lang) {
+		return $label . ' (' . \Locale::getDisplayLanguage($lang) . ')';
 	}
 
 	/**
