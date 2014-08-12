@@ -279,7 +279,7 @@ abstract class Model {
 			if( $this->_fields[$k]['i18n'] )
 				foreach( \DoPhp::lang()->getSupportedLanguages() as $l ) {
 					$label = $this->__buildLangLabel($this->_fields[$k]['label'], $l);
-					$data[$label] = \DoPhp::lang()->getText($v, $l);
+					$data[$label] = $this->__reprLangLabel($v);
 				}
 			else
 				$data[$this->_fields[$k]['label']] = $v;
@@ -298,18 +298,12 @@ abstract class Model {
 	public function table() {
 		list($items, $count) = $this->_table->select();
 
-		$lang = \DoPhp::lang();
 		$data = array();
 		foreach( $items as $i ) {
 			$for = $this->format($i);
 			foreach( $for as $k => & $v )
-				if( $this->_fields[$k]['i18n'] ) {
-					$ll = $lang->getTextLangs($v);
-					foreach( $ll as & $l )
-						$l = $lang->getCountryCode($l);
-					unset($l);
-					$v = $lang->getText($v, $lang->getDefaultLanguage()) . ' (' . implode(',',$ll) . ')';
-				}
+				if( $this->_fields[$k]['i18n'] )
+					$v = $this->__reprLangLabel($v);
 			unset($v);
 
 			$data[$this->formatPk($i)] = $for;
@@ -323,6 +317,18 @@ abstract class Model {
 	*/
 	private function __buildLangLabel($label, $lang) {
 		return $label . ' (' . \Locale::getDisplayLanguage($lang) . ')';
+	}
+
+	/**
+	* Short representation of localize label
+	*/
+	private function __reprLangLabel($id) {
+		$lang = \DoPhp::lang();
+		$ll = $lang->getTextLangs($id);
+		foreach( $ll as & $l )
+			$l = $lang->getCountryCode($l);
+		unset($l);
+		return $lang->getText($id, $lang->getDefaultLanguage()) . ' (' . implode(',',$ll) . ')';
 	}
 
 	/**
@@ -446,11 +452,14 @@ abstract class Model {
 			}
 		list($res, $cnt) = $this->_table->select(null, $cols);
 		$ret = array();
-		foreach( $res as $r )
-			if( count($cols) > 1 )
-				$ret[$r[$cols[0]]] = $r[$cols[1]];
+		foreach( $res as $r ) {
+			$valk = end($cols);
+			if( $this->_fields[$valk]['i18n'] )
+				$v = $this->__reprLangLabel($r[$valk]);
 			else
-				$ret[$r[$cols[0]]] = $r[$cols[0]];
+				$v = $r[$valk];
+			$ret[$valk] = $v;
+		}
 		return $ret;
 	}
 
