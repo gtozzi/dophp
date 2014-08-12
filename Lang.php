@@ -241,6 +241,21 @@ class Lang {
 	}
 
 	/**
+	* Updates an existing text
+	*
+	* @param $id int: The text ID
+	* @param $text array: Associative array of localized texts, in the form
+	*                     <language> => <text>
+	*/
+	public function updText($id, $text) {
+		foreach( $text as $lang => $txt ) {
+			$pk = array_combine($this->_txtTable->getPk(), array($id,$lang));
+			$par = array( self::TEXT_COL => $txt );
+			$this->_txtTable->update($pk, $par);
+		}
+	}
+
+	/**
 	* Retirieves a text from the database
 	*
 	* @param $id int: The text ID

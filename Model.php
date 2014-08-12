@@ -206,9 +206,17 @@ abstract class Model {
 				}
 
 				// Data is good, write the update
-				if( $mode == 'edit' )
-					$this->_table->update($pk, $data);
-				elseif( $mode == 'insert' ) {
+				if( $mode == 'edit' ) {
+					foreach( $data as $k => $v )
+						if( $this->_fields[$k]['i18n'] ) {
+							// Leave text ID untouched and update text instead
+							$txtid = $this->_table->get($pk, [$k])[$k];
+							\DoPhp::lang()->updText($txtid, $v);
+							unset($data[$k]);
+						}
+					if( count($data) )
+						$this->_table->update($pk, $data);
+				} elseif( $mode == 'insert' ) {
 					foreach( $data as $k => & $v )
 						if( $this->_fields[$k]['i18n'] ) {
 							// Insert text into text table and replace l18n field
@@ -240,8 +248,8 @@ abstract class Model {
 				// Explode l18n field
 				foreach( \DoPhp::lang()->getSupportedLanguages() as $l ) {
 					$fl = $f;
-					$fl['label'] .= $this->__buildLangLabel($fl['label'], $l);
-					$val = $data&&isset($data[$k][$l]) ? $data[$k][$l] : null;
+					$fl['label'] = $this->__buildLangLabel($fl['label'], $l);
+					$val = $data&&isset($data[$k][$l]) ? $data[$k][$l] : (isset($record)?\DoPhp::lang()->getText($record[$k],$l):null);
 					$err = $errors&&isset($errors[$k][$l]) ? $errors[$k][$l] : null;
 					$fields["{$k}[{$l}]"] = $this->__buildField($fl, $val, $err);
 				}
