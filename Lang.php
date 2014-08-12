@@ -45,6 +45,9 @@ namespace dophp;
 */
 class Lang {
 
+	/** The name of the column containing texts */
+	const TEXT_COL = 'text';
+
 	/** Database instance */
 	protected $_db;
 	/** List of supported languages */
@@ -102,8 +105,8 @@ class Lang {
 				throw new \Exception('Index table must have a single PK');
 			if( count($this->_txtTable->getPk()) != 2 )
 				throw new \Exception('Index table must have a composed PK');
-			if( ! in_array('text', $this->_txtTable->getCols()) )
-				throw new \Exception('Text table must have a `text` column');
+			if( ! in_array(self::TEXT_COL, $this->_txtTable->getCols()) )
+				throw new \Exception('Text table must have a '.self::TEXT_COL.' column');
 		}
 
 		// Sets the initial locale
@@ -210,11 +213,23 @@ class Lang {
 		
 		foreach( $text as $lang => $txt ) {
 			$par = array_combine($this->_txtTable->getPk(), array($id,$lang));
-			$par['text'] = $txt;
+			$par[self::TEXT_COL] = $txt;
 			$this->_txtTable->insert($par);
 		}
 
 		return $id;
+	}
+
+	/**
+	* Retirieves a text from the database
+	*
+	* @param $id int: The text ID
+	* @param $lang string: The language code
+	* @return string: The retrieved text
+	*/
+	public function getText($id, $lang) {
+		$ret = $this->_txtTable->get(array($id, $lang), array(self::TEXT_COL));
+		return $ret[self::TEXT_COL];
 	}
 
 }
