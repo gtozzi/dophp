@@ -152,10 +152,19 @@ class Lang {
 	/**
 	* Returns the list of supported languages
 	*
-	* @return array List of supported language codes
+	* @return array: List of supported language codes
 	*/
 	public function getSupportedLanguages() {
 		return $this->_supported;
+	}
+
+	/**
+	* Returns the name of the default language
+	*
+	* @return string: The name of the default language
+	*/
+	public function getDefaultLanguage() {
+		return $this->_supported[0];
 	}
 
 	/**
@@ -167,6 +176,17 @@ class Lang {
 	public function getLocaleName($lang) {
 		if( $this->_coding )
 			return $lang .= '.' . $this->_coding;
+	}
+
+	/**
+	* Given a language name, returns only the country code
+	*
+	* @param $lang string: The language name
+	* @return string: The 2-letter country code
+	*/
+	public function getCountryCode($lang) {
+		$e = explode('_', $lang);
+		return $e[0];
 	}
 
 	/**
@@ -230,6 +250,23 @@ class Lang {
 	public function getText($id, $lang) {
 		$ret = $this->_txtTable->get(array($id, $lang), array(self::TEXT_COL));
 		return $ret[self::TEXT_COL];
+	}
+
+	/**
+	* Returns the list of available languages for a given text
+	*
+	* @param $id int: The text ID
+	* @return array: The list of languages specified for this text
+	*/
+	public function getTextLangs($id) {
+		$pk = $this->_txtTable->getPk();
+		list($ret, $cnt) = $this->_txtTable->select(array($pk[0] => $id), array($pk[1]));
+
+		$texts = array();
+		foreach( $ret as $r )
+			$texts[] = $r[$pk[1]];
+
+		return $texts;
 	}
 
 }
