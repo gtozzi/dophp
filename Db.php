@@ -446,7 +446,7 @@ class Table {
 				$pk[$this->_pk[$k]] = $v;
 				unset($pk[$k]);
 			} else
-				if( ! array_key_exists($k, $this->_pk) )
+				if( ! in_array($k, $this->_pk) )
 					throw new \Exception("Unknown column name in PK: $k");
 
 		return $pk;
