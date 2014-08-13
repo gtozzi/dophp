@@ -10,6 +10,7 @@
 require_once(__DIR__ . '/Lang.php');
 require_once(__DIR__ . '/Db.php');
 require_once(__DIR__ . '/Auth.php');
+require_once(__DIR__ . '/Menu.php');
 require_once(__DIR__ . '/Page.php');
 require_once(__DIR__ . '/Validator.php');
 require_once(__DIR__ . '/Utils.php');
