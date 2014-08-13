@@ -214,6 +214,17 @@ class DoPhp {
 	}
 
 	/**
+	* Returns Configuration array
+	*
+	* @return array: Configuration array
+	*/
+	public static function conf() {
+		if( ! self::$__instance )
+			throw new Exception('Must instatiate DoPhp first');
+		return self::$__instance->__conf;
+	}
+
+	/**
 	* Returns Database class instance, if available
 	*
 	* @return object: A dophp\Db instance
