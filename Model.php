@@ -196,13 +196,17 @@ abstract class Model {
 			if( ! $errors ) {
 				foreach( $this->_fields as $k => $f ) {
 
-					// Do not update empty password fields
-					if( $mode == 'edit' && $f['rtype'] == 'password' && array_key_exists($k,$data) && ! $data[$k] )
+					// Do not update empty password and file fields
+					if( $mode == 'edit' && in_array($f['rtype'],array('password','file')) && array_key_exists($k,$data) && ! $data[$k] )
 						unset($data[$k]);
 
 					// Runs postprocessors
 					if( isset($f['postp']) && array_key_exists($k,$data) )
 						$data[$k] = $f['postp']($data[$k]);
+
+					// Save files
+					if( $f['rtype'] == 'file' )
+						$data[$k] = $this->_saveFile($name, $data[$k]);
 				}
 
 				// Data is good, write the update
@@ -444,23 +448,42 @@ abstract class Model {
 	*/
 	public function summary() {
 		$pks = $this->_table->getPk();
-		$cols = array(implode('-', $pks));
+
+		// Decide which field to use as name
+		$displayCol = null;
 		foreach( $this->_fields as $n => $f )
-			if( ! in_array($n,$cols) && $f['rtype'] ) {
-				$cols[] = $n;
+			if( ! in_array($n,$pks) && $f['rtype'] ) {
+				$displayCol = $n;
 				break;
 			}
+		if( ! $displayCol )
+			throw new \Exception('Couldn\'t find a display column');
+
+		// Retrieve and format data
+		$cols = $pks;
+		$cols[] = $displayCol;
 		list($res, $cnt) = $this->_table->select(null, $cols);
 		$ret = array();
 		foreach( $res as $r ) {
-			$valk = end($cols);
-			if( $this->_fields[$valk]['i18n'] )
-				$v = $this->__reprLangLabel($r[$valk]);
+			if( $this->_fields[$displayCol]['i18n'] )
+				$v = $this->__reprLangLabel($r[$displayCol]);
 			else
-				$v = $r[$valk];
-			$ret[$valk] = $v;
+				$v = $r[$displayCol];
+			$ret[$this->formatPk($r)] = $v;
 		}
+
 		return $ret;
+	}
+
+	/**
+	* Saves a file, should override
+	*
+	* @param $name string: the field name
+	* @param $data array: File data as returned in $_FILES (<name>, <type>, <tmp_name>, <error>, <size>)
+	* @return Mixed: the value to store in the database
+	*/
+	protected function _saveFile($name, $data) {
+		throw new \Exception('Not implcmented');
 	}
 
 }
