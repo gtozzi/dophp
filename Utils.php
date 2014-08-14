@@ -40,6 +40,19 @@ class Utils {
 	}
 
 	/**
+	* Parses an url using parse_url + parse_str
+	*/
+	public static function parseUrl($url) {
+		$parsed = parse_url($url);
+		if( isset($parsed['query']) ) {
+			$arr = array();
+			parse_str($parsed['query'], $arr);
+			$parsed['query'] = $arr;
+		}
+		return $parsed;
+	}
+
+	/**
 	* Returns a vormatted version of a time
 	*
 	* @param $str string: Time string in the format hh:mm:ss

@@ -17,6 +17,8 @@ class Menu extends MenuItem {
 	/**
 	* Constructs a menu from array
 	*
+	* @param $label string: The menu user-friendly label, null for separator
+	* @param $url string: The url, if clickable
 	* @param $items array: List of menu items, every item must be null to specify
 	*                      a separator or an associative array. The following
 	*                      keys are recognized:
@@ -25,9 +27,8 @@ class Menu extends MenuItem {
 	*                      <childs>: Array containing the childs for this menu,
 	*                                defined as above
 	*/
-	public function __construct($items=null) {
-		$this->_label = null;
-		$this->_url = null;
+	public function __construct($label=null, $url=null, $items=null) {
+		parent::__construct($label, $url);
 
 		if( $items )
 			foreach( $items as $i )
@@ -95,6 +96,40 @@ class MenuItem {
 
 	public function getChilds() {
 		return $this->_childs;
+	}
+
+	/**
+	* Returns an array containing the current active path.
+	*
+	* @return array Array of MenuItem instances. Null on failure
+	*/
+	public function getBreadcrumb() {
+		// First, check for first active child. If found, consider myself active too.
+		$cbc = null;
+		foreach( $this->_childs as $c )
+			if( $cbc = $c->getBreadcrumb() )
+				break;
+		if( $cbc )
+			return array_merge(array($this), $cbc);
+
+		// Then check if my url matches query url
+		if( $this->_url ) {
+			$reqUrl = Utils::parseUrl($_SERVER['REQUEST_URI']);
+			$myUrl = Utils::parseUrl($this->_url);
+			if(
+				( ! isset($myUrl['path']) || $myUrl['path'] == $reqUrl['path'] )
+				&&
+				(
+					( ! isset($myUrl['query']) && ! isset($reqUrl['query']) )
+					||
+					( isset($myUrl['query']) && isset($reqUrl['query']) && ! array_diff($myUrl['query'], $reqUrl['query']) )
+				)
+			)
+				return array($this);
+		}
+
+		// No luck
+		return null;
 	}
 
 }
