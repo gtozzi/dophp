@@ -26,14 +26,12 @@ class Menu extends MenuItem {
 	*                                defined as above
 	*/
 	public function __construct($items=null) {
-		if( ! $items ) {
-			$this->_label = null;
-			$this->_url = null;
-			return;
-		}
+		$this->_label = null;
+		$this->_url = null;
 
-		foreach( $items as $i )
-			$this->append($this->__parseItem($i));
+		if( $items )
+			foreach( $items as $i )
+				$this->append($this->__parseItem($i));
 	}
 
 	private function __parseItem($item) {
@@ -61,11 +59,11 @@ class Menu extends MenuItem {
 class MenuItem {
 
 	/** User-friendly label */
-	private $_label;
+	protected $_label;
 	/** Destination url */
-	private $_url;
+	protected $_url;
 	/** List of childs */
-	private $_childs = array();
+	protected $_childs = array();
 
 	/**
 	* Creates a new menu item
@@ -92,7 +90,7 @@ class MenuItem {
 	}
 
 	public function getUrl() {
-		return $this-_url;
+		return $this->_url;
 	}
 
 	public function getChilds() {
