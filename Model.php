@@ -40,6 +40,8 @@ abstract class Model {
 	*   'dopts'    => array:  Data Validation options, see Validator::__construct
 	*                         If null or missing, defaults to an empty array
 	*   'refer'    => class:  Name of the referenced model, if applicable
+	*   'rdata'    => array:  Associative array of data for a select box, if
+	*                         applicable. Overrides refer.
 	*   'postp'    => func:   Post-processor: parses the data before saving it,
 	*                         if applicable
 	*   'i18n'     => bool:   If true, this field is "multiplied" for every
@@ -349,11 +351,17 @@ abstract class Model {
 		);
 
 		if( $f['rtype'] == 'select' || $f['rtype'] == 'auto' ) {
-			// Reads related data
-			if( ! isset($f['refer']) )
-				throw new \Exception('Missing referred model');
-			$ref = \DoPhp::model($f['refer']);
-			$field['data'] = $ref->summary();
+			if( array_key_exists('rdata',$f) ) {
+				if( ! is_array($f['rdata']) )
+					throw new \Exception('Unvalid rdata');
+				$field['data'] = $f['rdata'];
+			} else {
+				// Reads related data
+				if( ! isset($f['refer']) )
+					throw new \Exception('Missing referred model');
+				$ref = \DoPhp::model($f['refer']);
+				$field['data'] = $ref->summary();
+			}
 		}
 
 		if( $f['rtype'] == 'password' ) // Do not show password
