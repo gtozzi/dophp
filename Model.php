@@ -465,7 +465,7 @@ abstract class Model {
 				break;
 			}
 		if( ! $displayCol )
-			throw new \Exception('Couldn\'t find a display column');
+			$displayCol = $pks[0];
 
 		// Retrieve and format data
 		$cols = $pks;
