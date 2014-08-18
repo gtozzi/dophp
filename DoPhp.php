@@ -274,7 +274,7 @@ class DoPhp {
 		if( ! self::$__instance )
 			throw new Exception('Must instatiate DoPhp first');
 
-		require self::$__instance->__conf['paths']['mod'] . '/' . ucfirst($name) . '.php';
+		require_once self::$__instance->__conf['paths']['mod'] . '/' . ucfirst($name) . '.php';
 		$classname = dophp\Utils::findClass(self::MODEL_PREFIX . $name);
 		if( ! $classname )
 			throw new Exception('Model class not found');
