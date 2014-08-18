@@ -240,7 +240,7 @@ class Table {
 	* @return The fetched row
 	*/
 	public function get($pk, $cols=null) {
-		$pk = $this->_parsePkArgs($pk);
+		$pk = $this->parsePkArgs($pk);
 		
 		list($w, $p) = $this->_db->buildParams($pk, ' AND ');
 		$q = "
@@ -301,7 +301,7 @@ class Table {
 	* @param $data array: Associative array of <column>=><data> to update
 	*/
 	public function update($pk, $data) {
-		$this->_db->update($this->_name, $data, $this->_parsePkArgs($pk));
+		$this->_db->update($this->_name, $data, $this->parsePkArgs($pk));
 	}
 
 	/**
@@ -431,7 +431,7 @@ class Table {
 	* @param $pk mixed: The primary key, array if composite (associative or numeric)
 	* @return array: Associative array with PK arguments
 	*/
-	protected function _parsePkArgs($pk) {
+	public function parsePkArgs($pk) {
 		// Check parameters
 		if( ! $this->_pk )
 			throw new \Exception('Table doesn\'t have a Primary Key');
