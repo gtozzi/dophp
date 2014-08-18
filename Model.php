@@ -71,7 +71,7 @@ abstract class Model {
 			$this->_names = $this->initNames();
 		$this->_table = new Table($db, $this->_table);
 		
-		// Clean the fields array
+		// Clean and validate the fields array
 		foreach( $this->_fields as $f => & $d ) {
 			if( ! isset($d['rtype']) )
 				$d['rtype'] = null;
@@ -83,6 +83,11 @@ abstract class Model {
 				$d['i18n'] = false;
 			if( ! isset($d['rtab']) )
 				$d['rtab'] = true;
+
+			if( ($d['rtype']=='select' || $d['rtype']=='auto') && ! (isset($d['refer']) || array_key_exists('rdata',$d)) )
+					throw new \Exception('Missing referred model or data');
+			if( array_key_exists('rdata',$d) && ! is_array($d['rdata']) )
+				throw new \Exception('Unvalid rdata');
 		}
 		unset($d);
 	}
@@ -322,6 +327,11 @@ abstract class Model {
 			foreach( $for as $k => & $v )
 				if( $this->_fields[$k]['i18n'] )
 					$v = $this->__reprLangLabel($v);
+				elseif( $this->_fields[$k]['rtype'] == 'select' || $this->_fields[$k]['rtype'] == 'auto' )
+					if( array_key_exists('rdata',$this->_fields[$k]) )
+						$v = $this->_fields[$k]['rdata'][$v];
+					else
+						$v = \DoPhp::model($this->_fields[$k]['refer'])->summary($v);
 			unset($v);
 
 			$data[$this->formatPk($i)] = $for;
@@ -362,19 +372,11 @@ abstract class Model {
 			'data'  => null,
 		);
 
-		if( $f['rtype'] == 'select' || $f['rtype'] == 'auto' ) {
-			if( array_key_exists('rdata',$f) ) {
-				if( ! is_array($f['rdata']) )
-					throw new \Exception('Unvalid rdata');
+		if( $f['rtype'] == 'select' || $f['rtype'] == 'auto' )
+			if( array_key_exists('rdata',$f) )
 				$field['data'] = $f['rdata'];
-			} else {
-				// Reads related data
-				if( ! isset($f['refer']) )
-					throw new \Exception('Missing referred model');
-				$ref = \DoPhp::model($f['refer']);
-				$field['data'] = $ref->summary();
-			}
-		}
+			else
+				$field['data'] = \DoPhp::model($f['refer'])->summary();
 
 		if( $f['rtype'] == 'password' ) // Do not show password
 			$field['value'] = '';
@@ -464,9 +466,11 @@ abstract class Model {
 	* Returns a short representation of model content, to be used in a select box
 	* By default, only selects first non-hidden field
 	*
-	* @return array: Associative array [ <pk> => <description> ]
+	* @param $pk mixed: The primary key to filter for
+	* @return array: Associative array [ <pk> => <description> ], or just <description>
+	*                if PK is given
 	*/
-	public function summary() {
+	public function summary($pk=null) {
 		$pks = $this->_table->getPk();
 
 		// Decide which field to use as name
@@ -482,7 +486,10 @@ abstract class Model {
 		// Retrieve and format data
 		$cols = $pks;
 		$cols[] = $displayCol;
-		list($res, $cnt) = $this->_table->select(null, $cols);
+		$pars = null;
+		if( $pk )
+			$pars = $this->_table->parsePkArgs($pk);
+		list($res, $cnt) = $this->_table->select($pars, $cols);
 		$ret = array();
 		foreach( $res as $r ) {
 			if( $this->_fields[$displayCol]['i18n'] )
@@ -492,6 +499,11 @@ abstract class Model {
 			$ret[$this->formatPk($r)] = $v;
 		}
 
+		if( $pk ) {
+			if( count($ret) > 1 )
+				throw new Exception('More than one row returned when filtering by PK');
+			return array_shift($ret);
+		}
 		return $ret;
 	}
 
