@@ -46,6 +46,8 @@ abstract class Model {
 	*                         if applicable
 	*   'i18n'     => bool:   If true, this field is "multiplied" for every
 	*                         supported language. Default: false
+	*   'rtab'     => bool:   If false, this field is not rendered in table view.
+	*                         Defaults to true.
 	* ]
 	* @see initFields()
 	*/
@@ -79,6 +81,8 @@ abstract class Model {
 				$d['dopts'] = array();
 			if( ! isset($d['i18n']) )
 				$d['i18n'] = false;
+			if( ! isset($d['rtab']) )
+				$d['rtab'] = true;
 		}
 		unset($d);
 	}
@@ -302,7 +306,15 @@ abstract class Model {
 	*                  <heads>: column headers
 	*/
 	public function table() {
-		list($items, $count) = $this->_table->select();
+		$cols = array();
+		$labels = array();
+		$allLabels = $this->getLabels();
+		foreach($this->_fields as $k => $f )
+			if( $f['rtab'] ) {
+				$cols[] = $k;
+				$labels[$k] = $allLabels[$k];
+			}
+		list($items, $count) = $this->_table->select(null, $cols);
 
 		$data = array();
 		foreach( $items as $i ) {
@@ -315,7 +327,7 @@ abstract class Model {
 			$data[$this->formatPk($i)] = $for;
 		}
 
-		return array($data, $count, $this->getLabels());
+		return array($data, $count, $labels);
 	}
 
 	/**
