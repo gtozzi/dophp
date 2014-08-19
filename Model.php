@@ -17,6 +17,8 @@ namespace dophp;
 */
 abstract class Model {
 
+	/** Database instance */
+	protected $_db;
 	/**
 	* The name of the underlying database table, must be overridden.
 	* Will be replaced with a real instance of the table by constructor.
@@ -78,13 +80,15 @@ abstract class Model {
 	* @param $db object: Database instance
 	*/
 	public function __construct($db) {
+		$this->_db = $db;
+
 		if( $this->_fields === null )
 			$this->_fields = $this->initFields();
 		if( $this->_names === null )
 			$this->_names = $this->initNames();
 		if( $this->_filter === null )
 			$this->_filter = $this->initFilter();
-		$this->_table = new Table($db, $this->_table);
+		$this->_table = new Table($this->_db, $this->_table);
 		
 		// Clean and validate the fields array
 		foreach( $this->_fields as $f => & $d ) {
