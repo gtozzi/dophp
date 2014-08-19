@@ -58,6 +58,13 @@ abstract class Model {
 	* @see initNames()
 	*/
 	protected $_names = null;
+	/**
+	* The base filter to apply on the table (by exaple, for access limiting),
+	* associative array of field => <value(s)>. If value is an array, multiple
+	* values are allower with and OR condition
+	* @see initFilter()
+	*/
+	protected $_filter = null;
 
 	/**
 	* Class constuctor
@@ -69,6 +76,8 @@ abstract class Model {
 			$this->_fields = $this->initFields();
 		if( $this->_names === null )
 			$this->_names = $this->initNames();
+		if( $this->_filter === null )
+			$this->_filter = $this->initFilter();
 		$this->_table = new Table($db, $this->_table);
 		
 		// Clean and validate the fields array
@@ -90,6 +99,34 @@ abstract class Model {
 				throw new \Exception('Unvalid rdata');
 		}
 		unset($d);
+
+		// Validate and build the filter
+		$cond = '';
+		$parm = array();
+		foreach($this->_filter as $f => $v) {
+			if( ! in_array($this->_fields[$f]['rtype'], array('select','auto')) )
+				throw new \Exception('Filter is supported only on related fields (select,auto)');
+
+			if( strlen($cond) )
+				$cond .= ' AND ';
+
+			if( ! is_array($v) ) {
+				$cond .= " `$f`=? ";
+				$parm[] = $v;
+			} else {
+				$cond .= ' ( ';
+				$i = 0;
+				foreach( $v as $vv ) {
+					if( ++$i > 1 )
+						$cond .= ' OR ';
+					$cond .= " `$f`=? ";
+					$parm[] = $vv;
+				}
+				$cond .= ' ) ';
+			}
+		}
+		$this->_filter = new Where($parm, $cond);
+
 	}
 
 	/**
@@ -113,6 +150,18 @@ abstract class Model {
 	*/
 	protected function initNames() {
 		throw new Exception('Unimplemented');
+	}
+
+	/**
+	* Returns filter to apply to this table's content, called when $this->_filter
+	* is not defined.
+	* Allows filter definition at runtime
+	*
+	* @return array in $_filter valid format
+	* @see $_filter
+	*/
+	protected function initFilter() {
+		return array();
 	}
 
 	/**
@@ -319,7 +368,7 @@ abstract class Model {
 				$cols[] = $k;
 				$labels[$k] = $allLabels[$k];
 			}
-		list($items, $count) = $this->_table->select(null, $cols);
+		list($items, $count) = $this->_table->select($this->_filter, $cols);
 
 		$data = array();
 		foreach( $items as $i ) {
