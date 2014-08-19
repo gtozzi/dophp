@@ -561,13 +561,19 @@ abstract class Model {
 
 		// Decide which field to use as name
 		$displayCol = null;
+		$intCol = null;
 		foreach( $this->_fields as $n => $f )
-			if( ! in_array($n,$pks) && $f['rtype'] ) {
-				$displayCol = $n;
-				break;
-			}
+			if( ! in_array($n,$pks) && $f['rtype'] )
+				if( $f['i18n'] || $this->_table->getColumnType($n) == 'string' ) {
+					$displayCol = $n;
+					break;
+				} elseif( ! $intCol )
+					$intCol = $n;
 		if( ! $displayCol )
-			$displayCol = $pks[0];
+			if( $intCol )
+				$displayCol = $intCol;
+			else
+				$displayCol = $pks[0];
 
 		// Retrieve and format data
 		$cols = $pks;
