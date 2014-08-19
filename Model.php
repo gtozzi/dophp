@@ -607,7 +607,7 @@ abstract class Model {
 	* @return Mixed: the value to store in the database
 	*/
 	protected function _saveFile($name, $data) {
-		throw new \Exception('Not implcmented');
+		throw new \Exception('saveFile not implemented');
 	}
 
 	/**
