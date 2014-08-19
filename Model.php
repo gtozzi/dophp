@@ -65,6 +65,12 @@ abstract class Model {
 	* @see initFilter()
 	*/
 	protected $_filter = null;
+	/**
+	* Where condition built from $_filter
+	* @see $_filter
+	* @see buildFilter()
+	*/
+	protected $_filterWhere;
 
 	/**
 	* Class constuctor
@@ -100,33 +106,7 @@ abstract class Model {
 		}
 		unset($d);
 
-		// Validate and build the filter
-		$cond = '';
-		$parm = array();
-		foreach($this->_filter as $f => $v) {
-			if( ! in_array($this->_fields[$f]['rtype'], array('select','auto')) )
-				throw new \Exception('Filter is supported only on related fields (select,auto)');
-
-			if( strlen($cond) )
-				$cond .= ' AND ';
-
-			if( ! is_array($v) ) {
-				$cond .= " `$f`=? ";
-				$parm[] = $v;
-			} else {
-				$cond .= ' ( ';
-				$i = 0;
-				foreach( $v as $vv ) {
-					if( ++$i > 1 )
-						$cond .= ' OR ';
-					$cond .= " `$f`=? ";
-					$parm[] = $vv;
-				}
-				$cond .= ' ) ';
-			}
-		}
-		$this->_filter = new Where($parm, $cond);
-
+		$this->buildFilter();
 	}
 
 	/**
@@ -162,6 +142,37 @@ abstract class Model {
 	*/
 	protected function initFilter() {
 		return array();
+	}
+
+	/**
+	* Validate and build the filter into a where object
+	*/
+	protected function buildFilter() {
+		$cond = '';
+		$parm = array();
+		foreach($this->_filter as $f => $v) {
+			if( ! in_array($this->_fields[$f]['rtype'], array('select','auto')) )
+				throw new \Exception('Filter is supported only on related fields (select,auto)');
+
+			if( strlen($cond) )
+				$cond .= ' AND ';
+
+			if( ! is_array($v) ) {
+				$cond .= " `$f`=? ";
+				$parm[] = $v;
+			} else {
+				$cond .= ' ( ';
+				$i = 0;
+				foreach( $v as $vv ) {
+					if( ++$i > 1 )
+						$cond .= ' OR ';
+					$cond .= " `$f`=? ";
+					$parm[] = $vv;
+				}
+				$cond .= ' ) ';
+			}
+		}
+		$this->_filterWhere = new Where($parm, $cond);
 	}
 
 	/**
@@ -254,6 +265,9 @@ abstract class Model {
 			list($data,$errors) = $this->validate($post, $files);
 
 			if( ! $errors ) {
+				if( ! $this->isAllowed($data) )
+					throw new \Exception('Saving forbidden data');
+
 				foreach( $this->_fields as $k => $f ) {
 
 					// Do not update empty password and file fields
@@ -299,8 +313,11 @@ abstract class Model {
 		}
 
 		// Retrieve hard data from the DB
-		if( $mode == 'edit' )
+		if( $mode == 'edit' ) {
 			$record = $this->_table->get($pk);
+			if( ! $this->isAllowed($record) )
+				throw new \Exception('Loading forbidden data');
+		}
 
 		// Build fields array
 		$fields = array();
@@ -315,12 +332,12 @@ abstract class Model {
 					$fl['label'] = $this->__buildLangLabel($fl['label'], $l);
 					$val = $data&&isset($data[$k][$l]) ? $data[$k][$l] : (isset($record)?\DoPhp::lang()->getText($record[$k],$l):null);
 					$err = $errors&&isset($errors[$k][$l]) ? $errors[$k][$l] : null;
-					$fields["{$k}[{$l}]"] = $this->__buildField($fl, $val, $err);
+					$fields["{$k}[{$l}]"] = $this->__buildField($k, $fl, $val, $err);
 				}
 			} else {
 				$val = $data&&isset($data[$k]) ? $data[$k] : (isset($record)?$record[$k]:null);
 				$err = $errors&&isset($errors[$k]) ? $errors[$k] : null;
-				$fields[$k] = $this->__buildField($f, $val, $err);
+				$fields[$k] = $this->__buildField($k, $f, $val, $err);
 			}
 		}
 
@@ -337,6 +354,8 @@ abstract class Model {
 		if( ! $pk )
 			throw new \Exception('Unvalid or missing pk');
 		$res = $this->format($this->_table->get($pk));
+		if( ! $this->isAllowed($res) )
+			throw new \Exception('Loading forbidden data');
 
 		$data = array();
 		foreach( $res as $k => $v )
@@ -368,7 +387,7 @@ abstract class Model {
 				$cols[] = $k;
 				$labels[$k] = $allLabels[$k];
 			}
-		list($items, $count) = $this->_table->select($this->_filter, $cols);
+		list($items, $count) = $this->_table->select($this->_filterWhere, $cols);
 
 		$data = array();
 		foreach( $items as $i ) {
@@ -411,7 +430,7 @@ abstract class Model {
 	/**
 	* Builds a single field, internal function
 	*/
-	private function __buildField($f, $val, $err) {
+	private function __buildField($k, $f, $val, $err) {
 		$field = array(
 			'label' => $f['label'],
 			'type'  => $f['rtype'],
@@ -421,11 +440,25 @@ abstract class Model {
 			'data'  => null,
 		);
 
-		if( $f['rtype'] == 'select' || $f['rtype'] == 'auto' )
+		if( $f['rtype'] == 'select' || $f['rtype'] == 'auto' ) {
+			// Retrieve data
 			if( array_key_exists('rdata',$f) )
-				$field['data'] = $f['rdata'];
+				$data = $f['rdata'];
 			else
-				$field['data'] = \DoPhp::model($f['refer'])->summary();
+				$data = \DoPhp::model($f['refer'])->summary();
+
+			// Filter data
+			if( isset($this->_filter[$k]) ) {
+				$allowed = $this->_filter[$k];
+				if( ! is_array($allowed) )
+					$allowed = array($allowed);
+				foreach( $data as $pk => $v )
+					if( ! in_array($pk, $allowed) )
+						unset($data[$pk]);
+			}
+
+			$field['data'] = $data;
+		}
 
 		if( $f['rtype'] == 'password' ) // Do not show password
 			$field['value'] = '';
@@ -565,6 +598,24 @@ abstract class Model {
 	*/
 	protected function _saveFile($name, $data) {
 		throw new \Exception('Not implcmented');
+	}
+
+	/**
+	* Checks if a given record is allowed base don current filter
+	*
+	* @param $record array: a query result or post record
+	* @return boolean: True when allowed
+	*/
+	protected function isAllowed($record) {
+		foreach( $this->_filter as $c => $v )
+			if( ! isset($record[$c]) )
+				return false;
+			if( is_array($v) && ! in_array($record[$c], $v) )
+				return false;
+			if( ! is_array($v) && $record[$c] != $v )
+				return false;
+
+		return true;
 	}
 
 }
