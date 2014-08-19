@@ -320,6 +320,63 @@ class Table {
 	}
 
 	/**
+	* Returns column type for a given column
+	*
+	* @param $col string: the column name
+	* @return string: One of integer, boolean, double, Decimal, string, Date,
+	*                 DateTime, Time
+	*/
+	public function getColumnType($col) {
+		$dtype = strtoupper($this->_cols[$col]['DATA_TYPE']);
+		$ctype = strtoupper($this->_cols[$col]['COLUMN_TYPE']);
+			
+		switch($dtype) {
+		case 'SMALLINT':
+		case 'MEDIUMINT':
+		case 'INT':
+		case 'INTEGER':
+		case 'BIGINT':
+			return 'integer';
+		case 'BIT':
+		case 'TINYINT':
+		case 'BOOL':
+		case 'BOOLEAN':
+			if( $ctype == 'TINYINT(1)' )
+				return 'boolean';
+			return 'integer';
+		case 'FLOAT':
+		case 'DOUBLE':
+			return 'double';
+		case 'DECIMAL':
+		case 'DEC':
+			return 'Decimal';
+		case 'CHAR':
+		case 'VARCHAR':
+		case 'BINARY':
+		case 'VARBINARY':
+		case 'TINYBLOB':
+		case 'BLOB':
+		case 'MEDIUMBLOB':
+		case 'LONGBLOB':
+		case 'TINYTEXT':
+		case 'TEXT':
+		case 'MEDIUMTEXT':
+		case 'LONGTEXT':
+		case 'ENUM':
+			return 'string';
+		case 'DATE':
+			return 'Date';
+		case 'DATETIME':
+		case 'TIMESTAMP':
+			return 'DateTime';
+		case 'TIME':
+			return 'Time';
+		default:
+			throw new \Exception("Unsupported column type $dtype");
+		}
+	}
+
+	/**
 	* Put every res element into the right type according to column definition
 	*
 	* @param $res array: Associative array representing a row
@@ -334,59 +391,31 @@ class Table {
 		$ret = array();
 		
 		foreach( $res as $k => $v ) {
-			
-			$dtype = strtoupper($this->_cols[$k]['DATA_TYPE']);
-			$ctype = strtoupper($this->_cols[$k]['COLUMN_TYPE']);
-			
+
 			if( $v !== null )
-				switch($dtype) {
-				case 'SMALLINT':
-				case 'MEDIUMINT':
-				case 'INT':
-				case 'INTEGER':
-				case 'BIGINT':
+				switch($this->getColumnType($k)) {
+				case 'integer':
 					$v = (int)$v;
 					break;
-				case 'BIT':
-				case 'TINYINT':
-				case 'BOOL':
-				case 'BOOLEAN':
-					if( $ctype == 'TINYINT(1)' )
-						$v = $v && $v != -1 ? true : false;
-					else
-						$v = (int)$v;
+				case 'boolean':
+					$v = $v && $v != -1 ? true : false;
 					break;
-				case 'FLOAT':
-				case 'DOUBLE':
+				case 'double':
 					$v = (double)$v;
 					break;
-				case 'DECIMAL':
-				case 'DEC':
+				case 'Decimal':
 					$v = new Decimal($v);
 					break;
-				case 'CHAR':
-				case 'VARCHAR':
-				case 'BINARY':
-				case 'VARBINARY':
-				case 'TINYBLOB':
-				case 'BLOB':
-				case 'MEDIUMBLOB':
-				case 'LONGBLOB':
-				case 'TINYTEXT':
-				case 'TEXT':
-				case 'MEDIUMTEXT':
-				case 'LONGTEXT':
-				case 'ENUM':
+				case 'string':
 					$v = (string)$v;
 					break;
-				case 'DATE':
+				case 'Date':
 					$v = new Date($v);
 					break;
-				case 'DATETIME':
-				case 'TIMESTAMP':
+				case 'DateTime':
 					$v = new \DateTime($v);
 					break;
-				case 'TIME':
+				case 'Time':
 					$v = new Time($v);
 					break;
 				default:
