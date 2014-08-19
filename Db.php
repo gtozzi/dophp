@@ -9,6 +9,7 @@
 
 namespace dophp;
 
+
 /**
 * Simple class for database connection handling
 */
@@ -72,8 +73,8 @@ class Db {
 	* @param $where array: where conditions
 	*/
 	public function update($table, $params, $where) {
-		list($s,$ps) = $this->buildInsUpdQuery('upd', $table, $params);
-		list($w,$pw) = $this->buildParams($where, ' AND ');
+		list($s,$ps) = self::buildInsUpdQuery('upd', $table, $params);
+		list($w,$pw) = self::buildParams($where, ' AND ');
 
 		$q = "$s WHERE $w";
 		$p = array_merge($ps, $pw);
@@ -102,7 +103,7 @@ class Db {
 	* @see buildParams
 	* @return array [query string, params]
 	*/
-	public function buildInsUpdQuery($type, $table, $params) {
+	public static function buildInsUpdQuery($type, $table, $params) {
 		switch( $type ) {
 		case 'ins':
 			$q = 'INSERT INTO';
@@ -114,7 +115,7 @@ class Db {
 			throw new \Exception("Unknown type $type");
 		}
 
-		list($cols, $p) = $this->buildParams($params);
+		list($cols, $p) = self::buildParams($params);
 		$q .= " `$table` SET $cols" ;
 		return array($q, $p);
 	}
@@ -130,7 +131,7 @@ class Db {
 	* @param $glue string: The string to join the arguments, usually ', ' or ' AND '
 	* @return array [query string, params]
 	*/
-	public function buildParams($params, $glue=', ') {
+	public static function buildParams($params, $glue=', ') {
 		$cols = array();
 		$vals = array();
 		foreach( $params as $k => $v ) {
@@ -156,7 +157,7 @@ class Db {
 	* @param $skip integer: Number of records to skip
 	* @return string: the LIMIT statement
 	*/
-	public function buildLimit($limit=null, $skip=0) {
+	public static function buildLimit($limit=null, $skip=0) {
 		if( $skip || $limit )
 			$lim = 'LIMIT ';
 		else
@@ -174,6 +175,7 @@ class Db {
 	}
 
 }
+
 
 /**
 * Represents a table on the database for easy automated access
@@ -242,7 +244,7 @@ class Table {
 	public function get($pk, $cols=null) {
 		$pk = $this->parsePkArgs($pk);
 		
-		list($w, $p) = $this->_db->buildParams($pk, ' AND ');
+		list($w, $p) = Db::buildParams($pk, ' AND ');
 		$q = "
 			SELECT
 		" . $this->_buildColumList($cols) . "
@@ -256,7 +258,7 @@ class Table {
 	/**
 	* Runs a select query
 	*
-	* @param $params array See dophp\Db::buildParams. Null to select all.
+	* @param $params array Null, Array passed to Where::Construct or Where instance
 	* @param $cols array Names of the columns. null to select all. true to
 	*                    select only PKs.
 	* @param $limit mixed Numeric limit, boolean TRUE means 1. If array,
@@ -270,15 +272,18 @@ class Table {
 	*/
 	public function select($params=null, $cols=null, $limit=null) {
 		$q = "SELECT\n\t";
+		$p = array();
 
 		$q .= $this->_buildColumList($cols);
 
 		$q .= "FROM `{$this->_name}`\n";
 
-		if( $params ) {
-			$q .= "WHERE ";
-			list($w, $p) = $this->_db->buildParams($params, ' AND ');
-			$q .= "$w\n";
+		if( ! $params instanceof Where )
+			$params = new Where($params);
+
+		if( $w = $params->getCondition() ) {
+			$q .= "WHERE $w\n";
+			$p = array_merge($p, $params->getParams());
 		}
 
 		if( is_array($limit) )
@@ -483,6 +488,47 @@ class Table {
 
 }
 
+
+/**
+* Represents a where condition query
+*/
+class Where {
+
+	/** Condition SQL */
+	protected $_cond = '';
+	/** Parameters to bind array */
+	protected $_params = array();
+
+	/**
+	* Construct the statement
+	*
+	* @param $params array: Associative array of <column> => <value> or null
+	* @param $condition string: Condition string to use. If 'AND' or 'OR' simply
+	*                   glues all the elements with the defined logical operator.
+	*                   Must be a valid PDO sql statement instead
+	*/
+	public function __construct($params, $condition='AND') {
+		if( ! $params )
+			return;
+		if( $condition == 'AND' || $condition == 'OR' ) {
+			list($this->_cond, $this->_params) = Db::buildParams($params, " $condition ");
+			return;
+		}
+		$this->_cond = $condition;
+		$this->_params = $params;
+	}
+
+	public function getCondition() {
+		return $this->_cond;
+	}
+
+	public function getParams() {
+		return $this->_params;
+	}
+
+}
+
+
 /**
 * Represents a Decimal, since PHP doesn't really support it
 */
@@ -500,11 +546,13 @@ class Decimal {
 	}
 }
 
+
 /**
 * Represents a Date without time
 */
 class Date extends \DateTime {
 }
+
 
 /**
 * Represents a time without a date
