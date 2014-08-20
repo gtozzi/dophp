@@ -41,6 +41,8 @@ abstract class Model {
 	*                         from database and omitted in insert/update queries
 	*   'dopts'    => array:  Data Validation options, see Validator::__construct
 	*                         If null or missing, defaults to an empty array
+	*                         The "required" key can be a string specifying a
+	*                         single action on which the field if required (insert/update)
 	*   'refer'    => class:  Name of the referenced model, if applicable
 	*   'rdata'    => array:  Associative array of data for a select box, if
 	*                         applicable. Overrides refer.
@@ -204,9 +206,12 @@ abstract class Model {
 	/**
 	* Returns validation rules
 	*
+	* @param $mode   The action to get the rules for (insert or update). If
+	*                unvalid or null acton is given, only rules common to all
+	*                actions are returned
 	* @return array Associative array [ <name> => [<type>, [<rules>]] ]
 	*/
-	public function getRules() {
+	public function getRules($mode=null) {
 		$rules = array();
 		foreach( $this->_fields as $k => $f )
 			if( isset($f['dtype']) ) {
@@ -222,6 +227,17 @@ abstract class Model {
 
 				$rules[$k] = array($f['dtype'], $f['dopts']);
 			}
+
+		// Parse "required" fields according to mode
+		foreach( $rules as & $r ) {
+			if( ! isset($r[1]['required']) )
+				continue;
+			if( gettype($r[1]['required']) == 'boolean' )
+				continue;
+			$r[1]['required'] = ($r[1]['required']==$mode);
+		}
+		unset($r);
+
 		return $rules;
 	}
 
@@ -266,7 +282,7 @@ abstract class Model {
 		$errors = null;
 		if( $post ) {
 			// Data has been submitted
-			list($data,$errors) = $this->validate($post, $files);
+			list($data,$errors) = $this->validate($post, $files, $mode);
 
 			if( ! $errors ) {
 				if( ! $this->isAllowed($data) )
@@ -541,10 +557,11 @@ abstract class Model {
 
 	/**
 	* Validates form data
+	* @see getRules()
 	* @see dophp\Validator
 	*/
-	public function validate(&$post, &$files) {
-		$val = new Validator($post, $files, $this->getRules());
+	public function validate(&$post, &$files, $mode=null) {
+		$val = new Validator($post, $files, $this->getRules($mode));
 		return $val->validate();
 	}
 
