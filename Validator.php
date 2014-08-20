@@ -218,22 +218,31 @@ abstract class base_validator implements field_validator {
 * Validate as string
 *
 * Custom validation rules: 'email'=>true, Validates as e-mail address
+*                          'url'=>true, Validates as absolute URL
 *
 * @return string
 */
 class string_validator extends base_validator {
 
 	protected function do_validate( &$v, &$o ) {
-		if( array_key_exists('email',$o) && $o['email'] ) {
+		if( isset($o['email']) && $o['email'] )
 			if( $err = $this->check_email($v) )
 				return $err;
-		}
+		if( isset($o['url']) && $o['url'] )
+			if( $err = $this->check_url($v) )
+				return $err;
 	}
 	protected function check_email($val) {
 		if( $val === null )
 			return false;
 		if( ! preg_match('/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,4}$/i', $val) )
-			return _("Unvalid eMail.");
+			return _('Unvalid eMail') . '.';
+	}
+	protected function check_url($val) {
+		if( $val == null )
+			return false;
+		if( ! preg_match('/^[a-z]+:\/\/[a-z0-9.]+\/?[a-z0-9=\-._~:\/?#[\]@!$&]*$/i', $val) )
+			return _('Unvalid absolute URL') . '.';
 	}
 }
 
