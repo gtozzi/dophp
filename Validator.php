@@ -320,7 +320,7 @@ class file_validator extends base_validator {
 		return false;
 	}
 	protected function do_validate( &$v, &$o ) {
-		if( array_key_exists('type',$o) && $o['type'] ) {
+		if( isset($o['type']) && $v['size'] ) {
 			$err = $this->check_type($v['type'], $o['type']);
 			if( $err )
 				return $err;
