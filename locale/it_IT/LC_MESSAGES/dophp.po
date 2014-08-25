@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: DoPhp\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2014-08-20 23:25+0200\n"
+"POT-Creation-Date: 2014-08-25 19:28+0200\n"
 "PO-Revision-Date: 2014-03-28 15:00+0100\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: Gabriele Tozzi <tozzi@despammed.com>\n"
@@ -27,26 +27,34 @@ msgstr "Sì"
 msgid "No"
 msgstr "No"
 
-#: Validator.php:208 Validator.php:326 Validator.php:359
+#: Validator.php:208 Validator.php:338 Validator.php:371
 msgid "Field can't be empty"
 msgstr "Il campo non può essere vuoto"
 
-#: Validator.php:239
+#: Validator.php:243
 msgid "Unvalid eMail"
 msgstr "eMail non valida"
 
-#: Validator.php:245
+#: Validator.php:249
 msgid "Unvalid absolute URL"
 msgstr "URL assoluto non valido"
 
-#: Validator.php:328
+#: Validator.php:255
+msgid "Text is too short"
+msgstr "Il testo è troppo breve"
+
+#: Validator.php:257
+msgid "Text is too long"
+msgstr "Il testo è troppo lungo"
+
+#: Validator.php:340
 msgid "Unvalid file size"
 msgstr "Dimensione file non valida"
 
-#: Validator.php:340
+#: Validator.php:352
 msgid "Unsupported file type"
 msgstr "Tipo file non supportato"
 
-#: Validator.php:362
+#: Validator.php:374
 msgid "Must be an array"
 msgstr "Deve essere un array"

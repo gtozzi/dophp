@@ -219,6 +219,7 @@ abstract class base_validator implements field_validator {
 *
 * Custom validation rules: 'email'=>true, Validates as e-mail address
 *                          'url'=>true, Validates as absolute URL
+*                          'len'=>array, Validates length bethween [<min>,<max>]
 *
 * @return string
 */
@@ -230,6 +231,9 @@ class string_validator extends base_validator {
 				return $err;
 		if( isset($o['url']) && $o['url'] )
 			if( $err = $this->check_url($v) )
+				return $err;
+		if( isset($o['len']) && $o['len'] )
+			if( $err = $this->check_len($v, $o['len'][0], $o['len'][1]) )
 				return $err;
 	}
 	protected function check_email($val) {
@@ -243,6 +247,14 @@ class string_validator extends base_validator {
 			return false;
 		if( ! preg_match('/^[a-z]+:\/\/[a-z0-9.]+\/?[a-z0-9=\-._~:\/?#[\]@!$&]*$/i', $val) )
 			return _('Unvalid absolute URL') . '.';
+	}
+	protected function check_len($val, $min, $max) {
+		if( $val == null )
+			return false;
+		if( $min && strlen($val) < $min )
+			return _('Text is too short') . '.';
+		if( $max && strlen($val) > $max )
+			return _('Text is too long') . '.';
 	}
 }
 
