@@ -47,6 +47,8 @@ class Lang {
 
 	/** The name of the column containing texts */
 	const TEXT_COL = 'text';
+	/** The key to use in session and cookies */
+	const LANG_KEY = 'dophp_manual_lang';
 
 	/** Database instance */
 	protected $_db;
@@ -119,8 +121,9 @@ class Lang {
 	* The methods used are, in order:
 	* 1. User's manual choice
 	* 2. Last locale manually chosen, from the session
-	* 3. Brower's settings
-	* 4. Fall back to default locale
+	* 3. Last locale manually chosen, from cookie
+	* 4. Brower's settings
+	* 5. Fall back to default locale
 	*
 	* @param $manual string: Name of the locale manually chosen by the user, it
 	*                        will be saved into the session if valid
@@ -128,16 +131,32 @@ class Lang {
 	public function autoLanguage($manual=null) {
 		if( $manual && in_array($manual, $this->_supported) ) {
 			$this->setLanguage($manual);
-			$_SESSION['dophp_manual_lang'] = $manual;
+			$_SESSION[self::LANG_KEY] = $manual;
+			$this->setLangCookie($manual);
 			return;
 		}
 
-		if( isset($_SESSION['dophp_manual_lang']) ) {
-			$this->setLanguage($_SESSION['dophp_manual_lang']);
+		if( isset($_SESSION[self::LANG_KEY]) ) {
+			$this->setLanguage($_SESSION[self::LANG_KEY]);
+			if( ! isset($_COOKIE[self::LANG_KEY]) || $_SESSION[self::LANG_KEY] != $_COOKIE[self::LANG_KEY] )
+				$this->setLangCookie($_SESSION[self::LANG_KEY]);
+			return;
+		}
+
+		if( isset($_COOKIE[self::LANG_KEY]) && in_array($_COOKIE[self::LANG_KEY], $this->_supported) ) {
+			$this->setLanguage($_COOKIE[self::LANG_KEY]);
+			$_SESSION[self::LANG_KEY] = $_COOKIE[self::LANG_KEY];
 			return;
 		}
 
 		$this->setLanguage(Utils::getBrowserLanguage($this->_supported));
+	}
+
+	/**
+	* Utility internal function to set the language cookie
+	*/
+	protected function setLangCookie($lang) {
+		setcookie(self::LANG_KEY, $lang, time() + 60*60*24*1500, '/');
 	}
 
 	/**
