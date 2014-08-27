@@ -41,6 +41,11 @@ class Utils {
 
 	/**
 	* Parses an url using parse_url + parse_str
+	* This is the inverse of buildUrl
+	*
+	* @see buildUrl()
+	* @param $url string: The URL string
+	* @return array: The URL array
 	*/
 	public static function parseUrl($url) {
 		$parsed = parse_url($url);
@@ -49,6 +54,36 @@ class Utils {
 			parse_str($parsed['query'], $arr);
 			$parsed['query'] = $arr;
 		}
+		return $parsed;
+	}
+
+	/**
+	* Takes an url represented as array ann recompose it usign http_build_query
+	* This is the inverse of parseUrl
+	*
+	* @todo Use http_build_url when it will become available on standard installs
+	* @see parseUrl()
+	* @param $url array: The URL array
+	* @return string: The URL string
+	*/
+	public static function buildUrl($url) {
+		if( isset($url['query']) )
+			$url['query'] = http_build_query($url['query']);
+		
+		$parsed = '';
+		if( isset($url['scheme']) )
+			$parsed .= $url['scheme'] . '://';
+		if( isset($url['user']) || isset($url['pass']) )
+			$parsed .= $url['user'] . ':' . $url['pass'] . '@';
+		if( isset($url['host']) )
+			$parsed .= $url['host'];
+		if( isset($url['path']) )
+			$parsed .= $url['path'];
+		if( isset($url['query']) )
+			$parsed .= '?' . $url['query'];
+		if( isset($url['fragment']) )
+			$parsed .= '#' . $url['fragment'];
+
 		return $parsed;
 	}
 
