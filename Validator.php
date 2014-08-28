@@ -331,6 +331,10 @@ class date_validator extends base_validator {
 class file_validator extends base_validator {
 
 	protected function do_clean($val) {
+		if( ! $val )
+			return null;
+		if( ! $val['size'] )
+			return null;
 		return $val;
 	}
 	protected function check_required($val) {

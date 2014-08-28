@@ -299,7 +299,7 @@ abstract class Model {
 						$data[$k] = $f['postp']($data[$k]);
 
 					// Save files
-					if( $f['rtype'] == 'file' )
+					if( $f['rtype']=='file' && isset($data[$k]) )
 						$data[$k] = $this->_saveFile($name, $data[$k]);
 				}
 
