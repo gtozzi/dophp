@@ -129,9 +129,9 @@ class AuthPlain extends AuthBase implements AuthInterface {
 	* @see AuthBase::_doLogin
 	*/
 	protected function _doLogin() {
-		if( $_REQUEST['login'] ) {
-			$user = $_REQUEST['username'];
-			$pwd = $_REQUEST['password'];
+		if( isset($_REQUEST['login']) && $_REQUEST['login'] ) {
+			$user = isset($_REQUEST['username']) ? $_REQUEST['username'] : null;
+			$pwd = isset($_REQUEST['password']) ? $_REQUEST['password'] : null;
 		} elseif( $this->_sess ) {
 			$user = $_SESSION[self::SESS_VAR.'username'];
 			$pwd = $_SESSION[self::SESS_VAR.'password'];

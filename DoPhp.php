@@ -143,7 +143,7 @@ class DoPhp {
 		}
 
 		// Calculates the name of the page to be loaded
-		$inc_file = dophp\Utils::pagePath($this->__conf, $_REQUEST[$key]);
+		$inc_file = dophp\Utils::pagePath($this->__conf, isset($_REQUEST[$key])?$_REQUEST[$key]:null);
 
 		if(array_key_exists($key, $_REQUEST) && $_REQUEST[$key] && !strpos($_REQUEST[$key], '/') && file_exists($inc_file))
 			$page = $_REQUEST[$key];
