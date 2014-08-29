@@ -58,6 +58,8 @@ class Imager {
 			throw new \Exception('Missing image name');
 		}
 		$this->_imgName = $get['name'];
+		if( substr($this->_imgName, 0, strlen($this->_imgFolder)) == $this->_imgFolder)
+			$this->_imgName = substr($this->_imgName, strlen($this->_imgFolder));
 		$path = $this->_imgFolder . '/' . $this->_imgName;
 		if( ! is_file($path) ) {
 			header("HTTP/1.1 404 Not Found");
