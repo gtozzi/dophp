@@ -245,7 +245,7 @@ class string_validator extends base_validator {
 	protected function check_url($val) {
 		if( $val == null )
 			return false;
-		if( ! preg_match('/^[a-z]+:\/\/[a-z0-9.]+\/?[a-z0-9=\-._~:\/?#[\]@!$&]*$/i', $val) )
+		if( ! preg_match('/^[a-z]+:\/\/[a-z0-9.]+\/?[a-z0-9=\-._~:\/?#[\]@!$&+]*$/i', $val) )
 			return _('Unvalid absolute URL') . '.';
 	}
 	protected function check_len($val, $min, $max) {
