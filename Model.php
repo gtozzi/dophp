@@ -494,7 +494,7 @@ abstract class Model {
 		$ret = array();
 		foreach( $row as $k => $v ) {
 			$f = new Field($v);
-			$ret[$k] = $v->format();
+			$ret[$k] = $f->format();
 		}
 		return $ret;
 	}
