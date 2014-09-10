@@ -450,15 +450,8 @@ abstract class Model {
 	/**
 	* Builds a single field, internal function
 	*/
-	private function __buildField($k, $f, $val, $err) {
-		$field = array(
-			'label' => $f['label'],
-			'type'  => $f['rtype'],
-			'descr' => $f['descr'],
-			'value' => $val,
-			'error' => $err,
-			'data'  => null,
-		);
+	private function __buildField($k, $f, $value, $error) {
+		$data = null;
 
 		if( $f['rtype'] == 'select' || $f['rtype'] == 'auto' ) {
 			// Retrieve data
@@ -476,14 +469,12 @@ abstract class Model {
 					if( ! in_array($pk, $allowed) )
 						unset($data[$pk]);
 			}
-
-			$field['data'] = $data;
 		}
 
 		if( $f['rtype'] == 'password' ) // Do not show password
-			$field['value'] = '';
+			$value = null;
 
-		return $field;
+		return new FormField($f['label'], $f['rtype'], $f['descr'], $value, $error, $data);
 	}
 
 	/**
@@ -502,30 +493,8 @@ abstract class Model {
 	public function format( $row ) {
 		$ret = array();
 		foreach( $row as $k => $v ) {
-			
-			$type = gettype($v);
-			$lc = localeconv();
-
-			if( $type == 'NULL' )
-				$v = '-';
-			elseif( $type == 'string' )
-				$v;
-			elseif( $v instanceof Time )
-				$v = $v->format('H:i:s');
-			elseif( $v instanceof Date )
-				$v = $v->format('d.m.Y');
-			elseif( $v instanceof \DateTime )
-				$v = $v->format('d.m.Y');
-			elseif( $type == 'boolean' )
-				$v = $v ? _('Yes') : _('No');
-			elseif( $type == 'integer' )
-				$v = number_format($v, 0, $lc['decimal_point'], $lc['thousands_sep']);
-			elseif( $type == 'double' )
-				$v = number_format($v, -1, $lc['decimal_point'], $lc['thousands_sep']);
-			else
-				throw new \Exception("Unsupported type $type");
-			
-			$ret[$k] = $v;
+			$f = new Field($v);
+			$ret[$k] = $v->format();
 		}
 		return $ret;
 	}
@@ -643,6 +612,121 @@ abstract class Model {
 				return false;
 
 		return true;
+	}
+
+}
+
+
+/**
+* Represents a data field, carrying a raw value
+*/
+class Field {
+
+	/** The raw value, ready to be written into DB */
+	protected $_value;
+
+	/**
+	* Creates the field
+	*
+	* @param mixed value: The raw value
+	*/
+	public function __construct($value) {
+		$this->_value = $value;
+	}
+
+	/**
+	* Returns the raw value for this field
+	*/
+	public function value() {
+		return $this->_value;
+	}
+
+	/**
+	* Formats the raw value into human-readable data
+	*
+	* @return string: the formatted value
+	*/
+	public function format() {
+		$type = gettype($this->_value);
+		$lc = localeconv();
+
+		if( $type == 'NULL' )
+			return '-';
+		if( $type == 'string' )
+			return $this->_value;
+		if( $this->_value instanceof Time )
+			return $this->_value->format('H:i:s');
+		if( $this->_value instanceof Date )
+			return $this->_value->format('d.m.Y');
+		if( $this->_value instanceof \DateTime )
+			return $this->_value->format('d.m.Y H:i:s');
+		if( $type == 'boolean' )
+			return $this->_value ? _('Yes') : _('No');
+		if( $type == 'integer' )
+			return number_format($this->_value, 0, $lc['decimal_point'], $lc['thousands_sep']);
+		if( $type == 'double' )
+			return number_format($this->_value, -1, $lc['decimal_point'], $lc['thousands_sep']);
+		
+		throw new \Exception("Unsupported type $type");
+	}
+
+	/**
+	* Returns a string version of this field
+	*/
+	public function __toString() {
+		if( $this->_value instanceof Time || $this->_value instanceof Date || $this->_value instanceof \DateTime )
+			return $this->format();
+		return (string) $this->_value;
+	}
+
+}
+
+
+/**
+* Represents a form field
+*/
+class FormField extends Field {
+
+	protected $_label;
+	protected $_type;
+	protected $_descr;
+	protected $_error;
+	protected $_data;
+
+	/**
+	* Creates a new form field
+	*
+	* @param $label string: The label for the field
+	* @param $type string: The field's type
+	* @param $descr string: The field's long description
+	* @param $value mixed: The raw value
+	* @param $error string: The error message
+	* @param $data array: The related data
+	*/
+	public function __construct($label, $type, $descr, $value, $error, $data) {
+		parent::__construct($value);
+		$this->_label = $label;
+		$this->_type = $type;
+		$this->_descr = $descr;
+		$this->_value = $value;
+		$this->_error = $error;
+		$this->_data = $data;
+	}
+
+	public function label() {
+		return $this->_label;
+	}
+	public function type() {
+		return $this->_type;
+	}
+	public function descr() {
+		return $this->_descr;
+	}
+	public function error() {
+		return $this->_error;
+	}
+	public function data() {
+		return $this->_data;
 	}
 
 }
