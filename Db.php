@@ -43,11 +43,18 @@ class Db {
 		if( ! is_array($params) )
 			$params = array($params);
 		foreach($params as & $p)
-			if( gettype($p) == 'boolean' ) // PDO would convert false into null otherwise
+			if( gettype($p) == 'boolean' ) { // PDO would convert false into null otherwise
 				if( $p === true )
 					$p = 1;
 				elseif( $p === false )
 					$p = 0;
+			}
+			elseif( $p instanceof Date )
+				$p = $p->format('Y-m-d');
+			elseif( $p instanceof Time )
+				$p = $p->format('H:i:s');
+			elseif( $p instanceof \DateTime )
+				$p = $p->format('Y-m-d H:i:s');
 		$st = $this->_pdo->prepare($query);
 		$st->execute($params);
 		return $st;
