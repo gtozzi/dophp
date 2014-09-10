@@ -64,7 +64,7 @@ class Db {
 	* Runs an INSERT statement from an associative array and returns ID of the
 	* last auto_increment value
 	*
-	* @see __buildInsUpdQuery
+	* @see buildInsUpdQuery
 	*/
 	public function insert($table, $params) {
 		list($q,$p) = $this->buildInsUpdQuery('ins', $table, $params);
@@ -76,8 +76,8 @@ class Db {
 	/**
 	* Runs an UPDATE statement from an associative array
 	*
-	* @see __buildInsUpdQuery
-	* @param $where array: where conditions
+	* @see buildInsUpdQuery
+	* @see buildParams
 	*/
 	public function update($table, $params, $where) {
 		list($s,$ps) = self::buildInsUpdQuery('upd', $table, $params);
@@ -86,6 +86,18 @@ class Db {
 		$q = "$s WHERE $w";
 		$p = array_merge($ps, $pw);
 
+		$this->run($q, $p);
+	}
+
+	/**
+	* Runs a DELETE statement
+	*
+	* @see buildParams
+	*/
+	public function delete($table, $where) {
+		list($w,$p) = self::buildParams($where, ' AND ');
+		$q = "DELETE FROM `$table` WHERE $w";
+		
 		$this->run($q, $p);
 	}
 
@@ -324,6 +336,15 @@ class Table {
 	*/
 	public function insert($data) {
 		return $this->_db->insert($this->_name, $data);
+	}
+
+	/**
+	* Runs a delete query for a single record
+	*
+	* @param $pk mixed: The primary key, array if composite (associative or numeric)
+	*/
+	public function delete($pk) {
+		$this->_db->delete($this->_name, $this->parsePkArgs($pk));
 	}
 
 	/**

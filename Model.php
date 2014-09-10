@@ -429,6 +429,29 @@ abstract class Model {
 	}
 
 	/**
+	* Try to delete an element, returns a human.friendly error when failed
+	*
+	* @param $pk mixed: The PK to select the record to be read
+	* @return array: [User errror message, Detailed error message] or NULL on success
+	*/
+	public function delete($pk) {
+		if( ! $pk )
+			throw new \Exception('Unvalid or missing pk');
+		try {
+			$this->_table->delete($pk);
+		} catch( \PDOException $e ) {
+			list($scode, $mcode, $mex) = $e->errorInfo;
+
+			if( $scode == '23000' && $mcode == 1451 )
+				return array(_('item is in use'), $e->getMessage());
+			else
+				return array($e->getMessage(), $e->getMessage());
+		}
+
+		return null;
+	}
+
+	/**
 	* Builds a localized label
 	*/
 	private function __buildLangLabel($label, $lang) {
