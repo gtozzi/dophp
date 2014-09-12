@@ -4,7 +4,10 @@
 * @file Model.php
 * @author Gabriele Tozzi <gabriele@tozzi.eu>
 * @package DoPhp
-* @brief Class used to represent a DoPhp Model.
+* @brief Class used to represent a DoPhp Model and related classes
+* @warning Classes in this file are still a work in progress, some functions are
+*          incomplete and backward compatibility could be broken without notice
+*          in future versions
 */
 
 namespace dophp;
