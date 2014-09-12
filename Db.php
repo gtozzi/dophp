@@ -114,6 +114,33 @@ class Db {
 	}
 
 	/**
+	* Begins a transaction
+	*
+	* @see PDO::beginTransaction()
+	*/
+	public function beginTransaction() {
+		$this->_pdo->beginTransaction();
+	}
+
+	/**
+	* Commits a transaction
+	*
+	* @see PDO::commit()
+	*/
+	public function commit() {
+		$this->_pdo->commit();
+	}
+
+	/**
+	* Rolls back a transaction
+	*
+	* @see PDO::rollBack()
+	*/
+	public function rollBack() {
+		$this->_pdo->rollBack();
+	}
+
+	/**
 	* Builds a partial query suitable for insert or update in the format
 	* "SET col1 = val1, col2 = val2, ..."
 	*
@@ -207,6 +234,8 @@ class Table {
 	protected $_db = null;
 	/** Column definition cache, populated at runtime */
 	protected $_cols = array();
+	/** references cache, populated at runtime */
+	protected $_refs = array();
 	/** Primary key cache, populated at runtime */
 	protected $_pk = array();
 
@@ -245,10 +274,32 @@ class Table {
 			ORDER BY `ORDINAL_POSITION`
 		";
 		foreach( $this->_db->run($q, array($this->_name))->fetchAll() as $c ) {
+			if( isset($this->_cols['COLUMN_NAME']) )
+				throw new \Exception("Duplicate definition found for column {$c['COLUMN_NAME']}");
 			$this->_cols[$c['COLUMN_NAME']] = $c;
 			if( $c['COLUMN_KEY'] == 'PRI' )
 				$this->_pk[] = $c['COLUMN_NAME'];
 		}
+
+		// Read and cache references structure
+		$q = "
+			SELECT
+				`CONSTRAINT_NAME`,
+				`COLUMN_NAME`,
+				`REFERENCED_TABLE_NAME`,
+				`REFERENCED_COLUMN_NAME`
+			FROM `information_schema`.`KEY_COLUMN_USAGE`
+			WHERE `CONSTRAINT_SCHEMA` = DATABASE()
+				AND `TABLE_SCHEMA` = DATABASE()
+				AND `REFERENCED_TABLE_SCHEMA` = DATABASE()
+				AND `TABLE_NAME` = ?
+			ORDER BY `ORDINAL_POSITION`, `POSITION_IN_UNIQUE_CONSTRAINT`
+		";
+		foreach( $this->_db->run($q, array($this->_name))->fetchAll() as $c ) {
+			if( isset($this->_refs['COLUMN_NAME']) )
+				throw new \Exception("More than one reference detected for column {$c['COLUMN_NAME']}");
+ 			$this->_refs[$c['COLUMN_NAME']] = $c;
+ 		}
 
 	}
 
@@ -470,6 +521,15 @@ class Table {
 	}
 
 	/**
+	* Returns table's name
+	*
+	* @return string: This table's name
+	*/
+	public function getName() {
+		return $this->_name;
+	}
+
+	/**
 	* Returns the table's primary key
 	*
 	* @return array: List of fields composing the primary key
@@ -485,6 +545,18 @@ class Table {
 	*/
 	public function getCols() {
 		return array_keys($this->_cols);
+	}
+
+	/**
+	* Returns array of table's references
+	*
+	* @return array: Associative array of arrays ['col' => [0=>referenced table, 1=>referenced column], ...]
+	*/
+	public function getRefs() {
+		$ret = array();
+		foreach( $this->_refs as $k => $r )
+			$ret[$k] = array($r['REFERENCED_TABLE_NAME'], $r['REFERENCED_COLUMN_NAME']);
+		return $ret;
 	}
 
 	/**
