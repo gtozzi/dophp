@@ -33,12 +33,15 @@ abstract class Model {
 	*                         - <null> [or missing]: The field is not rendered at all
 	*                         - label: The field is rendered as a label
 	*                         - select: The field is rendered as a select box
+	*                         - multi: The field is rendered as multiple select box
 	*                         - check: The field is rendered as a checkbox
 	*                         - auto: The field is renderes as a suggest (autocomplete)
 	*                         - text: The field is rendered as a text box
 	*   'dtype'    => string: The data type, used for validation, see Validator::__construct
 	*                         If null or missing, the field is automatically set
 	*                         from database and omitted in insert/update queries
+	*                         If array, data will be serialized prior of being written
+	*                         unless 'nmtab' is specified
 	*   'dopts'    => array:  Data Validation options, see Validator::__construct
 	*                         If null or missing, defaults to an empty array
 	*                         The "required" key can be a string specifying a
@@ -52,6 +55,7 @@ abstract class Model {
 	*                         supported language. Default: false
 	*   'rtab'     => bool:   If false, this field is not rendered in table view.
 	*                         Defaults to true.
+	*   'nmtab'    => string: The name of the N:M relation tab for an array field
 	* ]
 	* @see initFields()
 	*/
@@ -104,6 +108,8 @@ abstract class Model {
 				$d['i18n'] = false;
 			if( ! isset($d['rtab']) )
 				$d['rtab'] = true;
+			if( ! isset($d['nmtab']) )
+				$d['nmtab'] = null;
 
 			if( ($d['rtype']=='select' || $d['rtype']=='auto') && ! (isset($d['refer']) || array_key_exists('rdata',$d)) )
 					throw new \Exception('Missing referred model or data');
@@ -284,6 +290,7 @@ abstract class Model {
 			// Data has been submitted
 			list($data,$errors) = $this->validate($post, $files, $mode);
 
+			$related = array();
 			if( ! $errors ) {
 				if( ! $this->isAllowed($data) )
 					throw new \Exception('Saving forbidden data');
@@ -301,7 +308,19 @@ abstract class Model {
 					// Save files
 					if( $f['rtype']=='file' && isset($data[$k]) )
 						$data[$k] = $this->_saveFile($name, $data[$k]);
+
+					// Handle multi fields
+					if( $f['dtype']=='array' )
+						if( ! $f['nmtab'] )
+							$data[$k] = serialize($data[$k]);
+						else { // Move data into "related" array and handle it later
+							$related[$k] = $data[$k];
+							unset($data[$k]);
+						}
 				}
+
+				// Start tansaction
+				$this->_db->beginTransaction();
 
 				// Data is good, write the update
 				if( $mode == 'edit' ) {
@@ -323,9 +342,33 @@ abstract class Model {
 							$v = $txtid;
 						}
 					unset($v);
-					$this->_table->insert($data);
+					$pk = $this->_table->insert($data);
 				} else
 					throw new \Exception('This should never happen');
+
+				// Update related data, if needed
+				foreach( $related as $k => $v ) {
+ 					$rinfo = $this->__analyzeRelation($this->_fields[$k]);
+
+					// Delete unwanted relations
+					list($oldrels, $cnt) = $rinfo['nm']->select(array($rinfo['ncol'] => $pk), true);
+					if( $oldrels )
+						foreach( $oldrels as $k => $r )
+							if( ! $v || ! in_array($r[$rinfo['mcol']], $v) )
+								$rinfo['nm']->delete($r);
+
+					// Insert missing relations
+					if( $v )
+						foreach( $v as $vv ) {
+							$insdata = array($rinfo['ncol'] => $pk, $rinfo['mcol'] => $vv);
+							if( ! $rinfo['nm']->select($insdata,true,true) )
+								$rinfo['nm']->insert($insdata);
+						}
+
+				}
+
+				// Commit
+				$this->_db->commit();
 
 				return null;
 			}
@@ -335,6 +378,19 @@ abstract class Model {
 		// Retrieve hard data from the DB
 		if( $mode == 'edit' ) {
 			$record = $this->_table->get($pk);
+
+			foreach( $this->_fields as $n => $f )
+				if( $f['dtype']=='array' )
+					if( ! $f['nmtab'] )
+						$record[$n] = unserialize($record[$n]);
+					else { // Read data from relation
+						$rinfo = $this->__analyzeRelation($f);
+						list($res,$cnt) = $rinfo['nm']->select(array($rinfo['ncol']=>$pk), array($rinfo['mcol']));
+						$record[$n] = array();
+						foreach( $res as $r )
+							$record[$n][] = $r[$rinfo['mcol']];
+					}
+
 			if( ! $this->isAllowed($record) )
 				throw new \Exception('Loading forbidden data');
 		}
@@ -476,7 +532,7 @@ abstract class Model {
 	private function __buildField($k, $f, $value, $error) {
 		$data = null;
 
-		if( $f['rtype'] == 'select' || $f['rtype'] == 'auto' ) {
+		if( $f['rtype'] == 'select' || $f['rtype'] == 'multi' || $f['rtype'] == 'auto' ) {
 			// Retrieve data
 			if( array_key_exists('rdata',$f) )
 				$data = $f['rdata'];
@@ -498,6 +554,66 @@ abstract class Model {
 			$value = null;
 
 		return new FormField($f['label'], $f['rtype'], $f['descr'], $value, $error, $data);
+	}
+
+	/**
+	* Analyzes a relation, internal function
+	*
+	* @return array: Associative array with informations about the relation:
+	*                'refer' => The referred Model instance
+	*                'mn'    => The n:m Table instance
+	*                'ncol'  => Name of the column referring to my table in NM table's PK
+	*                'mcol'  => Name of the column referring to referred in NM table's PK
+	*/
+	private function __analyzeRelation($field) {
+
+		// Use caching to avoid multiple long queries
+		static $cache = null;
+		if( $cache !== null )
+			return $cache;
+
+		// If cache is not available, do the full analysis
+		$refer = \DoPhp::model($field['refer']);
+		$nm = new Table($this->_db, $field['nmtab']);
+
+		$npk = $this->_table->getPk();
+		if( count($npk) != 1 )
+			throw new \Exception('Unsupported composed or missing PK');
+		$npk = $npk[0];
+		$mpk = $refer->getTable()->getPk();
+		if( count($mpk) != 1 )
+			throw new \Exception('Unsupported composed or missing PK');
+		$mpk = $mpk[0];
+		$ncol = null; // Name of the column referring my table in n:m
+		$mcol = null; // Name of the column referring other table in n:m
+		foreach( $nm->getRefs() as $col => list($rtab, $rcol) ) {
+			if( ! $ncol && $rtab == $this->_table->getName() && $rcol == $npk )
+				$ncol = $col;
+			elseif( ! $mcol && $rtab == $refer->getTable()->getName() && $rcol == $mpk )
+				$mcol = $col;
+
+			if( $ncol && $mcol )
+				break;
+		}
+
+		if( ! $ncol || ! $mcol )
+			throw new \Exception('Couldn\'t find relations on n:m table');
+		$nmpk = $nm->getPk();
+		if( count($nmpk) < 2 )
+			throw new \Exception('m:m table must have a composite PK');
+		elseif( count($nmpk) != 2 )
+			throw new \Exception('Unsupported PK in n:m table');
+
+		if( array_search($ncol, $nmpk) === false || array_search($mcol, $nmpk) === false )
+			throw new \Exception('Couldn\'t find columns in relation');
+
+		$cache = array(
+			'refer' => $refer,
+			'nm' => $nm,
+			'ncol' => $ncol,
+			'mcol' => $mcol,
+		);
+		return $cache;
 	}
 
 	/**
