@@ -261,23 +261,46 @@ class string_validator extends base_validator {
 /**
 * Validate as integer
 *
+* Custom validation rules: 'min'=>int, value must be >= min
+*                          'max'=>true, value must be <= max
+*
 * @return int
 */
 class int_validator extends base_validator {
+
+	protected function do_validate( &$v, &$o ) {
+		if( array_key_exists('min', $o) )
+			if( $err = $this->check_min($v, $o['min']) )
+				return $err;
+		if( array_key_exists('max', $o) )
+			if( $err = $this->check_max($v, $o['max']) )
+				return $err;
+	}
 
 	protected function do_clean($val) {
 		if( gettype($val) == 'integer' )
 			return $val;
 		return (int)trim($val);
 	}
+
+	protected function check_min($val, $min) {
+		if( $val < $min )
+			return _('Value is too low') . '.';
+	}
+
+	protected function check_max($val, $max) {
+		if( $val > $max )
+			return _('Value is too big') . '.';
+	}
 }
 
 /**
 * Validate as double
 *
+* @see int_validator
 * @return double
 */
-class double_validator extends base_validator {
+class double_validator extends int_validator {
 
 	protected function do_clean($val) {
 		if( gettype($val) == 'double' )
