@@ -49,9 +49,12 @@ abstract class Model {
 	*                         If null or missing, defaults to an empty array
 	*                         The "required" key can be a string specifying a
 	*                         single action on which the field if required (insert/update)
-	*   'refer'    => class:  Name of the referenced model, if applicable
-	*   'rdata'    => array:  Associative array of data for a select box, if
-	*                         applicable. Overrides refer.
+	*   'ropts'    => array:  Data rendering options, associative array.
+	*                         'refer' => class:  Name of the referenced model, if applicable
+	*                         'data' => array:  Associative array of data for a select box, if
+	*                                   applicable. Overrides 'refer'.
+	*                         'group' => string: Name of the field in the referenced model
+	*                                    to use for grouping elements
 	*   'postp'    => func:   Post-processor: parses the data before saving it,
 	*                         if applicable
 	*   'i18n'     => bool:   If true, this field is "multiplied" for every
@@ -107,6 +110,8 @@ abstract class Model {
 				$d['dtype'] = null;
 			if( ! isset($d['dopts']) )
 				$d['dopts'] = array();
+			if( ! isset($d['ropts']) )
+				$d['ropts'] = array();
 			if( ! isset($d['i18n']) )
 				$d['i18n'] = false;
 			if( ! isset($d['rtab']) )
@@ -114,10 +119,10 @@ abstract class Model {
 			if( ! isset($d['nmtab']) )
 				$d['nmtab'] = null;
 
-			if( ($d['rtype']=='select' || $d['rtype']=='auto') && ! (isset($d['refer']) || array_key_exists('rdata',$d)) )
+			if( ($d['rtype']=='select' || $d['rtype']=='auto') && ! (isset($d['ropts']['refer']) || array_key_exists('data',$d['ropts'])) )
 					throw new \Exception('Missing referred model or data');
-			if( array_key_exists('rdata',$d) && ! is_array($d['rdata']) )
-				throw new \Exception('Unvalid rdata');
+			if( array_key_exists('data',$d['ropts']) && ! is_array($d['ropts']['data']) )
+				throw new \Exception('Unvalid referred data');
 		}
 		unset($d);
 
@@ -475,10 +480,10 @@ abstract class Model {
 				if( $this->_fields[$k]['i18n'] )
 					$v = $this->__reprLangLabel($v);
 				elseif( $this->_fields[$k]['rtype'] == 'select' || $this->_fields[$k]['rtype'] == 'auto' )
-					if( array_key_exists('rdata',$this->_fields[$k]) )
-						$v = $this->_fields[$k]['rdata'][$v];
+					if( array_key_exists('data',$this->_fields[$k]['ropts']) )
+						$v = $this->_fields[$k]['ropts']['data'][$v];
 					else
-						$v = \DoPhp::model($this->_fields[$k]['refer'])->summary($v);
+						$v = \DoPhp::model($this->_fields[$k]['ropts']['refer'])->summary($v);
 			unset($v);
 
 			$data[$this->formatPk($i)] = $for;
@@ -537,10 +542,10 @@ abstract class Model {
 
 		if( $f['rtype'] == 'select' || $f['rtype'] == 'multi' || $f['rtype'] == 'auto' ) {
 			// Retrieve data
-			if( array_key_exists('rdata',$f) )
-				$data = $f['rdata'];
+			if( array_key_exists('data',$f['ropts']) )
+				$data = $f['ropts']['data'];
 			else
-				$data = \DoPhp::model($f['refer'])->summary();
+				$data = \DoPhp::model($f['ropts']['refer'])->summary();
 
 			// Filter data
 			if( isset($this->_filter[$k]) ) {
