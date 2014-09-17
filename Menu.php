@@ -10,9 +10,47 @@
 namespace dophp;
 
 /**
+* Interface for every menu node
+*/
+interface MenuInterface {
+
+	/**
+	* Appends a child to this menu item
+	*
+	* @param $item object: The MenuItem instance
+	*/
+	public function append(MenuInterface $item);
+
+	/**
+	* Returns the item's label
+	*/
+	public function getLabel();
+
+	/**
+	* Returns the item's url
+	*/
+	public function getUrl();
+
+	/**
+	* Returns the item's childs
+	*/
+	public function getChilds();
+	
+	/**
+	* Returns an array containing the current active path.
+	*
+	* @return array Array of MenuInterface instances. Null on failure
+	*/
+	public function getBreadcrumb();
+}
+
+/**
 * Represents a Menu, as a collection of items.
 */
-class Menu extends MenuItem {
+class Menu implements MenuInterface {
+
+	/** The root MenuItem */
+	protected $_root;
 
 	/**
 	* Constructs a menu from array
@@ -28,28 +66,65 @@ class Menu extends MenuItem {
 	*                                defined as above
 	*/
 	public function __construct($label=null, $url=null, $items=null) {
-		parent::__construct($label, $url);
+		$this->_root = $this->_createChild(array('label'=>$label, 'url'=>$url));
 
 		if( $items )
 			foreach( $items as $i )
-				$this->append($this->__parseItem($i));
+				$this->_root->append($this->_parseItem($i));
 	}
 
-	private function __parseItem($item) {
+	/**
+	* Parses an item array definition and returns a MenuInterface instance
+	*
+	* @callgraph
+	* @param $item array: Associative array defining child (<label>, <url>)
+	* @return MenuInterface: The child instance
+	*/
+	protected function _parseItem($item) {
 		if( $item === null )
-			return new MenuItem();
+			return $this->_createChild(array());
 		if( ! is_array($item) )
 			throw new \Exception('Unvalid item data');
 
-		$label = isset($item['label']) ? $item['label'] : null;
-		$url = isset($item['url']) ? $item['url'] : null;
-		$el = new MenuItem($label, $url);
+		$el = $this->_createChild($item);
 
 		if( isset($item['childs']) )
 			foreach( $item['childs'] as $i )
-				$el->append($this->__parseItem($i));
+				$el->append($this->_parseItem($i));
 
 		return $el;
+	}
+
+	/**
+	* Creates a child element from an array definition
+	*
+	* @param $item array: Associative array defining child (<label>, <url>)
+	* @return MenuInterface: The child instance
+	*/
+	protected function _createChild($item) {
+		$label = isset($item['label']) ? $item['label'] : null;
+		$url = isset($item['url']) ? $item['url'] : null;
+		return new MenuItem($label, $url);
+	}
+
+	public function append(MenuInterface $item) {
+		return $this->_root->append($item);
+	}
+
+	public function getLabel() {
+		return $this->_root->getLabel();
+	}
+
+	public function getUrl() {
+		return $this->_root->getUrl();
+	}
+
+	public function getChilds() {
+		return $this->_root->getChilds();
+	}
+	
+	public function getBreadcrumb() {
+		return $this->_root->getBreadcrumb();
 	}
 
 }
@@ -57,7 +132,7 @@ class Menu extends MenuItem {
 /**
 * Represents a menu item
 */
-class MenuItem {
+class MenuItem implements MenuInterface {
 
 	/** User-friendly label */
 	protected $_label;
@@ -77,12 +152,7 @@ class MenuItem {
 		$this->_url = $url;
 	}
 
-	/**
-	* Appends a child to this menu item
-	*
-	* @param $item object: The MenuItem instance
-	*/
-	public function append(MenuItem $item) {
+	public function append(MenuInterface $item) {
 		$this->_childs[] = $item;
 	}
 
@@ -98,11 +168,6 @@ class MenuItem {
 		return $this->_childs;
 	}
 
-	/**
-	* Returns an array containing the current active path.
-	*
-	* @return array Array of MenuItem instances. Null on failure
-	*/
 	public function getBreadcrumb() {
 		// First, check for first active child. If found, consider myself active too.
 		$cbc = null;
