@@ -432,24 +432,18 @@ abstract class Model {
 	* Returns the data for rendering a display page
 	*
 	* @param $pk mixed: The PK to select the record to be read
-	* @return Array of label => value pairs
+	* @return Array of Field instances
 	*/
 	public function read($pk) {
 		if( ! $pk )
 			throw new \Exception('Unvalid or missing pk');
-		$res = $this->format($this->_table->get($pk));
+		$res = $this->_table->get($pk);
 		if( ! $this->isAllowed($res) )
 			throw new \Exception('Loading forbidden data');
 
 		$data = array();
 		foreach( $res as $k => $v )
-			if( $this->_fields[$k]['i18n'] )
-				foreach( \DoPhp::lang()->getSupportedLanguages() as $l ) {
-					$label = $this->__buildLangLabel($this->_fields[$k]['label'], $l);
-					$data[$label] = $this->__reprLangLabel($v);
-				}
-			else
-				$data[$this->_fields[$k]['label']] = $v;
+			$data[$k] = new Field($v, $this->_fields[$k]);
 
 		return $data;
 	}
@@ -458,7 +452,7 @@ abstract class Model {
 	* Returns the data for rendering a summary table
 	*
 	* @todo Will supporto filtering, ordering, etc...
-	* @return Array of <data>: associative array of data as <pk> => <item>
+	* @return Array of <data>: associative array of data as <pk> => <Field>
 	*                  <count>: total number of records found
 	*                  <heads>: column headers
 	*/
@@ -475,18 +469,11 @@ abstract class Model {
 
 		$data = array();
 		foreach( $items as $i ) {
-			$for = $this->format($i);
-			foreach( $for as $k => & $v )
-				if( $this->_fields[$k]['i18n'] )
-					$v = $this->__reprLangLabel($v);
-				elseif( $this->_fields[$k]['rtype'] == 'select' || $this->_fields[$k]['rtype'] == 'auto' )
-					if( array_key_exists('data',$this->_fields[$k]['ropts']) )
-						$v = $this->_fields[$k]['ropts']['data'][$v];
-					else
-						$v = \DoPhp::model($this->_fields[$k]['ropts']['refer'])->summary($v);
+			foreach( $i as $k => & $v )
+				$v = new Field($v, $this->_fields[$k]);
 			unset($v);
 
-			$data[$this->formatPk($i)] = $for;
+			$data[$this->formatPk($i)] = $i;
 		}
 
 		return array($data, $count, $labels);
@@ -523,18 +510,6 @@ abstract class Model {
 	}
 
 	/**
-	* Short representation of localize label
-	*/
-	private function __reprLangLabel($id) {
-		$lang = \DoPhp::lang();
-		$ll = $lang->getTextLangs($id);
-		foreach( $ll as & $l )
-			$l = $lang->getCountryCode($l);
-		unset($l);
-		return $lang->getText($id, $lang->getDefaultLanguage()) . ' (' . implode(',',$ll) . ')';
-	}
-
-	/**
 	* Builds a single field, internal function
 	*/
 	private function __buildField($k, $f, $value, $error) {
@@ -542,10 +517,16 @@ abstract class Model {
 
 		if( $f['rtype'] == 'select' || $f['rtype'] == 'multi' || $f['rtype'] == 'auto' ) {
 			// Retrieve data
+			$groups = array();
 			if( array_key_exists('data',$f['ropts']) )
 				$data = $f['ropts']['data'];
-			else
-				$data = \DoPhp::model($f['ropts']['refer'])->summary();
+			else {
+				$rmodel = \DoPhp::model($f['ropts']['refer']);
+				$data = $rmodel->summary();
+				if( isset($f['ropts']['group']) )
+					foreach( $data as $k => $v )
+						$groups[$k] = $rmodel->read($k)[$f['ropts']['group']]->format();
+			}
 
 			// Filter data
 			if( isset($this->_filter[$k]) ) {
@@ -556,12 +537,16 @@ abstract class Model {
 					if( ! in_array($pk, $allowed) )
 						unset($data[$pk]);
 			}
+
+			// Assemble data
+			foreach( $data as $k => & $v )
+				$v = new FormFieldData($k, $v, isset($groups[$k])?$groups[$k]:null);
 		}
 
 		if( $f['rtype'] == 'password' ) // Do not show password
 			$value = null;
 
-		return new FormField($f['label'], $f['rtype'], $f['descr'], $value, $error, $data);
+		return new FormField($value, $f, $error, $data);
 	}
 
 	/**
@@ -629,21 +614,6 @@ abstract class Model {
 	*/
 	public function getTable() {
 		return $this->_table;
-	}
-
-	/**
-	* Formats a row into human-readable values
-	*
-	* @param $row array: Associative array, row to be formatted
-	* @return array: Associative array of string, the formatted values
-	*/
-	public function format( $row ) {
-		$ret = array();
-		foreach( $row as $k => $v ) {
-			$f = new Field($v);
-			$ret[$k] = $f->format();
-		}
-		return $ret;
 	}
 
 	/**
@@ -717,11 +687,8 @@ abstract class Model {
 		list($res, $cnt) = $this->_table->select($pars, $cols);
 		$ret = array();
 		foreach( $res as $r ) {
-			if( $this->_fields[$displayCol]['i18n'] )
-				$v = $this->__reprLangLabel($r[$displayCol]);
-			else
-				$v = $r[$displayCol];
-			$ret[$this->formatPk($r)] = $v;
+			$f = new Field($r[$displayCol], $this->_fields[$displayCol]);
+			$ret[$this->formatPk($r)] = $f->format();
 		}
 
 		if( $pk ) {
@@ -771,14 +738,18 @@ class Field {
 
 	/** The raw value, ready to be written into DB */
 	protected $_value;
+	/** The field definition */
+	protected $_def;
 
 	/**
 	* Creates the field
 	*
+	* @param array def: The field definition
 	* @param mixed value: The raw value
 	*/
-	public function __construct($value) {
+	public function __construct($value, & $def) {
 		$this->_value = $value;
+		$this->_def = $def;
 	}
 
 	/**
@@ -798,23 +769,34 @@ class Field {
 		$lc = localeconv();
 
 		if( $type == 'NULL' )
-			return '-';
-		if( $type == 'string' )
-			return $this->_value;
-		if( $this->_value instanceof Time )
-			return $this->_value->format('H:i:s');
-		if( $this->_value instanceof Date )
-			return $this->_value->format('d.m.Y');
-		if( $this->_value instanceof \DateTime )
-			return $this->_value->format('d.m.Y H:i:s');
-		if( $type == 'boolean' )
-			return $this->_value ? _('Yes') : _('No');
-		if( $type == 'integer' )
-			return number_format($this->_value, 0, $lc['decimal_point'], $lc['thousands_sep']);
-		if( $type == 'double' )
-			return number_format($this->_value, -1, $lc['decimal_point'], $lc['thousands_sep']);
-		
-		throw new \Exception("Unsupported type $type");
+			$val = '-';
+		elseif( $type == 'string' )
+			$val = $this->_value;
+		elseif( $this->_value instanceof Time )
+			$val = $this->_value->format('H:i:s');
+		elseif( $this->_value instanceof Date )
+			$val = $this->_value->format('d.m.Y');
+		elseif( $this->_value instanceof \DateTime )
+			$val = $this->_value->format('d.m.Y H:i:s');
+		elseif( $type == 'boolean' )
+			$val = $this->_value ? _('Yes') : _('No');
+		elseif( $type == 'integer' )
+			$val = number_format($this->_value, 0, $lc['decimal_point'], $lc['thousands_sep']);
+		elseif( $type == 'double' )
+			$val = number_format($this->_value, -1, $lc['decimal_point'], $lc['thousands_sep']);
+		else
+			throw new \Exception("Unsupported type $type");
+
+		// Handle i18n and relations
+		if( $this->_def['i18n'] )
+			$val = $this->__reprLangLabel($val);
+		elseif( $this->_def['rtype'] == 'select' || $this->_def['rtype'] == 'auto' )
+			if( array_key_exists('data',$this->_def['ropts']) )
+				$val = $this->_def['ropts']['data'][$val];
+			else
+				$val = \DoPhp::model($this->_def['ropts']['refer'])->summary($val);
+
+		return $val;
 	}
 
 	/**
@@ -824,6 +806,28 @@ class Field {
 		if( $this->_value instanceof Time || $this->_value instanceof Date || $this->_value instanceof \DateTime )
 			return $this->format();
 		return (string) $this->_value;
+	}
+
+	/**
+	* Short representation of localize label
+	*/
+	private function __reprLangLabel($id) {
+		$lang = \DoPhp::lang();
+		$ll = $lang->getTextLangs($id);
+		foreach( $ll as & $l )
+			$l = $lang->getCountryCode($l);
+		unset($l);
+		return $lang->getText($id, $lang->getDefaultLanguage()) . ' (' . implode(',',$ll) . ')';
+	}
+
+	public function label() {
+		return $this->_def['label'];
+	}
+	public function type() {
+		return $this->_def['rtype'];
+	}
+	public function descr() {
+		return $this->_def['descr'];
 	}
 
 }
@@ -843,37 +847,54 @@ class FormField extends Field {
 	/**
 	* Creates a new form field
 	*
+	* @see Field::__construct
 	* @param $label string: The label for the field
 	* @param $type string: The field's type
 	* @param $descr string: The field's long description
-	* @param $value mixed: The raw value
 	* @param $error string: The error message
 	* @param $data array: The related data
 	*/
-	public function __construct($label, $type, $descr, $value, $error, $data) {
-		parent::__construct($value);
-		$this->_label = $label;
-		$this->_type = $type;
-		$this->_descr = $descr;
-		$this->_value = $value;
+	public function __construct($value, $def, $error, $data) {
+		parent::__construct($value, $def);
 		$this->_error = $error;
 		$this->_data = $data;
 	}
 
-	public function label() {
-		return $this->_label;
-	}
-	public function type() {
-		return $this->_type;
-	}
-	public function descr() {
-		return $this->_descr;
-	}
 	public function error() {
 		return $this->_error;
 	}
 	public function data() {
 		return $this->_data;
+	}
+
+}
+
+/**
+* Data for a form field
+*/
+class FormFieldData {
+
+	protected $_value;
+	protected $_descr;
+	protected $_group;
+
+	/**
+	* Creates a new data instance
+	*/
+	public function __construct($value, $descr, $group=null) {
+		$this->_value = $value;
+		$this->_descr = $descr;
+		$this->_group = $group;
+	}
+
+	public function value() {
+		return $this->_value;
+	}
+	public function descr() {
+		return $this->_descr;
+	}
+	public function group() {
+		return $this->_group;
 	}
 
 }
