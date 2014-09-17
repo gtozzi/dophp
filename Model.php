@@ -521,6 +521,8 @@ abstract class Model {
 			if( array_key_exists('data',$f['ropts']) )
 				$data = $f['ropts']['data'];
 			else {
+				if( ! isset($f['ropts']['refer']) )
+					throw New \Exception("Need refer or data for $k field");
 				$rmodel = \DoPhp::model($f['ropts']['refer']);
 				$data = $rmodel->summary();
 				if( isset($f['ropts']['group']) )
