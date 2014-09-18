@@ -511,8 +511,15 @@ abstract class Model {
 
 	/**
 	* Builds a single field, internal function
+	*
+	* @param $k string: The field name
+	* @param $f array: The field definition
+	* @param $value mixed: The field value
+	* @param $error string: The error message
+	*
+	* @return FormField: The built field
 	*/
-	private function __buildField($k, $f, $value, $error) {
+	private function __buildField($k, & $f, $value, $error) {
 		$data = null;
 
 		if( $f['rtype'] == 'select' || $f['rtype'] == 'multi' || $f['rtype'] == 'auto' ) {
@@ -526,8 +533,8 @@ abstract class Model {
 				$rmodel = \DoPhp::model($f['ropts']['refer']);
 				$data = $rmodel->summary();
 				if( isset($f['ropts']['group']) )
-					foreach( $data as $k => $v )
-						$groups[$k] = $rmodel->read($k)[$f['ropts']['group']]->format();
+					foreach( $data as $pk => $v )
+						$groups[$pk] = $rmodel->read($pk)[$f['ropts']['group']]->format();
 			}
 
 			// Filter data
