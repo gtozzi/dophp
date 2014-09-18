@@ -562,7 +562,7 @@ abstract class Model {
 	* Analyzes a relation, internal function
 	*
 	* @return array: Associative array with informations about the relation:
-	*                'refer' => The referred Model instance
+	*                'ropts' => [ 'refer' => The referred Model instance ]
 	*                'mn'    => The n:m Table instance
 	*                'ncol'  => Name of the column referring to my table in NM table's PK
 	*                'mcol'  => Name of the column referring to referred in NM table's PK
@@ -575,7 +575,7 @@ abstract class Model {
 			return $cache;
 
 		// If cache is not available, do the full analysis
-		$refer = \DoPhp::model($field['refer']);
+		$refer = \DoPhp::model($field['ropts']['refer']);
 		$nm = new Table($this->_db, $field['nmtab']);
 
 		$npk = $this->_table->getPk();
