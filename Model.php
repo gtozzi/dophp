@@ -690,9 +690,10 @@ abstract class Model {
 		// Retrieve and format data
 		$cols = $pks;
 		$cols[] = $displayCol;
-		$pars = null;
 		if( $pk )
 			$pars = $this->_table->parsePkArgs($pk);
+		else
+			$pars = $this->_filterWhere;
 		list($res, $cnt) = $this->_table->select($pars, $cols);
 		$ret = array();
 		foreach( $res as $r ) {
@@ -726,13 +727,14 @@ abstract class Model {
 	* @return boolean: True when allowed
 	*/
 	protected function isAllowed($record) {
-		foreach( $this->_filter as $c => $v )
+		foreach( $this->_filter as $c => $v ) {
 			if( ! isset($record[$c]) )
 				return false;
 			if( is_array($v) && ! in_array($record[$c], $v) )
 				return false;
 			if( ! is_array($v) && $record[$c] != $v )
 				return false;
+		}
 
 		return true;
 	}
