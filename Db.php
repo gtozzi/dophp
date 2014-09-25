@@ -178,6 +178,8 @@ class Db {
 	* @return array [query string, params]
 	*/
 	public static function buildParams($params, $glue=', ') {
+		if( ! $params )
+			return '';
 		$cols = array();
 		$vals = array();
 		foreach( $params as $k => $v ) {
@@ -637,12 +639,11 @@ class Where {
 	*                   Must be a valid PDO sql statement instead
 	*/
 	public function __construct($params, $condition='AND') {
-		if( ! $params )
-			return;
 		if( $condition == 'AND' || $condition == 'OR' ) {
 			list($this->_cond, $this->_params) = Db::buildParams($params, " $condition ");
 			return;
 		}
+
 		$this->_cond = $condition;
 		$this->_params = $params;
 	}

@@ -181,15 +181,18 @@ abstract class Model {
 				$cond .= " `$f`=? ";
 				$parm[] = $v;
 			} else {
-				$cond .= ' ( ';
-				$i = 0;
-				foreach( $v as $vv ) {
-					if( ++$i > 1 )
-						$cond .= ' OR ';
-					$cond .= " `$f`=? ";
-					$parm[] = $vv;
-				}
-				$cond .= ' ) ';
+				if( count($v) ) {
+					$cond .= ' ( ';
+					$i = 0;
+					foreach( $v as $vv ) {
+						if( ++$i > 1 )
+							$cond .= ' OR ';
+						$cond .= " `$f`=? ";
+						$parm[] = $vv;
+					}
+					$cond .= ' ) ';
+				} else
+					$cond .= ' FALSE ';
 			}
 		}
 		$this->_filterWhere = new Where($parm, $cond);
