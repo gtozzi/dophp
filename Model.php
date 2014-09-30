@@ -335,6 +335,8 @@ abstract class Model {
 
 				// Data is good, write the update
 				if( $mode == 'edit' ) {
+					$this->_beforeEdit($pk, $data, $related);
+
 					foreach( $data as $k => $v )
 						if( $this->_fields[$k]['i18n'] ) {
 							// Leave text ID untouched and update text instead
@@ -345,6 +347,8 @@ abstract class Model {
 					if( count($data) )
 						$this->_table->update($pk, $data);
 				} elseif( $mode == 'insert' ) {
+					$this->_beforeInsert($data, $related);
+
 					foreach( $data as $k => & $v )
 						if( $this->_fields[$k]['i18n'] ) {
 							// Insert text into text table and replace l18n field
@@ -376,6 +380,16 @@ abstract class Model {
 								$rinfo['nm']->insert($insdata);
 						}
 
+				}
+
+				// Run after insert/edit methods
+				switch($mode) {
+				case 'insert':
+					$this->_afterInsert($pk, $data, $related);
+					break;
+				case 'edit':
+					$this->_afterEdit($pk, $data, $related);
+					break;
 				}
 
 				// Commit
@@ -741,6 +755,45 @@ abstract class Model {
 
 		return true;
 	}
+
+	/**
+	* Runs custom actions before an item has to be inserted
+	* does nothing by default, may be overridden
+	*
+	* @param $data array: The data to be inserted, may be modified byRef
+	* @param $related array: Optional related data
+	*/
+	protected function _beforeInsert( & $data, & $related ) { }
+
+	/**
+	* Runs custom actions after an item has been edited
+	* does nothing by default, may be overridden
+	*
+	* @param $pk mixed: The primary key
+	* @param $data array: The data to be edited, may be modified byRef
+	* @param $related array: Optional related data
+	*/
+	protected function _beforeEdit($pk, & $data, & $related ) { }
+
+	/**
+	* Runs custom actions after an item has been inserted
+	* does nothing by default, may be overridden
+	*
+	* @param $pk mixed: The primary key
+	* @param $data array: The data just inserted
+	* @param $related array: Optional related data
+	*/
+	protected function _afterInsert($pk, & $data, & $related ) { }
+
+	/**
+	* Runs custom actions after an item has been edited
+	* does nothing by default, may be overridden
+	*
+	* @param $pk mixed: The primary key
+	* @param $data array: The data just edited
+	* @param $related array: Optional related data
+	*/
+	protected function _afterEdit($pk, & $data, & $related ) { }
 
 }
 
