@@ -330,4 +330,19 @@ class Utils {
 		return null;
 	}
 
+	/**
+	* Makes a string filename-safe by replacing unsafe characters
+	* Uses the most wide range un unsafe characters possible
+	*
+	* @param $name The input string
+	* @param $replace The replace character
+	* @return string: The sanitized string
+	*/
+	public static function safeFileName($name, $replace='_') {
+		$unsafe = array('/','\\','?','<','>',':','*','|','^',"\x7f");
+		for( $i=0; $i<=0x1f; $i++)
+			$unsafe[] = chr($i);
+		return str_replace($unsafe, $replace, $name);
+	}
+
 }
