@@ -106,7 +106,7 @@ abstract class Model {
 				$d['rtab'] = true;
 
 			if( ($d['rtype']=='select' || $d['rtype']=='auto') && ! (isset($d['refer']) || array_key_exists('rdata',$d)) )
-					throw new \Exception('Missing referred model or data');
+				throw new \Exception("Missing referred model or data for field \"$f\"");
 			if( array_key_exists('rdata',$d) && ! is_array($d['rdata']) )
 				throw new \Exception('Unvalid rdata');
 		}
