@@ -4,7 +4,10 @@
 * @file Model.php
 * @author Gabriele Tozzi <gabriele@tozzi.eu>
 * @package DoPhp
-* @brief Class used to represent a DoPhp Model.
+* @brief Class used to represent a DoPhp Model and related classes
+* @warning Classes in this file are still a work in progress, some functions are
+*          incomplete and backward compatibility could be broken without notice
+*          in future versions
 */
 
 namespace dophp;
@@ -33,25 +36,32 @@ abstract class Model {
 	*                         - <null> [or missing]: The field is not rendered at all
 	*                         - label: The field is rendered as a label
 	*                         - select: The field is rendered as a select box
+	*                         - multi: The field is rendered as multiple select box
 	*                         - check: The field is rendered as a checkbox
 	*                         - auto: The field is renderes as a suggest (autocomplete)
 	*                         - text: The field is rendered as a text box
 	*   'dtype'    => string: The data type, used for validation, see Validator::__construct
 	*                         If null or missing, the field is automatically set
 	*                         from database and omitted in insert/update queries
+	*                         If array, data will be serialized prior of being written
+	*                         unless 'nmtab' is specified
 	*   'dopts'    => array:  Data Validation options, see Validator::__construct
 	*                         If null or missing, defaults to an empty array
 	*                         The "required" key can be a string specifying a
 	*                         single action on which the field if required (insert/update)
-	*   'refer'    => class:  Name of the referenced model, if applicable
-	*   'rdata'    => array:  Associative array of data for a select box, if
-	*                         applicable. Overrides refer.
+	*   'ropts'    => array:  Data rendering options, associative array.
+	*                         'refer' => class:  Name of the referenced model, if applicable
+	*                         'data' => array:  Associative array of data for a select box, if
+	*                                   applicable. Overrides 'refer'.
+	*                         'group' => string: Name of the field in the referenced model
+	*                                    to use for grouping elements
 	*   'postp'    => func:   Post-processor: parses the data before saving it,
 	*                         if applicable
 	*   'i18n'     => bool:   If true, this field is "multiplied" for every
 	*                         supported language. Default: false
 	*   'rtab'     => bool:   If false, this field is not rendered in table view.
 	*                         Defaults to true.
+	*   'nmtab'    => string: The name of the N:M relation tab for an array field
 	* ]
 	* @see initFields()
 	*/
@@ -100,15 +110,19 @@ abstract class Model {
 				$d['dtype'] = null;
 			if( ! isset($d['dopts']) )
 				$d['dopts'] = array();
+			if( ! isset($d['ropts']) )
+				$d['ropts'] = array();
 			if( ! isset($d['i18n']) )
 				$d['i18n'] = false;
 			if( ! isset($d['rtab']) )
 				$d['rtab'] = true;
+			if( ! isset($d['nmtab']) )
+				$d['nmtab'] = null;
 
-			if( ($d['rtype']=='select' || $d['rtype']=='auto') && ! (isset($d['refer']) || array_key_exists('rdata',$d)) )
+			if( ($d['rtype']=='select' || $d['rtype']=='auto') && ! (isset($d['ropts']['refer']) || array_key_exists('data',$d['ropts'])) )
 				throw new \Exception("Missing referred model or data for field \"$f\"");
-			if( array_key_exists('rdata',$d) && ! is_array($d['rdata']) )
-				throw new \Exception('Unvalid rdata');
+			if( array_key_exists('data',$d['ropts']) && ! is_array($d['ropts']['data']) )
+				throw new \Exception('Unvalid referred data');
 		}
 		unset($d);
 
@@ -167,15 +181,18 @@ abstract class Model {
 				$cond .= " `$f`=? ";
 				$parm[] = $v;
 			} else {
-				$cond .= ' ( ';
-				$i = 0;
-				foreach( $v as $vv ) {
-					if( ++$i > 1 )
-						$cond .= ' OR ';
-					$cond .= " `$f`=? ";
-					$parm[] = $vv;
-				}
-				$cond .= ' ) ';
+				if( count($v) ) {
+					$cond .= ' ( ';
+					$i = 0;
+					foreach( $v as $vv ) {
+						if( ++$i > 1 )
+							$cond .= ' OR ';
+						$cond .= " `$f`=? ";
+						$parm[] = $vv;
+					}
+					$cond .= ' ) ';
+				} else
+					$cond .= ' FALSE ';
 			}
 		}
 		$this->_filterWhere = new Where($parm, $cond);
@@ -284,6 +301,7 @@ abstract class Model {
 			// Data has been submitted
 			list($data,$errors) = $this->validate($post, $files, $mode);
 
+			$related = array();
 			if( ! $errors ) {
 				if( ! $this->isAllowed($data) )
 					throw new \Exception('Saving forbidden data');
@@ -301,10 +319,24 @@ abstract class Model {
 					// Save files
 					if( $f['rtype']=='file' && isset($data[$k]) )
 						$data[$k] = $this->_saveFile($name, $data[$k]);
+
+					// Handle multi fields
+					if( $f['dtype']=='array' )
+						if( ! $f['nmtab'] )
+							$data[$k] = serialize($data[$k]);
+						else { // Move data into "related" array and handle it later
+							$related[$k] = $data[$k];
+							unset($data[$k]);
+						}
 				}
+
+				// Start tansaction
+				$this->_db->beginTransaction();
 
 				// Data is good, write the update
 				if( $mode == 'edit' ) {
+					$this->_beforeEdit($pk, $data, $related);
+
 					foreach( $data as $k => $v )
 						if( $this->_fields[$k]['i18n'] ) {
 							// Leave text ID untouched and update text instead
@@ -315,6 +347,8 @@ abstract class Model {
 					if( count($data) )
 						$this->_table->update($pk, $data);
 				} elseif( $mode == 'insert' ) {
+					$this->_beforeInsert($data, $related);
+
 					foreach( $data as $k => & $v )
 						if( $this->_fields[$k]['i18n'] ) {
 							// Insert text into text table and replace l18n field
@@ -323,9 +357,43 @@ abstract class Model {
 							$v = $txtid;
 						}
 					unset($v);
-					$this->_table->insert($data);
+					$pk = $this->_table->insert($data);
 				} else
 					throw new \Exception('This should never happen');
+
+				// Update related data, if needed
+				foreach( $related as $k => $v ) {
+ 					$rinfo = $this->__analyzeRelation($this->_fields[$k]);
+
+					// Delete unwanted relations
+					list($oldrels, $cnt) = $rinfo['nm']->select(array($rinfo['ncol'] => $pk), true);
+					if( $oldrels )
+						foreach( $oldrels as $k => $r )
+							if( ! $v || ! in_array($r[$rinfo['mcol']], $v) )
+								$rinfo['nm']->delete($r);
+
+					// Insert missing relations
+					if( $v )
+						foreach( $v as $vv ) {
+							$insdata = array($rinfo['ncol'] => $pk, $rinfo['mcol'] => $vv);
+							if( ! $rinfo['nm']->select($insdata,true,true) )
+								$rinfo['nm']->insert($insdata);
+						}
+
+				}
+
+				// Run after insert/edit methods
+				switch($mode) {
+				case 'insert':
+					$this->_afterInsert($pk, $data, $related);
+					break;
+				case 'edit':
+					$this->_afterEdit($pk, $data, $related);
+					break;
+				}
+
+				// Commit
+				$this->_db->commit();
 
 				return null;
 			}
@@ -335,6 +403,19 @@ abstract class Model {
 		// Retrieve hard data from the DB
 		if( $mode == 'edit' ) {
 			$record = $this->_table->get($pk);
+
+			foreach( $this->_fields as $n => $f )
+				if( $f['dtype']=='array' )
+					if( ! $f['nmtab'] )
+						$record[$n] = unserialize($record[$n]);
+					else { // Read data from relation
+						$rinfo = $this->__analyzeRelation($f);
+						list($res,$cnt) = $rinfo['nm']->select(array($rinfo['ncol']=>$pk), array($rinfo['mcol']));
+						$record[$n] = array();
+						foreach( $res as $r )
+							$record[$n][] = $r[$rinfo['mcol']];
+					}
+
 			if( ! $this->isAllowed($record) )
 				throw new \Exception('Loading forbidden data');
 		}
@@ -368,24 +449,18 @@ abstract class Model {
 	* Returns the data for rendering a display page
 	*
 	* @param $pk mixed: The PK to select the record to be read
-	* @return Array of label => value pairs
+	* @return Array of Field instances
 	*/
 	public function read($pk) {
 		if( ! $pk )
 			throw new \Exception('Unvalid or missing pk');
-		$res = $this->format($this->_table->get($pk));
+		$res = $this->_table->get($pk);
 		if( ! $this->isAllowed($res) )
 			throw new \Exception('Loading forbidden data');
 
 		$data = array();
 		foreach( $res as $k => $v )
-			if( $this->_fields[$k]['i18n'] )
-				foreach( \DoPhp::lang()->getSupportedLanguages() as $l ) {
-					$label = $this->__buildLangLabel($this->_fields[$k]['label'], $l);
-					$data[$label] = $this->__reprLangLabel($v);
-				}
-			else
-				$data[$this->_fields[$k]['label']] = $v;
+			$data[$k] = new Field($v, $this->_fields[$k]);
 
 		return $data;
 	}
@@ -394,7 +469,7 @@ abstract class Model {
 	* Returns the data for rendering a summary table
 	*
 	* @todo Will supporto filtering, ordering, etc...
-	* @return Array of <data>: associative array of data as <pk> => <item>
+	* @return Array of <data>: associative array of data as <pk> => <Field>
 	*                  <count>: total number of records found
 	*                  <heads>: column headers
 	*/
@@ -411,21 +486,37 @@ abstract class Model {
 
 		$data = array();
 		foreach( $items as $i ) {
-			$for = $this->format($i);
-			foreach( $for as $k => & $v )
-				if( $this->_fields[$k]['i18n'] )
-					$v = $this->__reprLangLabel($v);
-				elseif( $this->_fields[$k]['rtype'] == 'select' || $this->_fields[$k]['rtype'] == 'auto' )
-					if( array_key_exists('rdata',$this->_fields[$k]) )
-						$v = $this->_fields[$k]['rdata'][$v];
-					else
-						$v = \DoPhp::model($this->_fields[$k]['refer'])->summary($v);
+			foreach( $i as $k => & $v )
+				$v = new Field($v, $this->_fields[$k]);
 			unset($v);
 
-			$data[$this->formatPk($i)] = $for;
+			$data[$this->formatPk($i)] = $i;
 		}
 
 		return array($data, $count, $labels);
+	}
+
+	/**
+	* Try to delete an element, returns a human.friendly error when failed
+	*
+	* @param $pk mixed: The PK to select the record to be read
+	* @return array: [User errror message, Detailed error message] or NULL on success
+	*/
+	public function delete($pk) {
+		if( ! $pk )
+			throw new \Exception('Unvalid or missing pk');
+		try {
+			$this->_table->delete($pk);
+		} catch( \PDOException $e ) {
+			list($scode, $mcode, $mex) = $e->errorInfo;
+
+			if( $scode == '23000' && $mcode == 1451 )
+				return array(_('item is in use'), $e->getMessage());
+			else
+				return array($e->getMessage(), $e->getMessage());
+		}
+
+		return null;
 	}
 
 	/**
@@ -436,36 +527,32 @@ abstract class Model {
 	}
 
 	/**
-	* Short representation of localize label
-	*/
-	private function __reprLangLabel($id) {
-		$lang = \DoPhp::lang();
-		$ll = $lang->getTextLangs($id);
-		foreach( $ll as & $l )
-			$l = $lang->getCountryCode($l);
-		unset($l);
-		return $lang->getText($id, $lang->getDefaultLanguage()) . ' (' . implode(',',$ll) . ')';
-	}
-
-	/**
 	* Builds a single field, internal function
+	*
+	* @param $k string: The field name
+	* @param $f array: The field definition
+	* @param $value mixed: The field value
+	* @param $error string: The error message
+	*
+	* @return FormField: The built field
 	*/
-	private function __buildField($k, $f, $val, $err) {
-		$field = array(
-			'label' => $f['label'],
-			'type'  => $f['rtype'],
-			'descr' => $f['descr'],
-			'value' => $val,
-			'error' => $err,
-			'data'  => null,
-		);
+	private function __buildField($k, & $f, $value, $error) {
+		$data = null;
 
-		if( $f['rtype'] == 'select' || $f['rtype'] == 'auto' ) {
+		if( $f['rtype'] == 'select' || $f['rtype'] == 'multi' || $f['rtype'] == 'auto' ) {
 			// Retrieve data
-			if( array_key_exists('rdata',$f) )
-				$data = $f['rdata'];
-			else
-				$data = \DoPhp::model($f['refer'])->summary();
+			$groups = array();
+			if( array_key_exists('data',$f['ropts']) )
+				$data = $f['ropts']['data'];
+			else {
+				if( ! isset($f['ropts']['refer']) )
+					throw New \Exception("Need refer or data for $k field");
+				$rmodel = \DoPhp::model($f['ropts']['refer']);
+				$data = $rmodel->summary();
+				if( isset($f['ropts']['group']) )
+					foreach( $data as $pk => $v )
+						$groups[$pk] = $rmodel->read($pk)[$f['ropts']['group']]->format();
+			}
 
 			// Filter data
 			if( isset($this->_filter[$k]) ) {
@@ -477,13 +564,75 @@ abstract class Model {
 						unset($data[$pk]);
 			}
 
-			$field['data'] = $data;
+			// Assemble data
+			foreach( $data as $k => & $v )
+				$v = new FormFieldData($k, $v, isset($groups[$k])?$groups[$k]:null);
 		}
 
 		if( $f['rtype'] == 'password' ) // Do not show password
-			$field['value'] = '';
+			$value = null;
 
-		return $field;
+		return new FormField($value, $f, $error, $data);
+	}
+
+	/**
+	* Analyzes a relation, internal function
+	*
+	* @return array: Associative array with informations about the relation:
+	*                'ropts' => [ 'refer' => The referred Model instance ]
+	*                'mn'    => The n:m Table instance
+	*                'ncol'  => Name of the column referring to my table in NM table's PK
+	*                'mcol'  => Name of the column referring to referred in NM table's PK
+	*/
+	private function __analyzeRelation($field) {
+
+		// Use caching to avoid multiple long queries
+		static $cache = null;
+		if( $cache !== null )
+			return $cache;
+
+		// If cache is not available, do the full analysis
+		$refer = \DoPhp::model($field['ropts']['refer']);
+		$nm = new Table($this->_db, $field['nmtab']);
+
+		$npk = $this->_table->getPk();
+		if( count($npk) != 1 )
+			throw new \Exception('Unsupported composed or missing PK');
+		$npk = $npk[0];
+		$mpk = $refer->getTable()->getPk();
+		if( count($mpk) != 1 )
+			throw new \Exception('Unsupported composed or missing PK');
+		$mpk = $mpk[0];
+		$ncol = null; // Name of the column referring my table in n:m
+		$mcol = null; // Name of the column referring other table in n:m
+		foreach( $nm->getRefs() as $col => list($rtab, $rcol) ) {
+			if( ! $ncol && $rtab == $this->_table->getName() && $rcol == $npk )
+				$ncol = $col;
+			elseif( ! $mcol && $rtab == $refer->getTable()->getName() && $rcol == $mpk )
+				$mcol = $col;
+
+			if( $ncol && $mcol )
+				break;
+		}
+
+		if( ! $ncol || ! $mcol )
+			throw new \Exception('Couldn\'t find relations on n:m table');
+		$nmpk = $nm->getPk();
+		if( count($nmpk) < 2 )
+			throw new \Exception('m:m table must have a composite PK');
+		elseif( count($nmpk) != 2 )
+			throw new \Exception('Unsupported PK in n:m table');
+
+		if( array_search($ncol, $nmpk) === false || array_search($mcol, $nmpk) === false )
+			throw new \Exception('Couldn\'t find columns in relation');
+
+		$cache = array(
+			'refer' => $refer,
+			'nm' => $nm,
+			'ncol' => $ncol,
+			'mcol' => $mcol,
+		);
+		return $cache;
 	}
 
 	/**
@@ -491,43 +640,6 @@ abstract class Model {
 	*/
 	public function getTable() {
 		return $this->_table;
-	}
-
-	/**
-	* Formats a row into human-readable values
-	*
-	* @param $row array: Associative array, row to be formatted
-	* @return array: Associative array of string, the formatted values
-	*/
-	public function format( $row ) {
-		$ret = array();
-		foreach( $row as $k => $v ) {
-			
-			$type = gettype($v);
-			$lc = localeconv();
-
-			if( $type == 'NULL' )
-				$v = '-';
-			elseif( $type == 'string' )
-				$v;
-			elseif( $v instanceof Time )
-				$v = $v->format('H:i:s');
-			elseif( $v instanceof Date )
-				$v = $v->format('d.m.Y');
-			elseif( $v instanceof \DateTime )
-				$v = $v->format('d.m.Y');
-			elseif( $type == 'boolean' )
-				$v = $v ? _('Yes') : _('No');
-			elseif( $type == 'integer' )
-				$v = number_format($v, 0, $lc['decimal_point'], $lc['thousands_sep']);
-			elseif( $type == 'double' )
-				$v = number_format($v, -1, $lc['decimal_point'], $lc['thousands_sep']);
-			else
-				throw new \Exception("Unsupported type $type");
-			
-			$ret[$k] = $v;
-		}
-		return $ret;
 	}
 
 	/**
@@ -595,17 +707,15 @@ abstract class Model {
 		// Retrieve and format data
 		$cols = $pks;
 		$cols[] = $displayCol;
-		$pars = null;
 		if( $pk )
 			$pars = $this->_table->parsePkArgs($pk);
+		else
+			$pars = $this->_filterWhere;
 		list($res, $cnt) = $this->_table->select($pars, $cols);
 		$ret = array();
 		foreach( $res as $r ) {
-			if( $this->_fields[$displayCol]['i18n'] )
-				$v = $this->__reprLangLabel($r[$displayCol]);
-			else
-				$v = $r[$displayCol];
-			$ret[$this->formatPk($r)] = $v;
+			$f = new Field($r[$displayCol], $this->_fields[$displayCol]);
+			$ret[$this->formatPk($r)] = $f->format();
 		}
 
 		if( $pk ) {
@@ -634,15 +744,224 @@ abstract class Model {
 	* @return boolean: True when allowed
 	*/
 	protected function isAllowed($record) {
-		foreach( $this->_filter as $c => $v )
+		foreach( $this->_filter as $c => $v ) {
 			if( ! isset($record[$c]) )
 				return false;
 			if( is_array($v) && ! in_array($record[$c], $v) )
 				return false;
 			if( ! is_array($v) && $record[$c] != $v )
 				return false;
+		}
 
 		return true;
+	}
+
+	/**
+	* Runs custom actions before an item has to be inserted
+	* does nothing by default, may be overridden
+	*
+	* @param $data array: The data to be inserted, may be modified byRef
+	* @param $related array: Optional related data
+	*/
+	protected function _beforeInsert( & $data, & $related ) { }
+
+	/**
+	* Runs custom actions after an item has been edited
+	* does nothing by default, may be overridden
+	*
+	* @param $pk mixed: The primary key
+	* @param $data array: The data to be edited, may be modified byRef
+	* @param $related array: Optional related data
+	*/
+	protected function _beforeEdit($pk, & $data, & $related ) { }
+
+	/**
+	* Runs custom actions after an item has been inserted
+	* does nothing by default, may be overridden
+	*
+	* @param $pk mixed: The primary key
+	* @param $data array: The data just inserted
+	* @param $related array: Optional related data
+	*/
+	protected function _afterInsert($pk, & $data, & $related ) { }
+
+	/**
+	* Runs custom actions after an item has been edited
+	* does nothing by default, may be overridden
+	*
+	* @param $pk mixed: The primary key
+	* @param $data array: The data just edited
+	* @param $related array: Optional related data
+	*/
+	protected function _afterEdit($pk, & $data, & $related ) { }
+
+}
+
+
+/**
+* Represents a data field, carrying a raw value
+*/
+class Field {
+
+	/** The raw value, ready to be written into DB */
+	protected $_value;
+	/** The field definition */
+	protected $_def;
+
+	/**
+	* Creates the field
+	*
+	* @param array def: The field definition
+	* @param mixed value: The raw value
+	*/
+	public function __construct($value, & $def) {
+		$this->_value = $value;
+		$this->_def = $def;
+	}
+
+	/**
+	* Returns the raw value for this field
+	*/
+	public function value() {
+		return $this->_value;
+	}
+
+	/**
+	* Formats the raw value into human-readable data
+	*
+	* @return string: the formatted value
+	*/
+	public function format() {
+		$type = gettype($this->_value);
+		$lc = localeconv();
+
+		if( $type == 'NULL' )
+			$val = '-';
+		elseif( $type == 'string' )
+			$val = $this->_value;
+		elseif( $this->_value instanceof Time )
+			$val = $this->_value->format('H:i:s');
+		elseif( $this->_value instanceof Date )
+			$val = $this->_value->format('d.m.Y');
+		elseif( $this->_value instanceof \DateTime )
+			$val = $this->_value->format('d.m.Y H:i:s');
+		elseif( $type == 'boolean' )
+			$val = $this->_value ? _('Yes') : _('No');
+		elseif( $type == 'integer' )
+			$val = number_format($this->_value, 0, $lc['decimal_point'], $lc['thousands_sep']);
+		elseif( $type == 'double' )
+			$val = number_format($this->_value, -1, $lc['decimal_point'], $lc['thousands_sep']);
+		else
+			throw new \Exception("Unsupported type $type");
+
+		// Handle i18n and relations
+		if( $this->_def['i18n'] )
+			$val = $this->__reprLangLabel($val);
+		elseif( $this->_def['rtype'] == 'select' || $this->_def['rtype'] == 'auto' )
+			if( array_key_exists('data',$this->_def['ropts']) )
+				$val = $this->_def['ropts']['data'][$val];
+			else
+				$val = \DoPhp::model($this->_def['ropts']['refer'])->summary($val);
+
+		return $val;
+	}
+
+	/**
+	* Returns a string version of this field
+	*/
+	public function __toString() {
+		if( $this->_value instanceof Time || $this->_value instanceof Date || $this->_value instanceof \DateTime )
+			return $this->format();
+		return (string) $this->_value;
+	}
+
+	/**
+	* Short representation of localize label
+	*/
+	private function __reprLangLabel($id) {
+		$lang = \DoPhp::lang();
+		$ll = $lang->getTextLangs($id);
+		foreach( $ll as & $l )
+			$l = $lang->getCountryCode($l);
+		unset($l);
+		return $lang->getText($id, $lang->getDefaultLanguage()) . ' (' . implode(',',$ll) . ')';
+	}
+
+	public function label() {
+		return $this->_def['label'];
+	}
+	public function type() {
+		return $this->_def['rtype'];
+	}
+	public function descr() {
+		return $this->_def['descr'];
+	}
+
+}
+
+
+/**
+* Represents a form field
+*/
+class FormField extends Field {
+
+	protected $_label;
+	protected $_type;
+	protected $_descr;
+	protected $_error;
+	protected $_data;
+
+	/**
+	* Creates a new form field
+	*
+	* @see Field::__construct
+	* @param $label string: The label for the field
+	* @param $type string: The field's type
+	* @param $descr string: The field's long description
+	* @param $error string: The error message
+	* @param $data array: The related data
+	*/
+	public function __construct($value, $def, $error, $data) {
+		parent::__construct($value, $def);
+		$this->_error = $error;
+		$this->_data = $data;
+	}
+
+	public function error() {
+		return $this->_error;
+	}
+	public function data() {
+		return $this->_data;
+	}
+
+}
+
+/**
+* Data for a form field
+*/
+class FormFieldData {
+
+	protected $_value;
+	protected $_descr;
+	protected $_group;
+
+	/**
+	* Creates a new data instance
+	*/
+	public function __construct($value, $descr, $group=null) {
+		$this->_value = $value;
+		$this->_descr = $descr;
+		$this->_group = $group;
+	}
+
+	public function value() {
+		return $this->_value;
+	}
+	public function descr() {
+		return $this->_descr;
+	}
+	public function group() {
+		return $this->_group;
 	}
 
 }

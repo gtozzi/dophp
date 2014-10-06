@@ -43,11 +43,18 @@ class Db {
 		if( ! is_array($params) )
 			$params = array($params);
 		foreach($params as & $p)
-			if( gettype($p) == 'boolean' ) // PDO would convert false into null otherwise
+			if( gettype($p) == 'boolean' ) { // PDO would convert false into null otherwise
 				if( $p === true )
 					$p = 1;
 				elseif( $p === false )
 					$p = 0;
+			}
+			elseif( $p instanceof Date )
+				$p = $p->format('Y-m-d');
+			elseif( $p instanceof Time )
+				$p = $p->format('H:i:s');
+			elseif( $p instanceof \DateTime )
+				$p = $p->format('Y-m-d H:i:s');
 		$st = $this->_pdo->prepare($query);
 		$st->execute($params);
 		return $st;
@@ -57,7 +64,7 @@ class Db {
 	* Runs an INSERT statement from an associative array and returns ID of the
 	* last auto_increment value
 	*
-	* @see __buildInsUpdQuery
+	* @see buildInsUpdQuery
 	*/
 	public function insert($table, $params) {
 		list($q,$p) = $this->buildInsUpdQuery('ins', $table, $params);
@@ -69,8 +76,8 @@ class Db {
 	/**
 	* Runs an UPDATE statement from an associative array
 	*
-	* @see __buildInsUpdQuery
-	* @param $where array: where conditions
+	* @see buildInsUpdQuery
+	* @see buildParams
 	*/
 	public function update($table, $params, $where) {
 		list($s,$ps) = self::buildInsUpdQuery('upd', $table, $params);
@@ -79,6 +86,18 @@ class Db {
 		$q = "$s WHERE $w";
 		$p = array_merge($ps, $pw);
 
+		$this->run($q, $p);
+	}
+
+	/**
+	* Runs a DELETE statement
+	*
+	* @see buildParams
+	*/
+	public function delete($table, $where) {
+		list($w,$p) = self::buildParams($where, ' AND ');
+		$q = "DELETE FROM `$table` WHERE $w";
+		
 		$this->run($q, $p);
 	}
 
@@ -92,6 +111,33 @@ class Db {
 
 		$res = $this->run($q)->fetch();
 		return $res['fr'] !== null ? (int)$res['fr'] : null;
+	}
+
+	/**
+	* Begins a transaction
+	*
+	* @see PDO::beginTransaction()
+	*/
+	public function beginTransaction() {
+		$this->_pdo->beginTransaction();
+	}
+
+	/**
+	* Commits a transaction
+	*
+	* @see PDO::commit()
+	*/
+	public function commit() {
+		$this->_pdo->commit();
+	}
+
+	/**
+	* Rolls back a transaction
+	*
+	* @see PDO::rollBack()
+	*/
+	public function rollBack() {
+		$this->_pdo->rollBack();
 	}
 
 	/**
@@ -132,6 +178,8 @@ class Db {
 	* @return array [query string, params]
 	*/
 	public static function buildParams($params, $glue=', ') {
+		if( ! $params )
+			return '';
 		$cols = array();
 		$vals = array();
 		foreach( $params as $k => $v ) {
@@ -188,6 +236,8 @@ class Table {
 	protected $_db = null;
 	/** Column definition cache, populated at runtime */
 	protected $_cols = array();
+	/** references cache, populated at runtime */
+	protected $_refs = array();
 	/** Primary key cache, populated at runtime */
 	protected $_pk = array();
 
@@ -226,10 +276,32 @@ class Table {
 			ORDER BY `ORDINAL_POSITION`
 		";
 		foreach( $this->_db->run($q, array($this->_name))->fetchAll() as $c ) {
+			if( isset($this->_cols['COLUMN_NAME']) )
+				throw new \Exception("Duplicate definition found for column {$c['COLUMN_NAME']}");
 			$this->_cols[$c['COLUMN_NAME']] = $c;
 			if( $c['COLUMN_KEY'] == 'PRI' )
 				$this->_pk[] = $c['COLUMN_NAME'];
 		}
+
+		// Read and cache references structure
+		$q = "
+			SELECT
+				`CONSTRAINT_NAME`,
+				`COLUMN_NAME`,
+				`REFERENCED_TABLE_NAME`,
+				`REFERENCED_COLUMN_NAME`
+			FROM `information_schema`.`KEY_COLUMN_USAGE`
+			WHERE `CONSTRAINT_SCHEMA` = DATABASE()
+				AND `TABLE_SCHEMA` = DATABASE()
+				AND `REFERENCED_TABLE_SCHEMA` = DATABASE()
+				AND `TABLE_NAME` = ?
+			ORDER BY `ORDINAL_POSITION`, `POSITION_IN_UNIQUE_CONSTRAINT`
+		";
+		foreach( $this->_db->run($q, array($this->_name))->fetchAll() as $c ) {
+			if( isset($this->_refs['COLUMN_NAME']) )
+				throw new \Exception("More than one reference detected for column {$c['COLUMN_NAME']}");
+ 			$this->_refs[$c['COLUMN_NAME']] = $c;
+ 		}
 
 	}
 
@@ -317,6 +389,15 @@ class Table {
 	*/
 	public function insert($data) {
 		return $this->_db->insert($this->_name, $data);
+	}
+
+	/**
+	* Runs a delete query for a single record
+	*
+	* @param $pk mixed: The primary key, array if composite (associative or numeric)
+	*/
+	public function delete($pk) {
+		$this->_db->delete($this->_name, $this->parsePkArgs($pk));
 	}
 
 	/**
@@ -442,6 +523,15 @@ class Table {
 	}
 
 	/**
+	* Returns table's name
+	*
+	* @return string: This table's name
+	*/
+	public function getName() {
+		return $this->_name;
+	}
+
+	/**
 	* Returns the table's primary key
 	*
 	* @return array: List of fields composing the primary key
@@ -457,6 +547,18 @@ class Table {
 	*/
 	public function getCols() {
 		return array_keys($this->_cols);
+	}
+
+	/**
+	* Returns array of table's references
+	*
+	* @return array: Associative array of arrays ['col' => [0=>referenced table, 1=>referenced column], ...]
+	*/
+	public function getRefs() {
+		$ret = array();
+		foreach( $this->_refs as $k => $r )
+			$ret[$k] = array($r['REFERENCED_TABLE_NAME'], $r['REFERENCED_COLUMN_NAME']);
+		return $ret;
 	}
 
 	/**
@@ -537,12 +639,11 @@ class Where {
 	*                   Must be a valid PDO sql statement instead
 	*/
 	public function __construct($params, $condition='AND') {
-		if( ! $params )
-			return;
 		if( $condition == 'AND' || $condition == 'OR' ) {
 			list($this->_cond, $this->_params) = Db::buildParams($params, " $condition ");
 			return;
 		}
+
 		$this->_cond = $condition;
 		$this->_params = $params;
 	}

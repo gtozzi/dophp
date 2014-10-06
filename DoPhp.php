@@ -273,6 +273,8 @@ class DoPhp {
 	public static function model($name) {
 		if( ! self::$__instance )
 			throw new Exception('Must instatiate DoPhp first');
+		if( ! $name )
+			throw new Exception('Must give a model name');
 
 		require_once self::$__instance->__conf['paths']['mod'] . '/' . ucfirst($name) . '.php';
 		$classname = dophp\Utils::findClass(self::MODEL_PREFIX . $name);
