@@ -322,6 +322,27 @@ class date_validator extends base_validator {
 }
 
 /**
+* Validate as time only
+*
+* @return object dophp\Time
+*/
+class time_validator extends base_validator {
+
+	protected function do_clean($val) {
+		if( gettype($val) == 'object' && $val instanceof Time )
+			return $val;
+		$vals = preg_split('/(.|:|\s)/', trim($val));
+		die(var_dump($vals)); //TODO: complete
+		try {
+			$date = new \DateTime($val);
+		} catch( \Exception $e ) {
+			return null;
+		}
+		return $date;
+	}
+}
+
+/**
 * Validate a file
 *
 * Custom validation rules: 'type': array(<types>) Validate against a list of mime types
