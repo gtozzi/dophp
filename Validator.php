@@ -331,15 +331,21 @@ class time_validator extends base_validator {
 	protected function do_clean($val) {
 		if( gettype($val) == 'object' && $val instanceof Time )
 			return $val;
-		$vals = preg_split('/(.|:|\s)/', trim($val));
-		die(var_dump($vals)); //TODO: complete
-		try {
-			$date = new \DateTime($val);
-		} catch( \Exception $e ) {
+		$vals = preg_split('/(\\.|:|\\s+)/', trim($val));
+		if( count($vals) > 3 )
 			return null;
+		foreach( $vals as & $v ) {
+			if( ! is_numeric($v) )
+				return null;
+			$v = (int) $v;
 		}
-		return $date;
+		unset($v);
+		for( $i = 0; $i < 3; $i++ )
+			if( ! isset($vals[$i]) )
+				$vals[$i] = 0;
+		return new Time(implode(':', array_map(function($i){return str_pad($i,2,'0',STR_PAD_LEFT);}, $vals )));
 	}
+
 }
 
 /**
