@@ -102,6 +102,8 @@ abstract class PageSmarty extends PageBase implements PageInterface {
 
 	/** Smarty instance */
 	protected $_smarty;
+	/** Name of the template to be used */
+	protected $_template;
 
 	/**
 	* Prepares the template system and passes execution to _build()
@@ -128,10 +130,15 @@ abstract class PageSmarty extends PageBase implements PageInterface {
 		$this->_smarty->assign('config', $this->_config);
 		$this->_smarty->assignByRef('user', $this->_user);
 
+		// Init default template name
+		$base_file = basename($_SERVER['PHP_SELF'], '.php');
+		$this->_template = "$base_file.{$this->_name}.tpl";
+
+		// Call subclass build
 		$this->_build();
 
-		$base_file = basename($_SERVER['PHP_SELF'], '.php');
-		return $this->_smarty->fetch("$base_file.{$this->_name}.tpl");
+		// Run smarty
+		return $this->_smarty->fetch($this->_template);
 	}
 
 	/**
