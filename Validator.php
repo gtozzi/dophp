@@ -259,11 +259,40 @@ class string_validator extends base_validator {
 }
 
 /**
+* Common numeric validation class
+*
+* Custom validation rules: 'min'=>val, Number must be greater or equal than value
+*                          'max'=>val, Number must be lesser or equal than value
+*/
+abstract class number_validator extends base_validator {
+
+	protected function do_validate( &$v, &$o ) {
+		if( isset($o['min']) )
+			if( $err = $this->check_min($v, $o['min']) )
+				return $err;
+		if( isset($o['max']) )
+			if( $err = $this->check_max($v, $o['max']) )
+				return $err;
+	}
+	protected function check_min($val, $min) {
+		if( $val >= $min )
+			return false;
+		return _('Number is too small') . '.';
+	}
+	protected function check_max($val, $max) {
+		if( $val <= $max )
+			return false;
+		return _('Number is too big') . '.';
+	}
+
+}
+
+/**
 * Validate as integer
 *
 * @return int
 */
-class int_validator extends base_validator {
+class int_validator extends number_validator {
 
 	protected function do_clean($val) {
 		if( gettype($val) == 'integer' )
@@ -277,7 +306,7 @@ class int_validator extends base_validator {
 *
 * @return double
 */
-class double_validator extends base_validator {
+class double_validator extends number_validator {
 
 	protected function do_clean($val) {
 		if( gettype($val) == 'double' )
