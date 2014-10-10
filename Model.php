@@ -919,7 +919,7 @@ class FormField extends Field {
 	* @param $type string: The field's type
 	* @param $descr string: The field's long description
 	* @param $error string: The error message
-	* @param $data array: The related data
+	* @param $data array: The related data, array of FormFieldData objects
 	*/
 	public function __construct($value, $def, $error, $data) {
 		parent::__construct($value, $def);
