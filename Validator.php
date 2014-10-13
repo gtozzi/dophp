@@ -121,14 +121,16 @@ interface field_validator {
 * Base abstract validator class.
 *
 * Common rules: 'required'=>boolean|lambda($field_values, $all_values).
-*               When true (or when the lambda returns true, check that field
-*               is not empty.
+*                   When true (or when the lambda returns true, check that field
+*                   is not empty.
+*               'choices'=>array()
+*                   When specified, the validated value MUST be in_array(<choice>)
 *               'custom'=>lambda($field_values, $all_values).
-*               validates using custom function. Must return string error or
-*               null on success.
+*                   validates using custom function. Must return string error or
+*                   null on success.
 *               'default'=>specify a default value to be used in place of null
 *               'process'=>lambda($value)
-*               Lambda function to post-proces the final value after validation
+*                   Lambda function to post-proces the final value after validation
 */
 abstract class base_validator implements field_validator {
 
@@ -174,6 +176,8 @@ abstract class base_validator implements field_validator {
 			$err = $o['custom']($v, $this->__values);
 			if( $err )
 				return $err;
+		if( isset($o['choices']) && ! in_array($v, $o['choices']) )
+			return _('Field must be one of') . ' "' . implode($o['choices'],',') . '".';
 
 		// Perform specific validation tasks
 		$err = $this->do_validate($v, $o);
