@@ -681,6 +681,20 @@ class Decimal {
 * Represents a Date without time
 */
 class Date extends \DateTime {
+
+	/**
+	* Strips out time and timezone data
+	*
+	* @protected $date mixed: The date, as accepted by DateTime::__construct()
+	*                         or a DateTime instance
+	*/
+	public function __construct($date='now') {
+		if( gettype($date) == 'object' && $date instanceof \DateTime )
+			$date = $date->format('Y-m-d');
+		parent::__construct($date, new \DateTimeZone('UTC'));
+		$this->setTime(0, 0, 0);
+	}
+
 }
 
 
