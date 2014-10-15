@@ -6,8 +6,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: DoPhp\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2014-10-13 23:49+0200\n"
-"PO-Revision-Date: 2014-10-13 23:49+0200\n"
+"POT-Creation-Date: 2014-10-15 04:01+0200\n"
+"PO-Revision-Date: 2014-10-15 04:02+0200\n"
 "Last-Translator: Gabriele Tozzi <gabriele@tozzi.eu>\n"
 "Language-Team: Gabriele Tozzi <tozzi@despammed.com>\n"
 "Language: it\n"
@@ -35,7 +35,7 @@ msgstr "No"
 msgid "Field must be one of"
 msgstr "Il campo deve essere uno tra"
 
-#: Validator.php:212 Validator.php:402 Validator.php:435
+#: Validator.php:212 Validator.php:411 Validator.php:444
 msgid "Field can't be empty"
 msgstr "Il campo non può essere vuoto"
 
@@ -48,32 +48,44 @@ msgid "Unvalid absolute URL"
 msgstr "URL assoluto non valido"
 
 #: Validator.php:259
-msgid "Text is too short"
-msgstr "Il testo è troppo breve"
+msgid "Text must be at least {number} characters long"
+msgstr "Il testo deve essere lungo almeno {number} caratteri"
 
 #: Validator.php:261
-msgid "Text is too long"
-msgstr "Il testo è troppo lungo"
+msgid "Text must be no longer than {number} characters"
+msgstr "Il testo non deve essere più lungo di {number} caratteri"
 
 #: Validator.php:284
-msgid "Number is too small"
-msgstr "Il numero è troppo piccolo"
+msgid "Number must be at least {number}"
+msgstr "Il numero deve essere almeno {number}"
 
 #: Validator.php:289
-msgid "Number is too big"
-msgstr "Il numero è troppo grande"
+msgid "Number must not be bigger than {number}"
+msgstr "Il numero non deve essere più grande di {number}"
 
-#: Validator.php:404
+#: Validator.php:413
 msgid "Unvalid file size"
 msgstr "Dimensione file non valida"
 
-#: Validator.php:416
+#: Validator.php:425
 msgid "Unsupported file type"
 msgstr "Tipo file non supportato"
 
-#: Validator.php:438
+#: Validator.php:447
 msgid "Must be an array"
 msgstr "Deve essere un array"
+
+#~ msgid "Number is too small"
+#~ msgstr "Il numero è troppo piccolo"
+
+#~ msgid "Number is too big"
+#~ msgstr "Il numero è troppo grande"
+
+#~ msgid "Text is too short"
+#~ msgstr "Il testo è troppo breve"
+
+#~ msgid "Text is too long"
+#~ msgstr "Il testo è troppo lungo"
 
 #~ msgid "Value is too low"
 #~ msgstr "Valore troppo basso"

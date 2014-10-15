@@ -256,9 +256,9 @@ class string_validator extends base_validator {
 		if( $val == null )
 			return false;
 		if( $min && strlen($val) < $min )
-			return _('Text is too short') . '.';
+			return str_replace('{number}', $min, _('Text must be at least {number} characters long')) . '.';
 		if( $max && strlen($val) > $max )
-			return _('Text is too long') . '.';
+			return sprintf('{number}', $max, _('Text must be no longer than {number} characters')) . '.';
 	}
 }
 
@@ -281,12 +281,21 @@ abstract class number_validator extends base_validator {
 	protected function check_min($val, $min) {
 		if( $val >= $min )
 			return false;
-		return _('Number is too small') . '.';
+		return str_replace('{number}', $this->format_number($min), _('Number must be at least {number}')) . '.';
 	}
 	protected function check_max($val, $max) {
 		if( $val <= $max )
 			return false;
-		return _('Number is too big') . '.';
+		return str_replace('{number}', $this->format_number($max), _('Number must not be bigger than {number}')) . '.';
+	}
+
+	/**
+	* Utility function to convert a number (double or int) to string
+	*/
+	protected function format_number($num) {
+		if( floor($num) == $num )
+			return sprintf('%u', $num);
+		return sprintf('%f', $num);
 	}
 
 }
