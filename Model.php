@@ -907,7 +907,6 @@ class FormField extends Field {
 
 	protected $_label;
 	protected $_type;
-	protected $_descr;
 	protected $_error;
 	protected $_data;
 
@@ -917,7 +916,6 @@ class FormField extends Field {
 	* @see Field::__construct
 	* @param $label string: The label for the field
 	* @param $type string: The field's type
-	* @param $descr string: The field's long description
 	* @param $error string: The error message
 	* @param $data array: The related data, array of FormFieldData objects
 	*/
