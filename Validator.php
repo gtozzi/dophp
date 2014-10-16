@@ -28,7 +28,7 @@ class Validator {
 	* @param $files array: $_FILES data (usually), passed byRef
 	* @param $rules The rules, associative array with format:
 	*               'field_name' => array('field_type', array('options'))
-	*               - If field_type is an associative array, handles it as a
+	*               - If field_type is 'array', handles it as a
 	*                 sub-validator: expects data to be an array too.
 	*               - If field_name is (int)0 and 'multiple' option is true,
 	*                 that rule will be applied to any other numerical index
@@ -53,7 +53,7 @@ class Validator {
 						$multi[$k] = $r;
 			break;
 		}
-		$this->__rules = array_merge($multi, $rules);
+		$this->__rules = array_replace($multi, $rules); // array_merge screws up int keys!
 		\DoPhp::lang()->restoreDomain();
 	}
 
@@ -61,8 +61,10 @@ class Validator {
 	* Do the validation.
 	*
 	* @return array ($data, $error). $data cointains same fields on post
-	*         formatted according to 'field_type' (when given). $errors
-	*         contains validation errors. All fields are automatically trimmed.
+	*         formatted according to 'field_type' (when given).  All fields are
+	*         automatically trimmed. $errors contains validation errors as
+	*         associative array of strings, or associative array of arrays if
+	*         type is array (recursive validator).
 	*/
 	public function validate() {
 		\DoPhp::lang()->dophpDomain();
@@ -72,20 +74,11 @@ class Validator {
 		foreach( $this->__rules as $k => $v ) {
 			list($type, $options) = $v;
 
-			if( is_array($type) ) {
-				// Sub-validator
-				$subpost = isset($this->__post[$k]) ? $this->__post[$k] : array();
-				$subfiles = isset($this->__files[$k]) ? $this->__files[$k] : array();
-				$subv = new Validator( $subpost, $subfiles, $type );
-				list($d, $e) = $subv->validate();
-				if( $d )
-					$data[$k] = $d;
-				if( $e )
-					$errors[$k] = $e;
-				continue;
-			}
+			if( is_array($type) )
+				throw new Exception('Deprecated old sub-validator syntax');
 
 			$vname = 'dophp\\' . $type . '_validator';
+
 			if( substr($type,0,4) == 'file' )
 				$validator = new $vname($this->__files[$k], $options, $this->__files);
 			elseif( substr($type,0,5) == 'array' )
@@ -96,6 +89,7 @@ class Validator {
 			if( $err = $validator->validate() )
 				$errors[$k] = $err;
 		}
+
 		\DoPhp::lang()->restoreDomain();
 		return array( $data, $errors );
 	}
@@ -447,15 +441,12 @@ class array_validator implements field_validator {
 			$this->__error = _("Must be an array") . '.';
 
 		}elseif( array_key_exists('rules',$options) && $options['rules'] ) {
-			$val = array();
-			$val = new Validator($value, $_FILES, $options['rules']);
-			list($pars, $errors) = $val->validate();
-			$this->__value = $pars;
-			if( $errors )
-				$this->__error = print_r($errors, true);
+			$validator = new Validator($value, $_FILES, $options['rules']);
+			list($this->__value, $this->__error) = $validator->validate();
 
 		}else
 			$this->__value = $value;
+
 	}
 
 	public function clean() {
