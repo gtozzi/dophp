@@ -238,7 +238,7 @@ abstract class Model {
 					$sub = array();
 					foreach( \DoPhp::lang()->getSupportedLanguages() as $l )
 						$sub[$l] = array($f['dtype'], $f['dopts']);
-					$rules[$k] = array($sub, array());
+					$rules[$k] = array('array', array('rules'=>$sub));
 					continue;
 				}
 

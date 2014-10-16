@@ -75,7 +75,7 @@ class Validator {
 			list($type, $options) = $v;
 
 			if( is_array($type) )
-				throw new Exception('Deprecated old sub-validator syntax');
+				throw new \Exception('Deprecated old sub-validator syntax');
 
 			$vname = 'dophp\\' . $type . '_validator';
 
