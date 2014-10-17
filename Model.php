@@ -75,16 +75,12 @@ abstract class Model {
 	/**
 	* The base filter to apply on the table (by exaple, for access limiting),
 	* associative array of field => <value(s)>. If value is an array, multiple
-	* values are allower with and OR condition
+	* values are allowed with and OR condition.
+	* initFilter() also supports advanced filters.
 	* @see initFilter()
+	* @see SimpleAccessFilter::__construct()
 	*/
 	protected $_filter = null;
-	/**
-	* Where condition built from $_filter
-	* @see $_filter
-	* @see buildFilter()
-	*/
-	protected $_filterWhere;
 
 	/**
 	* Class constuctor
@@ -101,7 +97,18 @@ abstract class Model {
 		if( $this->_filter === null )
 			$this->_filter = $this->initFilter();
 		$this->_table = new Table($this->_db, $this->_table);
-		
+
+		// Build and validate the filter
+		if( ! $this->_filter )
+			$this->_filter = new NullAccessFilter();
+		elseif( gettype($this->_filter) == 'object' ) {
+			if( ! $this->_filter instanceof AccessFilterInterface )
+				throw new \Exception('Unvalid filter class');
+		} elseif( ! is_array($this->_filter) )
+			throw new \Exception('Unvalid filter format');
+		else
+			$this->_filter = new SimpleAccessFilter($this->_filter);
+
 		// Clean and validate the fields array
 		foreach( $this->_fields as $f => & $d ) {
 			if( ! isset($d['rtype']) )
@@ -125,8 +132,6 @@ abstract class Model {
 				throw new \Exception('Unvalid referred data');
 		}
 		unset($d);
-
-		$this->buildFilter();
 	}
 
 	/**
@@ -137,7 +142,7 @@ abstract class Model {
 	* @see $_fields
 	*/
 	protected function initFields() {
-		throw new Exception('Unimplemented');
+		throw new \Exception('Unimplemented');
 	}
 
 	/**
@@ -149,7 +154,7 @@ abstract class Model {
 	* @see $_names
 	*/
 	protected function initNames() {
-		throw new Exception('Unimplemented');
+		throw new \Exception('Unimplemented');
 	}
 
 	/**
@@ -157,45 +162,12 @@ abstract class Model {
 	* is not defined.
 	* Allows filter definition at runtime
 	*
-	* @return array in $_filter valid format
+	* @return array in $_filter valid format OR AccessFilterInterface instance
 	* @see $_filter
+	* @see SimpleAccessFilter::__construct()
 	*/
 	protected function initFilter() {
 		return array();
-	}
-
-	/**
-	* Validate and build the filter into a where object
-	*/
-	protected function buildFilter() {
-		$cond = '';
-		$parm = array();
-		foreach($this->_filter as $f => $v) {
-			if( ! in_array($this->_fields[$f]['rtype'], array('select','auto')) )
-				throw new \Exception('Filter is supported only on related fields (select,auto)');
-
-			if( strlen($cond) )
-				$cond .= ' AND ';
-
-			if( ! is_array($v) ) {
-				$cond .= " `$f`=? ";
-				$parm[] = $v;
-			} else {
-				if( count($v) ) {
-					$cond .= ' ( ';
-					$i = 0;
-					foreach( $v as $vv ) {
-						if( ++$i > 1 )
-							$cond .= ' OR ';
-						$cond .= " `$f`=? ";
-						$parm[] = $vv;
-					}
-					$cond .= ' ) ';
-				} else
-					$cond .= ' FALSE ';
-			}
-		}
-		$this->_filterWhere = new Where($parm, $cond);
 	}
 
 	/**
@@ -482,7 +454,7 @@ abstract class Model {
 				$cols[] = $k;
 				$labels[$k] = $allLabels[$k];
 			}
-		list($items, $count) = $this->_table->select($this->_filterWhere, $cols);
+		list($items, $count) = $this->_table->select($this->_filter->getRead(), $cols);
 
 		$data = array();
 		foreach( $items as $i ) {
@@ -707,10 +679,9 @@ abstract class Model {
 		// Retrieve and format data
 		$cols = $pks;
 		$cols[] = $displayCol;
+		$pars = $this->_filter->getRead();
 		if( $pk )
-			$pars = $this->_table->parsePkArgs($pk);
-		else
-			$pars = $this->_filterWhere;
+			$pars->add(new Where($this->_table->parsePkArgs($pk)));
 		list($res, $cnt) = $this->_table->select($pars, $cols);
 		$ret = array();
 		foreach( $res as $r ) {
@@ -720,7 +691,7 @@ abstract class Model {
 
 		if( $pk ) {
 			if( count($ret) > 1 )
-				throw new Exception('More than one row returned when filtering by PK');
+				throw new \Exception('More than one row returned when filtering by PK');
 			return array_shift($ret);
 		}
 		return $ret;
@@ -738,7 +709,7 @@ abstract class Model {
 	}
 
 	/**
-	* Checks if a given record is allowed base don current filter
+	* Checks if a given record is allowed based on current filter
 	*
 	* @param $record array: a query result or post record
 	* @return boolean: True when allowed
@@ -960,6 +931,85 @@ class FormFieldData {
 	}
 	public function group() {
 		return $this->_group;
+	}
+
+}
+
+
+/**
+* Interface for bullding custom filter classes
+*/
+interface AccessFilterInterface {
+
+	/**
+	* Returns a filter to apply to "read" queries
+	*
+	* @return object: Where instance
+	*/
+	public function getRead();
+
+}
+
+/**
+* Simple basic access filter implementation
+*/
+class SimpleAccessFilter implements AccessFilterInterface {
+
+	protected $_where;
+
+	/**
+	* Builds the filter from an array of where conditions to be concatenated with
+	* AND operator
+	*
+	* @param $conditions array: Associative array of conditions
+	*/
+	public function __construct($conditions) {
+		$cond = '';
+		$parm = array();
+		foreach($conditions as $f => $v) {
+			if( strlen($cond) )
+				$cond .= ' AND ';
+
+			if( ! is_array($v) ) {
+				$cond .= " `$f`=? ";
+				$parm[] = $v;
+			} else {
+				if( count($v) ) {
+					$cond .= ' ( ';
+					$i = 0;
+					foreach( $v as $vv ) {
+						if( ++$i > 1 )
+							$cond .= ' OR ';
+						$cond .= " `$f`=? ";
+						$parm[] = $vv;
+					}
+					$cond .= ' ) ';
+				} else
+					$cond .= ' FALSE ';
+			}
+		}
+		return new Where($parm, $cond);
+	}
+
+	public function getRead() {
+		return $this->_where;
+	}
+
+}
+
+/**
+* This filter simply does nothing
+*/
+class NullAccessFilter implements AccessFilterInterface {
+
+	protected $_where;
+
+	public function __construct() {
+		$this->_where = new Where();
+	}
+
+	public function getRead() {
+		return $this->_where;
 	}
 
 }
