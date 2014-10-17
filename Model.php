@@ -527,14 +527,10 @@ abstract class Model {
 			}
 
 			// Filter data
-			if( isset($this->_filter[$k]) ) {
-				$allowed = $this->_filter[$k];
-				if( ! is_array($allowed) )
-					$allowed = array($allowed);
+			if( isset($this->_filter) )
 				foreach( $data as $pk => $v )
-					if( ! in_array($pk, $allowed) )
+					if( ! $this->_filter->isAllowed($k, $v) )
 						unset($data[$pk]);
-			}
 
 			// Assemble data
 			foreach( $data as $k => & $v )
@@ -948,6 +944,14 @@ interface AccessFilterInterface {
 	*/
 	public function getRead();
 
+	/**
+	* Checks if a value is allowed for a given field
+	*
+	* @param $field string: name of the field
+	* @param $val mixed: the value to be assigned
+	*/
+	public function isAllowed($field, $val);
+
 }
 
 /**
@@ -955,6 +959,7 @@ interface AccessFilterInterface {
 */
 class SimpleAccessFilter implements AccessFilterInterface {
 
+	protected $conditions;
 	protected $_where;
 
 	/**
@@ -964,6 +969,8 @@ class SimpleAccessFilter implements AccessFilterInterface {
 	* @param $conditions array: Associative array of conditions
 	*/
 	public function __construct($conditions) {
+		$this->_conditions = $conditions;
+
 		$cond = '';
 		$parm = array();
 		foreach($conditions as $f => $v) {
@@ -988,11 +995,22 @@ class SimpleAccessFilter implements AccessFilterInterface {
 					$cond .= ' FALSE ';
 			}
 		}
-		return new Where($parm, $cond);
+
+		$this->_where = new Where($parm, $cond);
 	}
 
 	public function getRead() {
 		return $this->_where;
+	}
+
+	public function isAllowed($field, $val) {
+		if( isset($this->_conditions[$field]) ) {
+			if( in_array($val, $this->_conditions[$field]) )
+				return true;
+			else
+				return false;
+		} else
+			return true;
 	}
 
 }
@@ -1010,6 +1028,10 @@ class NullAccessFilter implements AccessFilterInterface {
 
 	public function getRead() {
 		return $this->_where;
+	}
+
+	public function isAllowed($field, $val) {
+		return true;
 	}
 
 }
