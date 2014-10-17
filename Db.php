@@ -175,11 +175,11 @@ class Db {
 	*                       the custom placeholder to use. By example:
 	*                       'password' => [ '123456', 'SHA1(?)' ]
 	* @param $glue string: The string to join the arguments, usually ', ' or ' AND '
-	* @return array [query string, params]
+	* @return array [query string, params array]
 	*/
 	public static function buildParams($params, $glue=', ') {
 		if( ! $params )
-			return '';
+			return array('', []);
 		$cols = array();
 		$vals = array();
 		foreach( $params as $k => $v ) {
@@ -363,7 +363,6 @@ class Table {
 		else
 			$skip = null;
 		$q .= $this->_db->buildLimit($limit, $skip);
-		
 		$st = $this->_db->run($q, $p);
 		if( $limit === true || $limit === 1 )
 			return $this->cast($st->fetch());
@@ -638,14 +637,55 @@ class Where {
 	*                   glues all the elements with the defined logical operator.
 	*                   Must be a valid PDO sql statement instead
 	*/
-	public function __construct($params, $condition='AND') {
+	public function __construct($params=null, $condition='AND') {
 		if( $condition == 'AND' || $condition == 'OR' ) {
 			list($this->_cond, $this->_params) = Db::buildParams($params, " $condition ");
 			return;
 		}
 
-		$this->_cond = $condition;
+		$this->_cond = trim($condition);
 		$this->_params = $params;
+
+	}
+
+	/**
+	* Add conditions from a different Where instance to this one
+	*
+	* @param $where object: The other Where instance
+	* @param $glue string: SQL Operator to glue the conditions together:
+	*              usually AND or OR
+	*/
+	public function add(Where $where, $glue='AND') {
+		// Check for parameters with same name
+		$cond = $where->getCondition();
+		$params = $where->getParams();
+
+		if( $this->_params && $params ) {
+			foreach( $this->_params as $n => $v )
+				if( gettype($n) != 'integer' && array_key_exists($n,$params) && $params[$n] !== $v ) {
+					$nn = null;
+					for( $i=2; $i<=PHP_INT_MAX; $i++ ) {
+						$k  = $n . $i;
+						if( ! array_key_exists($k,$this->_params) && ! array_key_exists($k,$params) ) {
+							$nn = $k;
+							break;
+						}
+					}
+					if( ! $nn )
+						throw new Exception("Couldn't find a new unique name for $n");
+
+					$params[$nn] = $params[$n];
+					unset($params[$n]);
+					$cond = str_replace(":$n", ":$nn", $cond);
+				}
+			$this->_params = array_merge($this->_params, $params);
+		} elseif( $params )
+			$this->_params = $params;
+
+		if( $this->_cond && $cond )
+			$this->_cond = "( {$this->_cond} ) $glue ( $cond )";
+		elseif( $cond )
+			$this->_cond = $cond;
 	}
 
 	public function getCondition() {
