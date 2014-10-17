@@ -711,14 +711,12 @@ abstract class Model {
 	* @return boolean: True when allowed
 	*/
 	protected function isAllowed($record) {
-		foreach( $this->_filter as $c => $v ) {
-			if( ! isset($record[$c]) )
+		if( ! $this->_filter )
+			return true;
+
+		foreach( $record as $c => $v )
+			if( ! $this->_filter->isAllowed($c, $v) )
 				return false;
-			if( is_array($v) && ! in_array($record[$c], $v) )
-				return false;
-			if( ! is_array($v) && $record[$c] != $v )
-				return false;
-		}
 
 		return true;
 	}
