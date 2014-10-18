@@ -60,6 +60,8 @@ abstract class Model {
 	*   'value'    => mixed:  If given, this field will always be set to this static value
 	*   'i18n'     => bool:   If true, this field is "multiplied" for every
 	*                         supported language. Default: false
+	*   'edit'     => bool:   If false, this field is not altered in edit mode.
+	*                         Defaults to true.
 	*   'rtab'     => bool:   If false, this field is not rendered in table view.
 	*                         Defaults to true.
 	*   'nmtab'    => string: The name of the N:M relation tab for an array field
@@ -122,6 +124,8 @@ abstract class Model {
 				$d['ropts'] = array();
 			if( ! isset($d['i18n']) )
 				$d['i18n'] = false;
+			if( ! isset($d['edit']) )
+				$d['edit'] = true;
 			if( ! isset($d['rtab']) )
 				$d['rtab'] = true;
 			if( ! isset($d['nmtab']) )
@@ -206,6 +210,9 @@ abstract class Model {
 		foreach( $this->_fields as $k => $f )
 			if( isset($f['dtype']) ) {
 
+				if( $mode=='edit' && ! $f['edit'] )
+					continue; // Skip rules for non-editable fields on edit mode
+
 				if( $f['i18n'] ) {
 					// Copy main rule to all childs
 					$sub = array();
@@ -271,10 +278,15 @@ abstract class Model {
 		$data = null;
 		$errors = null;
 		if( $post ) {
-			// Set static values
-			foreach( $this->_fields as $k => $f )
+			foreach( $this->_fields as $k => $f ) {
+				// Set static values
 				if( array_key_exists('value', $f) )
 					$post[$k] = $f['value'];
+
+				// Remove non editable fields on edit mode
+				if( $mode=='edit' && ! $f['edit'] && array_key_exists($k, $post) )
+					unset($post[$k]);
+			}
 
 			// Data has been submitted
 			list($data,$errors) = $this->validate($post, $files, $mode);
