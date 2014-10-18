@@ -57,6 +57,7 @@ abstract class Model {
 	*                                    to use for grouping elements
 	*   'postp'    => func:   Post-processor: parses the data before saving it,
 	*                         if applicable
+	*   'value'    => mixed:  If given, this field will always be set to this static value
 	*   'i18n'     => bool:   If true, this field is "multiplied" for every
 	*                         supported language. Default: false
 	*   'rtab'     => bool:   If false, this field is not rendered in table view.
@@ -270,6 +271,11 @@ abstract class Model {
 		$data = null;
 		$errors = null;
 		if( $post ) {
+			// Set static values
+			foreach( $this->_fields as $k => $f )
+				if( array_key_exists('value', $f) )
+					$post[$k] = $f['value'];
+
 			// Data has been submitted
 			list($data,$errors) = $this->validate($post, $files, $mode);
 
