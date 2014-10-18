@@ -1008,8 +1008,8 @@ class SimpleAccessFilter implements AccessFilterInterface {
 	}
 
 	public function isAllowed($field, $val) {
-		if( isset($this->_conditions[$field]) ) {
-			if( in_array($val, $this->_conditions[$field]) )
+		if( array_key_exists($field, $this->_conditions) ) {
+			if( ( is_array($this->_conditions[$field]) && in_array($val, $this->_conditions[$field]) ) || $this->_conditions[$field] === $val )
 				return true;
 			else
 				return false;
