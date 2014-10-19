@@ -418,6 +418,9 @@ abstract class Model {
 			if( ! $f['rtype'] )
 				continue;
 
+			if( $mode=='edit' && ! $f['edit'] ) // Don't render non editable fields in edit form
+				continue;
+
 			if( $f['i18n'] ) {
 				// Explode l18n field
 				foreach( \DoPhp::lang()->getSupportedLanguages() as $l ) {
