@@ -500,9 +500,16 @@ abstract class Model {
 	public function delete($pk) {
 		if( ! $pk )
 			throw new \Exception('Unvalid or missing pk');
+
+		$this->_db->beginTransaction();
+
+		$this->_beforeDelete($pk);
+
 		try {
 			$this->_table->delete($pk);
 		} catch( \PDOException $e ) {
+			$this->_db->rollBack();
+
 			list($scode, $mcode, $mex) = $e->errorInfo;
 
 			if( $scode == '23000' && $mcode == 1451 )
@@ -510,6 +517,10 @@ abstract class Model {
 			else
 				return array($e->getMessage(), $e->getMessage());
 		}
+
+		$this->_afterDelete($pk);
+
+		$this->_db->commit();
 
 		return null;
 	}
@@ -758,7 +769,7 @@ abstract class Model {
 	protected function _beforeInsert( & $data, & $related ) { }
 
 	/**
-	* Runs custom actions after an item has been edited
+	* Runs custom actions before an item has to be edited
 	* does nothing by default, may be overridden
 	*
 	* @param $pk mixed: The primary key
@@ -766,6 +777,14 @@ abstract class Model {
 	* @param $related array: Optional related data
 	*/
 	protected function _beforeEdit($pk, & $data, & $related ) { }
+
+	/**
+	* Runs custom actions before an item has to be deleted
+	* does nothing by default, may be overridden
+	*
+	* @param $pk mixed: The primary key
+	*/
+	protected function _beforeDelete($pk) { }
 
 	/**
 	* Runs custom actions after an item has been inserted
@@ -786,6 +805,14 @@ abstract class Model {
 	* @param $related array: Optional related data
 	*/
 	protected function _afterEdit($pk, & $data, & $related ) { }
+
+	/**
+	* Runs custom actions after an item has been deleted
+	* does nothing by default, may be overridden
+	*
+	* @param $pk mixed: The primary key
+	*/
+	protected function _afterDelete($pk) { }
 
 }
 
