@@ -662,7 +662,7 @@ class Where {
 
 		if( $this->_params && $params ) {
 			foreach( $this->_params as $n => $v )
-				if( gettype($n) != 'integer' && array_key_exists($n,$params) && $params[$n] !== $v ) {
+				if( ! is_int($n) && array_key_exists($n,$params) && $params[$n] !== $v ) {
 					$nn = null;
 					for( $i=2; $i<=PHP_INT_MAX; $i++ ) {
 						$k  = $n . $i;
@@ -672,7 +672,7 @@ class Where {
 						}
 					}
 					if( ! $nn )
-						throw new Exception("Couldn't find a new unique name for $n");
+						throw new \Exception("Couldn't find a new unique name for $n");
 
 					$params[$nn] = $params[$n];
 					unset($params[$n]);
@@ -686,6 +686,37 @@ class Where {
 			$this->_cond = "( {$this->_cond} ) $glue ( $cond )";
 		elseif( $cond )
 			$this->_cond = $cond;
+
+		// PDO doesn't allow mixed named and positional parameters
+		$int = false;
+		$str = false;
+		foreach( $this->_params as $n => $v )
+			if( is_int($n) )
+				$int = true;
+			else
+				$str = true;
+
+		// Convert numeric parameters into positional
+		if( $int && $str )
+			foreach( $this->_params as $n => $v )
+				if( is_int($n) ) {
+					unset($this->_params[$n]);
+					$nn = null;
+					for( $i=$n; $i<=PHP_INT_MAX; $i++ ) {
+						$k = "p$n";
+						if( ! array_key_exists($k,$this->_params) ) {
+							$nn = $k;
+							break;
+						}
+					}
+					if( ! $nn )
+						throw new \Exception("Couldn't find a new unique name for $n");
+					$this->_params[$nn] = $v;
+					$count = null;
+					$this->_cond = preg_replace('/\\?/', ":$nn", $this->_cond, 1, $count);
+					if( $count != 1 )
+						throw new \Exception("Error $count replacing argument");
+				}
 	}
 
 	public function getCondition() {
