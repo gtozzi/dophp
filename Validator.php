@@ -241,13 +241,13 @@ class string_validator extends base_validator {
 			return _('Unvalid eMail') . '.';
 	}
 	protected function check_url($val) {
-		if( $val == null )
+		if( $val === null )
 			return false;
 		if( ! preg_match('/^[a-z]+:\/\/[a-z0-9.]+\/?[a-z0-9=\-._~:\/?#[\]@!$&+]*$/i', $val) )
 			return _('Unvalid absolute URL') . '.';
 	}
 	protected function check_len($val, $min, $max) {
-		if( $val == null )
+		if( $val === null )
 			return false;
 		if( $min && strlen($val) < $min )
 			return str_replace('{number}', $min, _('Text must be at least {number} characters long')) . '.';
@@ -273,12 +273,12 @@ abstract class number_validator extends base_validator {
 				return $err;
 	}
 	protected function check_min($val, $min) {
-		if( $val >= $min )
+		if( $val === null || $val >= $min )
 			return false;
 		return str_replace('{number}', $this->format_number($min), _('Number must be at least {number}')) . '.';
 	}
 	protected function check_max($val, $max) {
-		if( $val <= $max )
+		if( $val === null || $val <= $max )
 			return false;
 		return str_replace('{number}', $this->format_number($max), _('Number must not be bigger than {number}')) . '.';
 	}
