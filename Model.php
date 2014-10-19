@@ -291,7 +291,7 @@ abstract class Model {
 			}
 
 			// Data has been submitted
-			list($data,$errors) = $this->validate($post, $files, $mode);
+			list($data,$errors) = $this->validate($post, $files, $mode, $pk);
 
 			$related = array();
 			if( ! $errors ) {
@@ -659,10 +659,15 @@ abstract class Model {
 
 	/**
 	* Validates form data
+	*
+	* @param $post array: POST data
+	* @param $files array: FILES data
+	* @param $mode string: Running mode ('insert', 'edit', null if unknown)
+	* @param $pk mixed: The PK on edit mode, null if unknown (unused, may be used in subclass)
 	* @see getRules()
 	* @see dophp\Validator
 	*/
-	public function validate(&$post, &$files, $mode=null) {
+	public function validate(&$post, &$files, $mode=null, $pk=null) {
 		$val = new Validator($post, $files, $this->getRules($mode));
 		return $val->validate();
 	}
