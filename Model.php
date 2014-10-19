@@ -113,6 +113,8 @@ abstract class Model {
 			$this->_filter = new SimpleAccessFilter($this->_filter);
 
 		// Clean and validate the fields array
+		if( ! $this->_fields || ! is_array($this->_fields) )
+			throw new \Exception('Unvalid fields');
 		foreach( $this->_fields as $f => & $d ) {
 			if( ! isset($d['rtype']) )
 				$d['rtype'] = null;
@@ -528,7 +530,6 @@ abstract class Model {
 	*/
 	private function __buildField($k, & $f, $value, $error) {
 		$data = null;
-
 		if( $f['rtype'] == 'select' || $f['rtype'] == 'multi' || $f['rtype'] == 'auto' ) {
 			// Retrieve data
 			$groups = array();
@@ -547,7 +548,7 @@ abstract class Model {
 			// Filter data
 			if( isset($this->_filter) )
 				foreach( $data as $pk => $v )
-					if( ! $this->_filter->isAllowed($k, $v) )
+					if( ! $this->_filter->isAllowed($k, $pk) )
 						unset($data[$pk]);
 
 			// Assemble data

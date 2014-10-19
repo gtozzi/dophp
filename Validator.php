@@ -252,7 +252,7 @@ class string_validator extends base_validator {
 		if( $min && strlen($val) < $min )
 			return str_replace('{number}', $min, _('Text must be at least {number} characters long')) . '.';
 		if( $max && strlen($val) > $max )
-			return sprintf('{number}', $max, _('Text must be no longer than {number} characters')) . '.';
+			return str_replace('{number}', $max, _('Text must be no longer than {number} characters')) . '.';
 	}
 }
 
