@@ -35,10 +35,10 @@ class RpcTest:
 	
 	SEP = '~'
 	
-	def __init__(self, url):
-		''' Runs the remote method '''
+	def __init__(self, url, user=None, pwd=None):
+		''' Init the RPC Client '''
 		
-		# Connect to server
+		# Parse the url
 		self.baseUrl = urllib.parse.urlparse(url)
 
 		if self.baseUrl.scheme == 'http':
@@ -47,8 +47,11 @@ class RpcTest:
 			self.conn = http.client.HTTPSConnection
 		else:
 			raise ValueError('Unknown scheme', self.baseUrl.scheme)
+		
+		self.user = user
+		self.pwd = pwd
 
-	def run(self, method, auth=None, **param):
+	def run(self, method, **param):
 		# Connect
 		conn = self.conn(self.baseUrl.netloc)
 		
@@ -58,15 +61,15 @@ class RpcTest:
 			'Content-Type': 'application/json',
 		}
 		url = self.baseUrl.path + '?do=' + method
-		if auth:
+		if self.user or self.pwd:
 			# Build authentication
 			sign = hashlib.sha1()
-			sign.update(auth[0].encode('utf-8'))
+			sign.update(self.user.encode('utf-8'))
 			sign.update(self.SEP.encode('utf-8'))
-			sign.update(auth[1].encode('utf-8'))
+			sign.update(self.pwd.encode('utf-8'))
 			sign.update(self.SEP.encode('utf-8'))
 			sign.update(body.encode('utf-8'))
-			headers['X-Auth-User'] = auth[0]
+			headers['X-Auth-User'] = self.user
 			headers['X-Auth-Sign'] = sign.hexdigest()
 		conn.request('POST', url, body, headers)
 		
@@ -104,11 +107,15 @@ if __name__ == '__main__':
 			else:
 				params[k] = v
 
-	rpc = RpcTest(args.url)
-	if params:
-		res = rpc.run(args.method, args.auth, **params)
+	if args.auth:
+		rpc = RpcTest(args.url, args.auth[0], args.auth[1])
 	else:
-		res = rpc.run(args.method, args.auth)
+		rpc = RpcTest(args.url)
+
+	if params:
+		res = rpc.run(args.method, **params)
+	else:
+		res = rpc.run(args.method)
 
 	# Show result
 	print(res.status, res.reason)
