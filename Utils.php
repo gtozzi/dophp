@@ -345,4 +345,22 @@ class Utils {
 		return str_replace($unsafe, $replace, $name);
 	}
 
+	/**
+	* Returns distance between two points on a sphere
+	*
+	* @param $lat1 double: Latitude of first point in degress
+	* @param $lng1 double: Longitude of first point in degress
+	* @param $lat2 double: Latitude of second point in degress
+	* @param $lng2 double: Longitude of second point in degress
+	*
+	* @return double: distance in degrees (1 degree = 60 nautical miles)
+	*/
+	public static function distance($lat1, $lng1, $lat2, $lng2) {
+		$dist = sin(deg2rad($lat1)) * sin(deg2rad($lat2)) +  cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * cos(deg2rad($lon1-$lng2));
+		$dist = acos($dist);
+		$dist = rad2deg($dist);
+
+		return $dist;
+	}
+
 }
