@@ -83,7 +83,7 @@ class Utils {
 		if( isset($url['user']) || isset($url['pass']) )
 			$parsed .= $url['user'] . ':' . $url['pass'] . '@';
 		if( isset($url['host']) )
-			$parsed .= $url['host'];
+			$parsed .= $url['host'] . '/';
 		if( isset($url['port']) && ( ! isset(self::$DEFAULT_PORTS[$url['scheme']]) || self::$DEFAULT_PORTS[$url['scheme']] != $url['port'] ) )
 			$parsed .= ':' . $url['port'];
 		if( isset($url['path']) )
