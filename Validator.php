@@ -237,7 +237,7 @@ class string_validator extends base_validator {
 	protected function check_email($val) {
 		if( $val === null )
 			return false;
-		if( ! preg_match('/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,4}$/i', $val) )
+		if( ! preg_match('/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,63}$/i', $val) )
 			return _('Unvalid eMail') . '.';
 	}
 	protected function check_url($val) {
