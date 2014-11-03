@@ -6,8 +6,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: DoPhp\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2014-09-17 14:15+0200\n"
-"PO-Revision-Date: 2014-09-17 14:15+0200\n"
+"POT-Creation-Date: 2014-10-15 04:01+0200\n"
+"PO-Revision-Date: 2014-10-15 04:02+0200\n"
 "Last-Translator: Gabriele Tozzi <gabriele@tozzi.eu>\n"
 "Language-Team: Gabriele Tozzi <tozzi@despammed.com>\n"
 "Language: it\n"
@@ -19,54 +19,76 @@ msgstr ""
 "X-Poedit-SourceCharset: UTF-8\n"
 "X-Poedit-Basepath: ../../../\n"
 
-#: Model.php:505
+#: Model.php:514
 msgid "item is in use"
 msgstr "l'elemento è in uso"
 
-#: Model.php:806
+#: Model.php:849
 msgid "Yes"
 msgstr "Sì"
 
-#: Model.php:806
+#: Model.php:849
 msgid "No"
 msgstr "No"
 
-#: Validator.php:208 Validator.php:365 Validator.php:398
+#: Validator.php:180
+msgid "Field must be one of"
+msgstr "Il campo deve essere uno tra"
+
+#: Validator.php:212 Validator.php:411 Validator.php:444
 msgid "Field can't be empty"
 msgstr "Il campo non può essere vuoto"
 
-#: Validator.php:243
+#: Validator.php:247
 msgid "Unvalid eMail"
 msgstr "eMail non valida"
 
-#: Validator.php:249
+#: Validator.php:253
 msgid "Unvalid absolute URL"
 msgstr "URL assoluto non valido"
 
-#: Validator.php:255
-msgid "Text is too short"
-msgstr "Il testo è troppo breve"
+#: Validator.php:259
+msgid "Text must be at least {number} characters long"
+msgstr "Il testo deve essere lungo almeno {number} caratteri"
 
-#: Validator.php:257
-msgid "Text is too long"
-msgstr "Il testo è troppo lungo"
+#: Validator.php:261
+msgid "Text must be no longer than {number} characters"
+msgstr "Il testo non deve essere più lungo di {number} caratteri"
 
-#: Validator.php:288
-msgid "Value is too low"
-msgstr "Valore troppo basso"
+#: Validator.php:284
+msgid "Number must be at least {number}"
+msgstr "Il numero deve essere almeno {number}"
 
-#: Validator.php:293
-msgid "Value is too big"
-msgstr "Valore troppo alto"
+#: Validator.php:289
+msgid "Number must not be bigger than {number}"
+msgstr "Il numero non deve essere più grande di {number}"
 
-#: Validator.php:367
+#: Validator.php:413
 msgid "Unvalid file size"
 msgstr "Dimensione file non valida"
 
-#: Validator.php:379
+#: Validator.php:425
 msgid "Unsupported file type"
 msgstr "Tipo file non supportato"
 
-#: Validator.php:401
+#: Validator.php:447
 msgid "Must be an array"
 msgstr "Deve essere un array"
+
+#~ msgid "Number is too small"
+#~ msgstr "Il numero è troppo piccolo"
+
+#~ msgid "Number is too big"
+#~ msgstr "Il numero è troppo grande"
+
+#~ msgid "Text is too short"
+#~ msgstr "Il testo è troppo breve"
+
+#~ msgid "Text is too long"
+#~ msgstr "Il testo è troppo lungo"
+
+#~ msgid "Value is too low"
+#~ msgstr "Valore troppo basso"
+
+#~ msgid "Value is too big"
+#~ msgstr "Valore troppo alto"

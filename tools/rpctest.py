@@ -35,10 +35,17 @@ class RpcTest:
 	
 	SEP = '~'
 	
-	def __init__(self, url):
-		''' Runs the remote method '''
+	def __init__(self, url, user=None, pwd=None, headers={}):
+		'''
+		Init the RPC Client
 		
-		# Connect to server
+		@param url string: The base URL
+		@param user string: The username
+		@param pwd string: The password
+		@param headers dict: Custom headers
+		'''
+		
+		# Parse the url
 		self.baseUrl = urllib.parse.urlparse(url)
 
 		if self.baseUrl.scheme == 'http':
@@ -47,26 +54,31 @@ class RpcTest:
 			self.conn = http.client.HTTPSConnection
 		else:
 			raise ValueError('Unknown scheme', self.baseUrl.scheme)
+		
+		self.user = user
+		self.pwd = pwd
+		self.headers = headers
 
-	def run(self, method, auth=None, headers={}, **param):
+	def run(self, method, **param):
 		# Connect
 		conn = self.conn(self.baseUrl.netloc)
 		
 		# Request the page
 		body = json.dumps(param)
+		headers = self.headers.copy()
 		headers.update({
 			'Content-Type': 'application/json',
 		})
 		url = self.baseUrl.path + '?do=' + method
-		if auth:
+		if self.user or self.pwd:
 			# Build authentication
 			sign = hashlib.sha1()
-			sign.update(auth[0].encode('utf-8'))
+			sign.update(self.user.encode('utf-8'))
 			sign.update(self.SEP.encode('utf-8'))
-			sign.update(auth[1].encode('utf-8'))
+			sign.update(self.pwd.encode('utf-8'))
 			sign.update(self.SEP.encode('utf-8'))
 			sign.update(body.encode('utf-8'))
-			headers['X-Auth-User'] = auth[0]
+			headers['X-Auth-User'] = self.user
 			headers['X-Auth-Sign'] = sign.hexdigest()
 		conn.request('POST', url, body, headers)
 		
@@ -108,11 +120,15 @@ if __name__ == '__main__':
 
 	headers = args.header if args.header else {}
 
-	rpc = RpcTest(args.url)
-	if params:
-		res = rpc.run(args.method, args.auth, headers, **params)
+	if args.auth:
+		rpc = RpcTest(args.url, args.auth[0], args.auth[1], headers=headers)
 	else:
-		res = rpc.run(args.method, args.auth, headers)
+		rpc = RpcTest(args.url, headers=headers)
+
+	if params:
+		res = rpc.run(args.method, **params)
+	else:
+		res = rpc.run(args.method)
 
 	# Show result
 	print(res.status, res.reason)

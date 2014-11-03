@@ -57,8 +57,11 @@ abstract class Model {
 	*                                    to use for grouping elements
 	*   'postp'    => func:   Post-processor: parses the data before saving it,
 	*                         if applicable
+	*   'value'    => mixed:  If given, this field will always be set to this static value
 	*   'i18n'     => bool:   If true, this field is "multiplied" for every
 	*                         supported language. Default: false
+	*   'edit'     => bool:   If false, this field is not altered in edit mode.
+	*                         Defaults to true.
 	*   'rtab'     => bool:   If false, this field is not rendered in table view.
 	*                         Defaults to true.
 	*   'nmtab'    => string: The name of the N:M relation tab for an array field
@@ -75,16 +78,12 @@ abstract class Model {
 	/**
 	* The base filter to apply on the table (by exaple, for access limiting),
 	* associative array of field => <value(s)>. If value is an array, multiple
-	* values are allower with and OR condition
+	* values are allowed with and OR condition.
+	* initFilter() also supports advanced filters.
 	* @see initFilter()
+	* @see SimpleAccessFilter::__construct()
 	*/
 	protected $_filter = null;
-	/**
-	* Where condition built from $_filter
-	* @see $_filter
-	* @see buildFilter()
-	*/
-	protected $_filterWhere;
 
 	/**
 	* Class constuctor
@@ -101,8 +100,21 @@ abstract class Model {
 		if( $this->_filter === null )
 			$this->_filter = $this->initFilter();
 		$this->_table = new Table($this->_db, $this->_table);
-		
+
+		// Build and validate the filter
+		if( ! $this->_filter )
+			$this->_filter = new NullAccessFilter();
+		elseif( gettype($this->_filter) == 'object' ) {
+			if( ! $this->_filter instanceof AccessFilterInterface )
+				throw new \Exception('Unvalid filter class');
+		} elseif( ! is_array($this->_filter) )
+			throw new \Exception('Unvalid filter format');
+		else
+			$this->_filter = new SimpleAccessFilter($this->_filter);
+
 		// Clean and validate the fields array
+		if( ! $this->_fields || ! is_array($this->_fields) )
+			throw new \Exception('Unvalid fields');
 		foreach( $this->_fields as $f => & $d ) {
 			if( ! isset($d['rtype']) )
 				$d['rtype'] = null;
@@ -114,19 +126,19 @@ abstract class Model {
 				$d['ropts'] = array();
 			if( ! isset($d['i18n']) )
 				$d['i18n'] = false;
+			if( ! isset($d['edit']) )
+				$d['edit'] = true;
 			if( ! isset($d['rtab']) )
 				$d['rtab'] = true;
 			if( ! isset($d['nmtab']) )
 				$d['nmtab'] = null;
 
 			if( ($d['rtype']=='select' || $d['rtype']=='auto') && ! (isset($d['ropts']['refer']) || array_key_exists('data',$d['ropts'])) )
-					throw new \Exception('Missing referred model or data');
+				throw new \Exception("Missing referred model or data for field \"$f\"");
 			if( array_key_exists('data',$d['ropts']) && ! is_array($d['ropts']['data']) )
 				throw new \Exception('Unvalid referred data');
 		}
 		unset($d);
-
-		$this->buildFilter();
 	}
 
 	/**
@@ -137,7 +149,7 @@ abstract class Model {
 	* @see $_fields
 	*/
 	protected function initFields() {
-		throw new Exception('Unimplemented');
+		throw new \Exception('Unimplemented');
 	}
 
 	/**
@@ -149,7 +161,7 @@ abstract class Model {
 	* @see $_names
 	*/
 	protected function initNames() {
-		throw new Exception('Unimplemented');
+		throw new \Exception('Unimplemented');
 	}
 
 	/**
@@ -157,42 +169,12 @@ abstract class Model {
 	* is not defined.
 	* Allows filter definition at runtime
 	*
-	* @return array in $_filter valid format
+	* @return array in $_filter valid format OR AccessFilterInterface instance
 	* @see $_filter
+	* @see SimpleAccessFilter::__construct()
 	*/
 	protected function initFilter() {
 		return array();
-	}
-
-	/**
-	* Validate and build the filter into a where object
-	*/
-	protected function buildFilter() {
-		$cond = '';
-		$parm = array();
-		foreach($this->_filter as $f => $v) {
-			if( ! in_array($this->_fields[$f]['rtype'], array('select','auto')) )
-				throw new \Exception('Filter is supported only on related fields (select,auto)');
-
-			if( strlen($cond) )
-				$cond .= ' AND ';
-
-			if( ! is_array($v) ) {
-				$cond .= " `$f`=? ";
-				$parm[] = $v;
-			} else {
-				$cond .= ' ( ';
-				$i = 0;
-				foreach( $v as $vv ) {
-					if( ++$i > 1 )
-						$cond .= ' OR ';
-					$cond .= " `$f`=? ";
-					$parm[] = $vv;
-				}
-				$cond .= ' ) ';
-			}
-		}
-		$this->_filterWhere = new Where($parm, $cond);
 	}
 
 	/**
@@ -230,12 +212,15 @@ abstract class Model {
 		foreach( $this->_fields as $k => $f )
 			if( isset($f['dtype']) ) {
 
+				if( $mode=='edit' && ! $f['edit'] )
+					continue; // Skip rules for non-editable fields on edit mode
+
 				if( $f['i18n'] ) {
 					// Copy main rule to all childs
 					$sub = array();
 					foreach( \DoPhp::lang()->getSupportedLanguages() as $l )
 						$sub[$l] = array($f['dtype'], $f['dopts']);
-					$rules[$k] = array($sub, array());
+					$rules[$k] = array('array', array('rules'=>$sub));
 					continue;
 				}
 
@@ -295,8 +280,18 @@ abstract class Model {
 		$data = null;
 		$errors = null;
 		if( $post ) {
+			foreach( $this->_fields as $k => $f ) {
+				// Set static values
+				if( array_key_exists('value', $f) )
+					$post[$k] = $f['value'];
+
+				// Remove non editable fields on edit mode
+				if( $mode=='edit' && ! $f['edit'] && array_key_exists($k, $post) )
+					unset($post[$k]);
+			}
+
 			// Data has been submitted
-			list($data,$errors) = $this->validate($post, $files, $mode);
+			list($data,$errors) = $this->validate($post, $files, $mode, $pk);
 
 			$related = array();
 			if( ! $errors ) {
@@ -332,6 +327,8 @@ abstract class Model {
 
 				// Data is good, write the update
 				if( $mode == 'edit' ) {
+					$this->_beforeEdit($pk, $data, $related);
+
 					foreach( $data as $k => $v )
 						if( $this->_fields[$k]['i18n'] ) {
 							// Leave text ID untouched and update text instead
@@ -342,6 +339,8 @@ abstract class Model {
 					if( count($data) )
 						$this->_table->update($pk, $data);
 				} elseif( $mode == 'insert' ) {
+					$this->_beforeInsert($data, $related);
+
 					foreach( $data as $k => & $v )
 						if( $this->_fields[$k]['i18n'] ) {
 							// Insert text into text table and replace l18n field
@@ -373,6 +372,16 @@ abstract class Model {
 								$rinfo['nm']->insert($insdata);
 						}
 
+				}
+
+				// Run after insert/edit methods
+				switch($mode) {
+				case 'insert':
+					$this->_afterInsert($pk, $data, $related);
+					break;
+				case 'edit':
+					$this->_afterEdit($pk, $data, $related);
+					break;
 				}
 
 				// Commit
@@ -407,6 +416,9 @@ abstract class Model {
 		$fields = array();
 		foreach( $this->_fields as $k => $f ) {
 			if( ! $f['rtype'] )
+				continue;
+
+			if( $mode=='edit' && ! $f['edit'] ) // Don't render non editable fields in edit form
 				continue;
 
 			if( $f['i18n'] ) {
@@ -465,7 +477,7 @@ abstract class Model {
 				$cols[] = $k;
 				$labels[$k] = $allLabels[$k];
 			}
-		list($items, $count) = $this->_table->select($this->_filterWhere, $cols);
+		list($items, $count) = $this->_table->select($this->_filter->getRead(), $cols);
 
 		$data = array();
 		foreach( $items as $i ) {
@@ -488,9 +500,16 @@ abstract class Model {
 	public function delete($pk) {
 		if( ! $pk )
 			throw new \Exception('Unvalid or missing pk');
+
+		$this->_db->beginTransaction();
+
+		$this->_beforeDelete($pk);
+
 		try {
 			$this->_table->delete($pk);
 		} catch( \PDOException $e ) {
+			$this->_db->rollBack();
+
 			list($scode, $mcode, $mex) = $e->errorInfo;
 
 			if( $scode == '23000' && $mcode == 1451 )
@@ -498,6 +517,10 @@ abstract class Model {
 			else
 				return array($e->getMessage(), $e->getMessage());
 		}
+
+		$this->_afterDelete($pk);
+
+		$this->_db->commit();
 
 		return null;
 	}
@@ -521,7 +544,6 @@ abstract class Model {
 	*/
 	private function __buildField($k, & $f, $value, $error) {
 		$data = null;
-
 		if( $f['rtype'] == 'select' || $f['rtype'] == 'multi' || $f['rtype'] == 'auto' ) {
 			// Retrieve data
 			$groups = array();
@@ -538,14 +560,10 @@ abstract class Model {
 			}
 
 			// Filter data
-			if( isset($this->_filter[$k]) ) {
-				$allowed = $this->_filter[$k];
-				if( ! is_array($allowed) )
-					$allowed = array($allowed);
+			if( isset($this->_filter) )
 				foreach( $data as $pk => $v )
-					if( ! in_array($pk, $allowed) )
+					if( ! $this->_filter->isAllowed($k, $pk) )
 						unset($data[$pk]);
-			}
 
 			// Assemble data
 			foreach( $data as $k => & $v )
@@ -652,10 +670,15 @@ abstract class Model {
 
 	/**
 	* Validates form data
+	*
+	* @param $post array: POST data
+	* @param $files array: FILES data
+	* @param $mode string: Running mode ('insert', 'edit', null if unknown)
+	* @param $pk mixed: The PK on edit mode, null if unknown (unused, may be used in subclass)
 	* @see getRules()
 	* @see dophp\Validator
 	*/
-	public function validate(&$post, &$files, $mode=null) {
+	public function validate(&$post, &$files, $mode=null, $pk=null) {
 		$val = new Validator($post, $files, $this->getRules($mode));
 		return $val->validate();
 	}
@@ -690,9 +713,9 @@ abstract class Model {
 		// Retrieve and format data
 		$cols = $pks;
 		$cols[] = $displayCol;
-		$pars = null;
+		$pars = $this->_filter->getRead();
 		if( $pk )
-			$pars = $this->_table->parsePkArgs($pk);
+			$pars->add(new Where($this->_table->parsePkArgs($pk)));
 		list($res, $cnt) = $this->_table->select($pars, $cols);
 		$ret = array();
 		foreach( $res as $r ) {
@@ -702,7 +725,7 @@ abstract class Model {
 
 		if( $pk ) {
 			if( count($ret) > 1 )
-				throw new Exception('More than one row returned when filtering by PK');
+				throw new \Exception('More than one row returned when filtering by PK');
 			return array_shift($ret);
 		}
 		return $ret;
@@ -720,22 +743,76 @@ abstract class Model {
 	}
 
 	/**
-	* Checks if a given record is allowed base don current filter
+	* Checks if a given record is allowed based on current filter
 	*
 	* @param $record array: a query result or post record
 	* @return boolean: True when allowed
 	*/
 	protected function isAllowed($record) {
-		foreach( $this->_filter as $c => $v )
-			if( ! isset($record[$c]) )
-				return false;
-			if( is_array($v) && ! in_array($record[$c], $v) )
-				return false;
-			if( ! is_array($v) && $record[$c] != $v )
+		if( ! $this->_filter )
+			return true;
+
+		foreach( $record as $c => $v )
+			if( ! $this->_filter->isAllowed($c, $v) )
 				return false;
 
 		return true;
 	}
+
+	/**
+	* Runs custom actions before an item has to be inserted
+	* does nothing by default, may be overridden
+	*
+	* @param $data array: The data to be inserted, may be modified byRef
+	* @param $related array: Optional related data
+	*/
+	protected function _beforeInsert( & $data, & $related ) { }
+
+	/**
+	* Runs custom actions before an item has to be edited
+	* does nothing by default, may be overridden
+	*
+	* @param $pk mixed: The primary key
+	* @param $data array: The data to be edited, may be modified byRef
+	* @param $related array: Optional related data
+	*/
+	protected function _beforeEdit($pk, & $data, & $related ) { }
+
+	/**
+	* Runs custom actions before an item has to be deleted
+	* does nothing by default, may be overridden
+	*
+	* @param $pk mixed: The primary key
+	*/
+	protected function _beforeDelete($pk) { }
+
+	/**
+	* Runs custom actions after an item has been inserted
+	* does nothing by default, may be overridden
+	*
+	* @param $pk mixed: The primary key
+	* @param $data array: The data just inserted
+	* @param $related array: Optional related data
+	*/
+	protected function _afterInsert($pk, & $data, & $related ) { }
+
+	/**
+	* Runs custom actions after an item has been edited
+	* does nothing by default, may be overridden
+	*
+	* @param $pk mixed: The primary key
+	* @param $data array: The data just edited
+	* @param $related array: Optional related data
+	*/
+	protected function _afterEdit($pk, & $data, & $related ) { }
+
+	/**
+	* Runs custom actions after an item has been deleted
+	* does nothing by default, may be overridden
+	*
+	* @param $pk mixed: The primary key
+	*/
+	protected function _afterDelete($pk) { }
 
 }
 
@@ -849,7 +926,6 @@ class FormField extends Field {
 
 	protected $_label;
 	protected $_type;
-	protected $_descr;
 	protected $_error;
 	protected $_data;
 
@@ -859,9 +935,8 @@ class FormField extends Field {
 	* @see Field::__construct
 	* @param $label string: The label for the field
 	* @param $type string: The field's type
-	* @param $descr string: The field's long description
 	* @param $error string: The error message
-	* @param $data array: The related data
+	* @param $data array: The related data, array of FormFieldData objects
 	*/
 	public function __construct($value, $def, $error, $data) {
 		parent::__construct($value, $def);
@@ -904,6 +979,111 @@ class FormFieldData {
 	}
 	public function group() {
 		return $this->_group;
+	}
+
+}
+
+
+/**
+* Interface for bullding custom filter classes
+*/
+interface AccessFilterInterface {
+
+	/**
+	* Returns a filter to apply to "read" queries
+	*
+	* @return object: Where instance
+	*/
+	public function getRead();
+
+	/**
+	* Checks if a value is allowed for a given field
+	*
+	* @param $field string: name of the field
+	* @param $val mixed: the value to be assigned
+	*/
+	public function isAllowed($field, $val);
+
+}
+
+/**
+* Simple basic access filter implementation
+*/
+class SimpleAccessFilter implements AccessFilterInterface {
+
+	protected $conditions;
+	protected $_where;
+
+	/**
+	* Builds the filter from an array of where conditions to be concatenated with
+	* AND operator
+	*
+	* @param $conditions array: Associative array of conditions
+	*/
+	public function __construct($conditions) {
+		$this->_conditions = $conditions;
+
+		$cond = '';
+		$parm = array();
+		foreach($conditions as $f => $v) {
+			if( strlen($cond) )
+				$cond .= ' AND ';
+
+			if( ! is_array($v) ) {
+				$cond .= " `$f`=? ";
+				$parm[] = $v;
+			} else {
+				if( count($v) ) {
+					$cond .= ' ( ';
+					$i = 0;
+					foreach( $v as $vv ) {
+						if( ++$i > 1 )
+							$cond .= ' OR ';
+						$cond .= " `$f`=? ";
+						$parm[] = $vv;
+					}
+					$cond .= ' ) ';
+				} else
+					$cond .= ' FALSE ';
+			}
+		}
+
+		$this->_where = new Where($parm, $cond);
+	}
+
+	public function getRead() {
+		return $this->_where;
+	}
+
+	public function isAllowed($field, $val) {
+		if( array_key_exists($field, $this->_conditions) ) {
+			if( ( is_array($this->_conditions[$field]) && in_array($val, $this->_conditions[$field]) ) || $this->_conditions[$field] === $val )
+				return true;
+			else
+				return false;
+		} else
+			return true;
+	}
+
+}
+
+/**
+* This filter simply does nothing
+*/
+class NullAccessFilter implements AccessFilterInterface {
+
+	protected $_where;
+
+	public function __construct() {
+		$this->_where = new Where();
+	}
+
+	public function getRead() {
+		return $this->_where;
+	}
+
+	public function isAllowed($field, $val) {
+		return true;
 	}
 
 }

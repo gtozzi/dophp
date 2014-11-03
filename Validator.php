@@ -28,7 +28,7 @@ class Validator {
 	* @param $files array: $_FILES data (usually), passed byRef
 	* @param $rules The rules, associative array with format:
 	*               'field_name' => array('field_type', array('options'))
-	*               - If field_type is an associative array, handles it as a
+	*               - If field_type is 'array', handles it as a
 	*                 sub-validator: expects data to be an array too.
 	*               - If field_name is (int)0 and 'multiple' option is true,
 	*                 that rule will be applied to any other numerical index
@@ -53,7 +53,7 @@ class Validator {
 						$multi[$k] = $r;
 			break;
 		}
-		$this->__rules = array_merge($multi, $rules);
+		$this->__rules = array_replace($multi, $rules); // array_merge screws up int keys!
 		\DoPhp::lang()->restoreDomain();
 	}
 
@@ -61,8 +61,10 @@ class Validator {
 	* Do the validation.
 	*
 	* @return array ($data, $error). $data cointains same fields on post
-	*         formatted according to 'field_type' (when given). $errors
-	*         contains validation errors. All fields are automatically trimmed.
+	*         formatted according to 'field_type' (when given).  All fields are
+	*         automatically trimmed. $errors contains validation errors as
+	*         associative array of strings, or associative array of arrays if
+	*         type is array (recursive validator).
 	*/
 	public function validate() {
 		\DoPhp::lang()->dophpDomain();
@@ -72,20 +74,11 @@ class Validator {
 		foreach( $this->__rules as $k => $v ) {
 			list($type, $options) = $v;
 
-			if( is_array($type) ) {
-				// Sub-validator
-				$subpost = isset($this->__post[$k]) ? $this->__post[$k] : array();
-				$subfiles = isset($this->__files[$k]) ? $this->__files[$k] : array();
-				$subv = new Validator( $subpost, $subfiles, $type );
-				list($d, $e) = $subv->validate();
-				if( $d )
-					$data[$k] = $d;
-				if( $e )
-					$errors[$k] = $e;
-				continue;
-			}
+			if( is_array($type) )
+				throw new \Exception('Deprecated old sub-validator syntax');
 
 			$vname = 'dophp\\' . $type . '_validator';
+
 			if( substr($type,0,4) == 'file' )
 				$validator = new $vname($this->__files[$k], $options, $this->__files);
 			elseif( substr($type,0,5) == 'array' )
@@ -96,6 +89,7 @@ class Validator {
 			if( $err = $validator->validate() )
 				$errors[$k] = $err;
 		}
+
 		\DoPhp::lang()->restoreDomain();
 		return array( $data, $errors );
 	}
@@ -121,14 +115,16 @@ interface field_validator {
 * Base abstract validator class.
 *
 * Common rules: 'required'=>boolean|lambda($field_values, $all_values).
-*               When true (or when the lambda returns true, check that field
-*               is not empty.
+*                   When true (or when the lambda returns true, check that field
+*                   is not empty.
+*               'choices'=>array()
+*                   When specified, the validated value MUST be in_array(<choice>)
 *               'custom'=>lambda($field_values, $all_values).
-*               validates using custom function. Must return string error or
-*               null on success.
+*                   validates using custom function. Must return string error or
+*                   null on success.
 *               'default'=>specify a default value to be used in place of null
 *               'process'=>lambda($value)
-*               Lambda function to post-proces the final value after validation
+*                   Lambda function to post-proces the final value after validation
 */
 abstract class base_validator implements field_validator {
 
@@ -174,6 +170,8 @@ abstract class base_validator implements field_validator {
 			$err = $o['custom']($v, $this->__values);
 			if( $err )
 				return $err;
+		if( isset($o['choices']) && ! in_array($v, $o['choices']) )
+			return _('Field must be one of') . ' "' . implode($o['choices'],',') . '".';
 
 		// Perform specific validation tasks
 		$err = $this->do_validate($v, $o);
@@ -243,64 +241,79 @@ class string_validator extends base_validator {
 			return _('Unvalid eMail') . '.';
 	}
 	protected function check_url($val) {
-		if( $val == null )
+		if( $val === null )
 			return false;
 		if( ! preg_match('/^[a-z]+:\/\/[a-z0-9.]+\/?[a-z0-9=\-._~:\/?#[\]@!$&+]*$/i', $val) )
 			return _('Unvalid absolute URL') . '.';
 	}
 	protected function check_len($val, $min, $max) {
-		if( $val == null )
+		if( $val === null )
 			return false;
 		if( $min && strlen($val) < $min )
-			return _('Text is too short') . '.';
+			return str_replace('{number}', $min, _('Text must be at least {number} characters long')) . '.';
 		if( $max && strlen($val) > $max )
-			return _('Text is too long') . '.';
+			return str_replace('{number}', $max, _('Text must be no longer than {number} characters')) . '.';
 	}
+}
+
+/**
+* Common numeric validation class
+*
+* Custom validation rules: 'min'=>val, Number must be greater or equal than value
+*                          'max'=>val, Number must be lesser or equal than value
+*/
+abstract class number_validator extends base_validator {
+
+	protected function do_validate( &$v, &$o ) {
+		if( isset($o['min']) )
+			if( $err = $this->check_min($v, $o['min']) )
+				return $err;
+		if( isset($o['max']) )
+			if( $err = $this->check_max($v, $o['max']) )
+				return $err;
+	}
+	protected function check_min($val, $min) {
+		if( $val === null || $val >= $min )
+			return false;
+		return str_replace('{number}', $this->format_number($min), _('Number must be at least {number}')) . '.';
+	}
+	protected function check_max($val, $max) {
+		if( $val === null || $val <= $max )
+			return false;
+		return str_replace('{number}', $this->format_number($max), _('Number must not be bigger than {number}')) . '.';
+	}
+
+	/**
+	* Utility function to convert a number (double or int) to string
+	*/
+	protected function format_number($num) {
+		if( floor($num) == $num )
+			return sprintf('%u', $num);
+		return sprintf('%f', $num);
+	}
+
 }
 
 /**
 * Validate as integer
 *
-* Custom validation rules: 'min'=>int, value must be >= min
-*                          'max'=>true, value must be <= max
-*
 * @return int
 */
-class int_validator extends base_validator {
-
-	protected function do_validate( &$v, &$o ) {
-		if( array_key_exists('min', $o) )
-			if( $err = $this->check_min($v, $o['min']) )
-				return $err;
-		if( array_key_exists('max', $o) )
-			if( $err = $this->check_max($v, $o['max']) )
-				return $err;
-	}
+class int_validator extends number_validator {
 
 	protected function do_clean($val) {
 		if( gettype($val) == 'integer' )
 			return $val;
 		return (int)trim($val);
 	}
-
-	protected function check_min($val, $min) {
-		if( $val < $min )
-			return _('Value is too low') . '.';
-	}
-
-	protected function check_max($val, $max) {
-		if( $val > $max )
-			return _('Value is too big') . '.';
-	}
 }
 
 /**
 * Validate as double
 *
-* @see int_validator
 * @return double
 */
-class double_validator extends int_validator {
+class double_validator extends number_validator {
 
 	protected function do_clean($val) {
 		if( gettype($val) == 'double' )
@@ -342,6 +355,33 @@ class date_validator extends base_validator {
 		}
 		return $date;
 	}
+}
+
+/**
+* Validate as time only
+*
+* @return object dophp\Time
+*/
+class time_validator extends base_validator {
+
+	protected function do_clean($val) {
+		if( gettype($val) == 'object' && $val instanceof Time )
+			return $val;
+		$vals = preg_split('/(\\.|:|\\s+)/', trim($val));
+		if( count($vals) > 3 )
+			return null;
+		foreach( $vals as & $v ) {
+			if( ! is_numeric($v) )
+				return null;
+			$v = (int) $v;
+		}
+		unset($v);
+		for( $i = 0; $i < 3; $i++ )
+			if( ! isset($vals[$i]) )
+				$vals[$i] = 0;
+		return new Time(implode(':', array_map(function($i){return str_pad($i,2,'0',STR_PAD_LEFT);}, $vals )));
+	}
+
 }
 
 /**
@@ -401,15 +441,12 @@ class array_validator implements field_validator {
 			$this->__error = _("Must be an array") . '.';
 
 		}elseif( array_key_exists('rules',$options) && $options['rules'] ) {
-			$val = array();
-			$val = new Validator($value, $_FILES, $options['rules']);
-			list($pars, $errors) = $val->validate();
-			$this->__value = $pars;
-			if( $errors )
-				$this->__error = print_r($errors, true);
+			$validator = new Validator($value, $_FILES, $options['rules']);
+			list($this->__value, $this->__error) = $validator->validate();
 
 		}else
 			$this->__value = $value;
+
 	}
 
 	public function clean() {

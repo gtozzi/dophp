@@ -39,9 +39,19 @@ interface MenuInterface {
 	/**
 	* Returns an array containing the current active path.
 	*
+	* @param $url string: Url to get the breadcrumb for (use current URL if missing)
 	* @return array Array of MenuInterface instances. Null on failure
 	*/
-	public function getBreadcrumb();
+	public function getBreadcrumb($url=null);
+
+	/**
+	* Checks if this menu item is active (based on url and alt), NOT recursvie:
+	* does not account for active childrens
+	*
+	* @param $url string: Url to check active for (use current URL if missing)
+	* @return boolean True if active, False otherwise
+	*/
+	public function isActive($url=null);
 }
 
 /**
@@ -51,6 +61,8 @@ class Menu implements MenuInterface {
 
 	/** The root MenuItem */
 	protected $_root;
+	/** The current URL */
+	protected $_currentUrl;
 
 	/**
 	* Constructs a menu from array
@@ -66,6 +78,7 @@ class Menu implements MenuInterface {
 	*                                defined as above
 	*/
 	public function __construct($label=null, $url=null, $items=null) {
+		$this->_currentUrl = $_SERVER['REQUEST_URI'];
 		$this->_root = $this->_createChild(array('label'=>$label, 'url'=>$url));
 
 		if( $items )
@@ -104,7 +117,8 @@ class Menu implements MenuInterface {
 	protected function _createChild($item) {
 		$label = isset($item['label']) ? $item['label'] : null;
 		$url = isset($item['url']) ? $item['url'] : null;
-		return new MenuItem($label, $url);
+		$alt = isset($item['alt']) ? $item['alt'] : null;
+		return new MenuItem($label, $url, $alt);
 	}
 
 	public function append(MenuInterface $item) {
@@ -123,8 +137,33 @@ class Menu implements MenuInterface {
 		return $this->_root->getChilds();
 	}
 	
-	public function getBreadcrumb() {
-		return $this->_root->getBreadcrumb();
+	public function getBreadcrumb($url=null) {
+		if( $url === null )
+			$url = $this->_currentUrl;
+		return $this->_root->getBreadcrumb($url);
+	}
+
+	public function isActive($url=null) {
+		if( $url === null )
+			$url = $this->_currentUrl;
+		return $this->_root->isActive($url);
+	}
+
+	/**
+	* Sets a different url to use for self::isActive() checks in place of
+	* current script's URL
+	*
+	* @param $url string: A valid url
+	*/
+	public function setCurrentUrl($url) {
+		$this->_currentUrl = $url;
+	}
+
+	/**
+	* Returns the current URL
+	*/
+	public function getCurrentUrl() {
+		return $this->_currentUrl;
 	}
 
 }
@@ -140,16 +179,21 @@ class MenuItem implements MenuInterface {
 	protected $_url;
 	/** List of childs */
 	protected $_childs = array();
+	/** Alternative URL regex */
+	protected $_alt;
 
 	/**
 	* Creates a new menu item
 	*
 	* @param $label string: The menu user-friendly label, null for separator
 	* @param $url string: The url, if clickable
+	* @param $alt string: Regular expression matching alternative URLs for this element
+	*                     (used in breadcrumb building)
 	*/
-	public function __construct($label=null, $url=null) {
+	public function __construct($label=null, $url=null, $alt=null) {
 		$this->_label = $label;
 		$this->_url = $url;
+		$this->_alt = $alt;
 	}
 
 	public function append(MenuInterface $item) {
@@ -168,18 +212,35 @@ class MenuItem implements MenuInterface {
 		return $this->_childs;
 	}
 
-	public function getBreadcrumb() {
+	public function getBreadcrumb($url=null) {
+		if( $url === null )
+			$url = $_SERVER['REQUEST_URI'];
+
 		// First, check for first active child. If found, consider myself active too.
 		$cbc = null;
 		foreach( $this->_childs as $c )
-			if( $cbc = $c->getBreadcrumb() )
+			if( $cbc = $c->getBreadcrumb($url) )
 				break;
 		if( $cbc )
 			return array_merge(array($this), $cbc);
 
-		// Then check if my url matches query url
+		// Then check if im an active myself
+		if( $this->isActive($url) )
+			return array($this);
+
+		// No luck
+		return null;
+	}
+
+	public function isActive($url=null) {
+		if( $url === null )
+			$url = $_SERVER['REQUEST_URI'];
+
+		if( ! ( $this->_url || $this->_alt ) )
+			return false;
+
 		if( $this->_url ) {
-			$reqUrl = Utils::parseUrl($_SERVER['REQUEST_URI']);
+			$reqUrl = Utils::parseUrl($url);
 			$myUrl = Utils::parseUrl($this->_url);
 			if(
 				( ! isset($myUrl['path']) || $myUrl['path'] == $reqUrl['path'] )
@@ -190,11 +251,13 @@ class MenuItem implements MenuInterface {
 					( isset($myUrl['query']) && isset($reqUrl['query']) && ! array_diff($myUrl['query'], $reqUrl['query']) )
 				)
 			)
-				return array($this);
+				return true;
 		}
 
-		// No luck
-		return null;
+		if( $this->_alt && preg_match($this->_alt, Utils::fullUrl($url)) )
+			return true;
+
+		return false;
 	}
 
 }

@@ -11,6 +11,13 @@ namespace dophp;
 
 class Utils {
 
+	/** Default ports used for URL protocols */
+	public static $DEFAULT_PORTS = array(
+		'http' => 80,
+		'https' => 443,
+		'ftp' => 21,
+	);
+
 	/**
 	* Tries to process a time string intelligently
 	*
@@ -77,6 +84,8 @@ class Utils {
 			$parsed .= $url['user'] . ':' . $url['pass'] . '@';
 		if( isset($url['host']) )
 			$parsed .= $url['host'];
+		if( isset($url['port']) && ( ! isset(self::$DEFAULT_PORTS[$url['scheme']]) || self::$DEFAULT_PORTS[$url['scheme']] != $url['port'] ) )
+			$parsed .= ':' . $url['port'];
 		if( isset($url['path']) )
 			$parsed .= $url['path'];
 		if( isset($url['query']) )
@@ -131,22 +140,40 @@ class Utils {
 	* @return string: The Full page URL
 	*/
 	public static function fullPageUrl($page, $key='do') {
-		$s = & $_SERVER;
-		$ssl = (!empty($s['HTTPS']) && $s['HTTPS'] == 'on') ? true : false;
-		$sp = strtolower($s['SERVER_PROTOCOL']);
-		$protocol = substr($sp, 0, strpos($sp, '/')) . (($ssl) ? 's' : '');
-		$port = $s['SERVER_PORT'];
-		$port = ((!$ssl && $port=='80') || ($ssl && $port=='443')) ? '' : ':'.$port;
-		$host = isset($s['HTTP_X_FORWARDED_HOST']) ? $s['HTTP_X_FORWARDED_HOST'] : isset($s['HTTP_HOST']) ? $s['HTTP_HOST'] : $s['SERVER_NAME'];
-		$host = explode(':', $host);
-		$host = $host[0];
-		$uri = $protocol . '://' . $host . $port . $s['REQUEST_URI'];
-		$segments = explode('?', $uri, 2);
-		$url = $segments[0];
-		if( $key === null )
-			return "$url$page";
-		else
-			return "$url?$key=$page";
+		$url = $key === null ? $page : "?$key=$page";
+
+		return self::fullUrl($url);
+	}
+
+	/**
+	* Returns the full URL for a partial URI
+	*
+	* @param $url Any url combination. Missing informations are filled with current
+	*             URL's ones
+	* @return string: The full page URL
+	*/
+	public static function fullUrl($url) {
+		$url = self::parseUrl($url);
+
+		if( ! isset($url['scheme']) )
+			$url['scheme'] = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS']=='on' ? 'https' : 'http';
+		if( ! isset($url['host']) ) {
+			$url['host'] = isset($_SERVER['HTTP_X_FORWARDED_HOST']) ? $_SERVER['HTTP_X_FORWARDED_HOST'] : isset($_SERVER['HTTP_HOST'])?$_SERVER['HTTP_HOST']:$_SERVER['SERVER_NAME'];
+			$url['host'] = explode(':', $url['host']);
+			$url['host'] = $url['host'][0];
+		}
+		if( ! isset($url['port']) )
+			$url['port'] = $_SERVER['SERVER_PORT'];
+		if( ! isset($url['user']) && isset($_SERVER['PHP_AUTH_USER']) )
+			$url['user'] = $_SERVER['PHP_AUTH_USER'];
+		if( ! isset($url['pass']) && isset($_SERVER['PHP_AUTH_PW']) )
+			$url['pass'] = $_SERVER['PHP_AUTH_PW'];
+		if( ! array_key_exists('path', $url) ) {
+			$uri = self::parseUrl($_SERVER['REQUEST_URI']);
+			$url['path'] = $uri['path'];
+		}
+
+		return self::buildUrl($url);
 	}
 
 	/**
@@ -301,6 +328,39 @@ class Utils {
 			if( strtolower($c) == strtolower($name) )
 				return $c;
 		return null;
+	}
+
+	/**
+	* Makes a string filename-safe by replacing unsafe characters
+	* Uses the most wide range un unsafe characters possible
+	*
+	* @param $name The input string
+	* @param $replace The replace character
+	* @return string: The sanitized string
+	*/
+	public static function safeFileName($name, $replace='_') {
+		$unsafe = array('/','\\','?','<','>',':','*','|','^',"\x7f");
+		for( $i=0; $i<=0x1f; $i++)
+			$unsafe[] = chr($i);
+		return str_replace($unsafe, $replace, $name);
+	}
+
+	/**
+	* Returns distance between two points on a sphere
+	*
+	* @param $lat1 double: Latitude of first point in degress
+	* @param $lng1 double: Longitude of first point in degress
+	* @param $lat2 double: Latitude of second point in degress
+	* @param $lng2 double: Longitude of second point in degress
+	*
+	* @return double: distance in degrees (1 degree = 60 nautical miles)
+	*/
+	public static function distance($lat1, $lng1, $lat2, $lng2) {
+		$dist = sin(deg2rad($lat1)) * sin(deg2rad($lat2)) +  cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * cos(deg2rad($lon1-$lng2));
+		$dist = acos($dist);
+		$dist = rad2deg($dist);
+
+		return $dist;
 	}
 
 }
