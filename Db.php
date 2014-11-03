@@ -172,8 +172,11 @@ class Db {
 	*
 	* @param $params array: Associative array with parameters. Key is the name
 	*                       of the column. If the data is an array, 2nd key is
-	*                       the custom placeholder to use. By example:
+	*                       the custom sql funcion to use. By example:
 	*                       'password' => [ '123456', 'SHA1(?)' ]
+	*                       If also 1st key is an array, then multiple arguments
+	*                       will be bound to the custom sql function, By example:
+	*                       'password' => [['12345', '45678'], 'AES_ENCRYPT(?,?)'],
 	* @param $glue string: The string to join the arguments, usually ', ' or ' AND '
 	* @return array [query string, params array]
 	*/
@@ -185,9 +188,22 @@ class Db {
 		foreach( $params as $k => $v ) {
 			$c = "`$k` = ";
 			if( is_array($v) ) {
-				$c .= str_replace('?', ":$k", $v[1]);
-				if( $v[0] !== null )
-					$vals[$k] = $v[0];
+				if( count($v) != 2 || ! array_key_exists(0,$v) || ! array_key_exists(1,$v) )
+					throw new \Exception('Unvalid number of array components');
+				if( is_array($v[0]) ) {
+					$f = $v[1];
+					foreach( $v[0] as $n => $vv ) {
+						$kk = $k . $n;
+						$f = preg_replace('/\?/', ":$kk", $f, 1);
+						if( $vv !== null )
+							$vals[$kk] = $vv;
+					}
+					$c .= $f;
+				} else {
+					$c .= str_replace('?', ":$k", $v[1]);
+					if( $v[0] !== null )
+						$vals[$k] = $v[0];
+				}
 			} else {
 				$c .= ":$k";
 				$vals[$k] = $v;
