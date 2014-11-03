@@ -48,15 +48,15 @@ class RpcTest:
 		else:
 			raise ValueError('Unknown scheme', self.baseUrl.scheme)
 
-	def run(self, method, auth=None, **param):
+	def run(self, method, auth=None, headers={}, **param):
 		# Connect
 		conn = self.conn(self.baseUrl.netloc)
 		
 		# Request the page
 		body = json.dumps(param)
-		headers = {
+		headers.update({
 			'Content-Type': 'application/json',
-		}
+		})
 		url = self.baseUrl.path + '?do=' + method
 		if auth:
 			# Build authentication
@@ -91,11 +91,13 @@ if __name__ == '__main__':
 	parser.add_argument('method', help='name of the method to call')
 	parser.add_argument('-a', '--auth', nargs=2, metavar=('USER','PASS'),
 			help='username and password for authentication')
+	parser.add_argument('-e', '--header', nargs='*', action=ParamAction,
+			help='adds an header <name>=<value>')
 	parser.add_argument('param', nargs='*', action=ParamAction,
 			help='adds a parameter <name>=<value> (use [] to specify a list)')
 
 	args = parser.parse_args()
-	
+
 	params = {}
 	if args.param:
 		for k, v in args.param.items():
@@ -104,11 +106,13 @@ if __name__ == '__main__':
 			else:
 				params[k] = v
 
+	headers = args.header if args.header else {}
+
 	rpc = RpcTest(args.url)
 	if params:
-		res = rpc.run(args.method, args.auth, **params)
+		res = rpc.run(args.method, args.auth, headers, **params)
 	else:
-		res = rpc.run(args.method, args.auth)
+		res = rpc.run(args.method, args.auth, headers)
 
 	# Show result
 	print(res.status, res.reason)
