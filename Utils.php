@@ -83,11 +83,16 @@ class Utils {
 		if( isset($url['user']) || isset($url['pass']) )
 			$parsed .= $url['user'] . ':' . $url['pass'] . '@';
 		if( isset($url['host']) )
-			$parsed .= $url['host'] . '/';
+			$parsed .= $url['host'];
 		if( isset($url['port']) && ( ! isset(self::$DEFAULT_PORTS[$url['scheme']]) || self::$DEFAULT_PORTS[$url['scheme']] != $url['port'] ) )
 			$parsed .= ':' . $url['port'];
-		if( isset($url['path']) )
+		if( strlen($parsed) )
+			$parsed .= '/';
+		if( isset($url['path']) ) {
+			if( substr($parsed,-1,1) == '/' && substr($url['path'],0,1) == '/' )
+				$parsed = substr($parsed, 0, -1);
 			$parsed .= $url['path'];
+		}
 		if( isset($url['query']) )
 			$parsed .= '?' . $url['query'];
 		if( isset($url['fragment']) )
@@ -171,6 +176,18 @@ class Utils {
 		if( ! array_key_exists('path', $url) ) {
 			$uri = self::parseUrl($_SERVER['REQUEST_URI']);
 			$url['path'] = $uri['path'];
+		} else {
+			$path = explode('/', $url['path']);
+			if( count($path) < 2 ) {
+				// Only file name specified, add folder if available
+				$uri = self::parseUrl($_SERVER['REQUEST_URI']);
+				$pathi = explode('/', $uri['path']);
+				if( count($pathi) > 1 ) {
+					array_pop($pathi);
+					$path = array_merge($pathi, $path);
+				}
+			}
+			$url['path'] = implode('/', $path);
 		}
 
 		return self::buildUrl($url);
