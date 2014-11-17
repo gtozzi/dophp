@@ -373,7 +373,7 @@ class Utils {
 	* @return double: distance in degrees (1 degree = 60 nautical miles)
 	*/
 	public static function distance($lat1, $lng1, $lat2, $lng2) {
-		$dist = sin(deg2rad($lat1)) * sin(deg2rad($lat2)) +  cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * cos(deg2rad($lon1-$lng2));
+		$dist = sin(deg2rad($lat1)) * sin(deg2rad($lat2)) + cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * cos(deg2rad($lng1-$lng2));
 		$dist = acos($dist);
 		$dist = rad2deg($dist);
 
