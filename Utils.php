@@ -228,6 +228,7 @@ class Utils {
 	/**
 	* Cleans an array according to template array
 	*
+	* @todo Merge with Validator
 	* @param $array array: The input array
 	* @param $template array: Associative array <key>=><type>
 	*                         If key is (int)0 multiple items are expected
@@ -242,31 +243,39 @@ class Utils {
 			if( $k === 0 ) {
 				foreach( $array as $n => $v )
 					if( is_int($n) )
-						$out[$n] = self::cleanArray($v, $t);
-			}elseif( array_key_exists($k, $array) ) {
+						$out[$n] = self::cleanValue($v, $t);
+			} elseif( array_key_exists($k, $array) ) {
 				if( is_array($t) )
 					$out[$k] = self::cleanArray($array[$k], $t);
 				elseif( $array[$k] === null )
 					$out[$k] = null;
 				else
-					switch($t) {
-					case 'string':
-						$out[$k] = (string)$array[$k];
-						break;
-					case 'int':
-						$out[$k] = (int)$array[$k];
-						break;
-					case 'double':
-						$out[$k] = (double)$array[$k];
-						break;
-					case 'bool':
-						$out[$k] = (bool)$array[$k];
-						break;
-					default:
-						throw new \Exception("Uknown type $t");
-					}
+					$out[$k] = self::cleanValue($array[$k], $t);
 			}
 		return $out;
+	}
+
+	/**
+	* Cleans a single value according to format
+	*
+	* @todo Merge with Validator
+	* @param $value string: The input value
+	* @param $type string: The type
+	* @return mixed: The correctly typed value
+	*/
+	public static function cleanValue($value, $type) {
+		switch($type) {
+		case 'string':
+			return (string)$value;
+		case 'int':
+			return (int)$value;
+		case 'double':
+			return (double)$value;
+		case 'bool':
+			return (bool)$value;
+		default:
+			throw new \Exception("Uknown type $t");
+		}
 	}
 
 	/**
