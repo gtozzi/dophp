@@ -263,7 +263,7 @@ class Utils {
 						$out[$k] = (bool)$array[$k];
 						break;
 					default:
-						throw new Exception("Uknown type $t");
+						throw new \Exception("Uknown type $t");
 					}
 			}
 		return $out;
