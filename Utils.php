@@ -242,8 +242,12 @@ class Utils {
 		foreach( $template as $k => $t )
 			if( $k === 0 ) {
 				foreach( $array as $n => $v )
-					if( is_int($n) )
-						$out[$n] = self::cleanValue($v, $t);
+					if( is_int($n) ) {
+						if( is_array($t) )
+							$out[$n] = self::cleanArray($v, $t);
+						else
+							$out[$n] = self::cleanValue($v, $t);
+					}
 			} elseif( array_key_exists($k, $array) ) {
 				if( is_array($t) )
 					$out[$k] = self::cleanArray($array[$k], $t);
