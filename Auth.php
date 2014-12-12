@@ -179,17 +179,22 @@ class AuthSign extends AuthBase implements AuthInterface {
 
 	/** Separator to use for hash concatenation */
 	const SEP = '~';
+	/** UserId header name ($_SERVER key name) */
+	const HEAD_USER = 'HTTP_X_AUTH_USER';
+	/** Signature header name ($_SERVER key name) */
+	const HEAD_SIGN = 'HTTP_X_AUTH_SIGN';
 
 	/**
 	* @see AuthBase::_doLogin
 	*/
 	public function _doLogin() {
-		$headers = Utils::headers();
 		$data = file_get_contents("php://input");
 
-		if( $headers['X-Auth-User'] || $headers['X-Auth-Sign'] ) {
-			$user = $headers['X-Auth-User'];
-			$sign = $headers['X-Auth-Sign'];
+		$user = null;
+		$sign = null;
+		if( isset($_SERVER[self::HEAD_USER]) && isset($_SERVER[self::HEAD_SIGN]) ) {
+			$user = $_SERVER[self::HEAD_USER];
+			$sign = $_SERVER[self::HEAD_SIGN];
 		}elseif( $this->_sess ) {
 			$user = $_SESSION[self::SESS_VAR.'user'];
 			$sign = $_SESSION[self::SESS_VAR.'sign'];
