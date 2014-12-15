@@ -77,12 +77,19 @@ class DoPhp {
 	*                                 - idx: the table containing the text indexes
 	*                                 - txt: the table containing the texts itself
 	*                 )
+	*                 'dophp' => array( // Internal DoPhp configurations
+	*                     'url'  => relative path for accessing DoPhp folder from webserver.
+	*                               Default: try to guess it
+	*                     'path' => relative or absolute DoPhp root path
+	*                               Default: automatically detect it
+	*                 )
 	* @param $db     string: Name of the class to use for the database connection
 	* @param $auth   string: Name of the class to use for user authentication
 	* @param $lang   string: Name of the class to use for multilanguage handling
 	* @param $sess   boolean: If true, starts the session and uses it
 	* @param $def    string: Default page name, used when received missing or unvalid page
 	* @param $key    string: the key containing the page name
+	* @param $url    string: base relative URL for accessing dophp folder in webserver
 	*/
 	public function __construct($conf=null, $db='dophp\\Db', $auth=null, $lang='dophp\\Lang',
 			$sess=true, $def='home', $key=self::BASE_KEY) {
@@ -114,6 +121,14 @@ class DoPhp {
 			$this->__conf['lang']['texts'] = array();
 		if( ! array_key_exists('tables', $this->__conf['lang']) )
 			$this->__conf['lang']['tables'] = array();
+		if( ! array_key_exists('dophp', $this->__conf) )
+			$this->__conf['dophp'] = array();
+		if( ! array_key_exists('dophp', $this->__conf) )
+			$this->__conf['dophp'] = array();
+		if( ! array_key_exists('url', $this->__conf['dophp']) )
+			$this->__conf['dophp']['url'] = preg_replace('/^'.preg_quote($_SERVER['DOCUMENT_ROOT'],'/').'/', '', __DIR__, 1);
+		if( ! array_key_exists('path', $this->__conf['dophp']) )
+			$this->__conf['dophp']['path'] = __DIR__;
 
 		//Set the locale
 		bindtextdomain(self::TEXT_DOMAIN, __DIR__ . '/locale');

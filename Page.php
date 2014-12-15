@@ -115,7 +115,10 @@ abstract class PageSmarty extends PageBase implements PageInterface {
 		$this->_smarty = new \Smarty();
 		$this->_smarty->left_delimiter = self::TAG_START;
 		$this->_smarty->right_delimiter = self::TAG_END;
-		$this->_smarty->setTemplateDir("{$this->_config['paths']['tpl']}/");
+		$this->_smarty->setTemplateDir(array(
+			"{$this->_config['paths']['tpl']}/",
+			'dophp' => "{$this->_config['dophp']['path']}/tpl/"
+		));
 		$this->_smarty->setCompileDir("{$this->_config['paths']['cac']}/");
 		$this->_smarty->setCacheDir("{$this->_config['paths']['cac']}/");
 
