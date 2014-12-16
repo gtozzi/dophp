@@ -5,7 +5,7 @@
 	<form class="form-horizontal" role="form" action="{{$submitUrl}}" method="post" enctype="multipart/form-data">
 		{{block name='fields'}}
 			{{foreach $fields as $n => $f}}
-				{{include file='crud/form-field.tpl' name=$n field=$f}}
+				{{include file='file:[dophp]crud/form-field.tpl' name=$n field=$f}}
 			{{/foreach}}
 		{{/block}}
 
