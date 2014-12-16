@@ -746,6 +746,10 @@ class Decimal {
 	public function __construct($val) {
 		$this->__val = $val;
 	}
+
+	public function __toString() {
+		return $this->__val;
+	}
 }
 
 
