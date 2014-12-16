@@ -51,7 +51,7 @@
 					{{foreach $items as $it}}{{strip}}
 						[
 							{{foreach $cols as $h => $e}}
-								'{{addslashes($it[$h])}}',
+								{{json_encode((string)$it[$h])}},
 							{{/foreach}}
 						],{{"\n"}}
 					{{/strip}}{{/foreach}}
