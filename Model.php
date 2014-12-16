@@ -29,43 +29,8 @@ abstract class Model {
 	protected $_table = null;
 	/**
 	* Field description array, should be overriden in sub-class
-	* defining an associative array or arrays in the format [ <column_id> => [
-	*   'label'    => string: The label to display for this field
-	*   'descr'    => string: Long description
-	*   'rtype'    => string: The field renderring type:
-	*                         - <null> [or missing]: The field is not rendered at all
-	*                         - label: The field is rendered as a label
-	*                         - select: The field is rendered as a select box
-	*                         - multi: The field is rendered as multiple select box
-	*                         - check: The field is rendered as a checkbox
-	*                         - auto: The field is renderes as a suggest (autocomplete)
-	*                         - text: The field is rendered as a text box
-	*   'dtype'    => string: The data type, used for validation, see Validator::__construct
-	*                         If null or missing, the field is automatically set
-	*                         from database and omitted in insert/update queries
-	*                         If array, data will be serialized prior of being written
-	*                         unless 'nmtab' is specified
-	*   'dopts'    => array:  Data Validation options, see Validator::__construct
-	*                         If null or missing, defaults to an empty array
-	*                         The "required" key can be a string specifying a
-	*                         single action on which the field if required (insert/update)
-	*   'ropts'    => array:  Data rendering options, associative array.
-	*                         'refer' => class:  Name of the referenced model, if applicable
-	*                         'data' => array:  Associative array of data for a select box, if
-	*                                   applicable. Overrides 'refer'.
-	*                         'group' => string: Name of the field in the referenced model
-	*                                    to use for grouping elements
-	*   'postp'    => func:   Post-processor: parses the data before saving it,
-	*                         if applicable
-	*   'value'    => mixed:  If given, this field will always be set to this static value
-	*   'i18n'     => bool:   If true, this field is "multiplied" for every
-	*                         supported language. Default: false
-	*   'edit'     => bool:   If false, this field is not altered in edit mode.
-	*                         Defaults to true.
-	*   'rtab'     => bool:   If false, this field is not rendered in table view.
-	*                         Defaults to true.
-	*   'nmtab'    => string: The name of the N:M relation tab for an array field
-	* ]
+	* defining an associative array or arrays in the format accepted by
+	* FieldDefinition::__construct()
 	* @see initFields()
 	*/
 	protected $_fields = null;
@@ -115,29 +80,8 @@ abstract class Model {
 		// Clean and validate the fields array
 		if( ! $this->_fields || ! is_array($this->_fields) )
 			throw new \Exception('Unvalid fields');
-		foreach( $this->_fields as $f => & $d ) {
-			if( ! isset($d['rtype']) )
-				$d['rtype'] = null;
-			if( ! isset($d['dtype']) )
-				$d['dtype'] = null;
-			if( ! isset($d['dopts']) )
-				$d['dopts'] = array();
-			if( ! isset($d['ropts']) )
-				$d['ropts'] = array();
-			if( ! isset($d['i18n']) )
-				$d['i18n'] = false;
-			if( ! isset($d['edit']) )
-				$d['edit'] = true;
-			if( ! isset($d['rtab']) )
-				$d['rtab'] = true;
-			if( ! isset($d['nmtab']) )
-				$d['nmtab'] = null;
-
-			if( ($d['rtype']=='select' || $d['rtype']=='auto') && ! (isset($d['ropts']['refer']) || array_key_exists('data',$d['ropts'])) )
-				throw new \Exception("Missing referred model or data for field \"$f\"");
-			if( array_key_exists('data',$d['ropts']) && ! is_array($d['ropts']['data']) )
-				throw new \Exception('Unvalid referred data');
-		}
+		foreach( $this->_fields as $f => & $d )
+			$d = new FieldDefinition($d);
 		unset($d);
 	}
 
@@ -194,8 +138,8 @@ abstract class Model {
 	public function getLabels() {
 		$labels = array();
 		foreach( $this->_fields as $k => $f )
-			if( isset($f['label']) )
-				$labels[$k] = $f['label'];
+			if( $f->label )
+				$labels[$k] = $f->label;
 		return $labels;
 	}
 
@@ -397,8 +341,8 @@ abstract class Model {
 			$record = $this->_table->get($pk);
 
 			foreach( $this->_fields as $n => $f )
-				if( $f['dtype']=='array' )
-					if( ! $f['nmtab'] )
+				if( $f->dtype == 'array' )
+					if( ! $f->nmtab )
 						$record[$n] = unserialize($record[$n]);
 					else { // Read data from relation
 						$rinfo = $this->__analyzeRelation($f);
@@ -455,7 +399,8 @@ abstract class Model {
 
 		$data = array();
 		foreach( $res as $k => $v )
-			$data[$k] = new Field($v, $this->_fields[$k]);
+			if( isset($this->_fields[$k]) )
+				$data[$k] = new Field($v, $this->_fields[$k]);
 
 		return $data;
 	}
@@ -473,20 +418,20 @@ abstract class Model {
 		$labels = array();
 		$allLabels = $this->getLabels();
 		foreach($this->_fields as $k => $f )
-			if( $f['rtab'] ) {
+			if( $f->rtab ) {
 				$cols[] = $k;
 				$labels[$k] = $allLabels[$k];
 			}
-		list($items, $count) = $this->_table->select($this->_filter->getRead(), $cols);
 
 		$data = array();
-		foreach( $items as $i ) {
+		foreach( $this->_table->select($this->_filter->getRead(), $cols) as $x => $i ) {
 			foreach( $i as $k => & $v )
 				$v = new Field($v, $this->_fields[$k]);
 			unset($v);
 
 			$data[$this->formatPk($i)] = $i;
 		}
+		$count = $this->_db->foundRows();
 
 		return array($data, $count, $labels);
 	}
@@ -818,6 +763,110 @@ abstract class Model {
 
 
 /**
+* Defines the characteristics for a field
+*/
+class FieldDefinition {
+
+	/** string: The label to display for this field */
+	public $label = null;
+
+	/** string: Long description */
+	public $descr = null;
+
+	/**
+	* string: The field renderring type:
+	*         - <null> [or missing]: The field is not rendered at all
+	*         - label: The field is rendered as a label
+	*         - select: The field is rendered as a select box
+	*         - multi: The field is rendered as multiple select box
+	*         - check: The field is rendered as a checkbox
+	*         - auto: The field is renderes as a suggest (autocomplete)
+	*         - text: The field is rendered as a text box
+	*/
+	public $rtype = null;
+
+	/**
+	* string: The data type, used for validation, see Validator::__construct
+	*         If null or missing, the field is automatically set
+	*         from database and omitted in insert/update queries
+	*         If array, data will be serialized prior of being written
+	*         unless 'nmtab' is specified
+	*/
+	public $dtype = null;
+
+	/**
+	* array: Data Validation options, see Validator::__construct
+	*        If null or missing, defaults to an empty array
+	*        The "required" key can be a string specifying a
+	*        single action on which the field if required (insert/update)
+	*/
+	public $dopts = [];
+
+	/**
+	* array: Data rendering options, associative array.
+	*        'refer' => class:  Name of the referenced model, if applicable
+	*        'data' => array:  Associative array of data for a select box, if
+	*                          applicable. Overrides 'refer'.
+	*        'group' => string: Name of the field in the referenced model
+	*                           to use for grouping elements
+	*/
+	public $ropts = [];
+
+	/**
+	* func: Post-processor: parses the data before saving it, if applicable
+	*/
+	public $postp = null;
+
+	/**
+	* mixed: If given, this field will always be set to this static value
+	*/
+	public $value = null;
+
+	/**
+	* bool: If true, this field is "multiplied" for every supported language.
+	* Default: false
+	*/
+	public $i18n = false;
+
+	/**
+	* bool: If false, this field is not altered in edit mode.
+	* Defaults to true.
+	*/
+	public $edit = true;
+
+	/**
+	* bool: If false, this field is not rendered in table view.
+	* Defaults to true.
+	*/
+	public $rtab = true;
+
+	/**
+	* string: The name of the N:M relation tab for an array field
+	*/
+	public $nmtab = null;
+
+	/**
+	* Set the properties from an associative array. See property descriptions
+	* for list ov available keys
+	*/
+	public function __construct($array) {
+		foreach( $array as $k => $v ) {
+			if( ! property_exists($this, $k) )
+				throw new \Exception("Unknown property $k");
+			$this->$k = $v;
+		}
+
+		// Perform some sanity checks
+		if( ($this->rtype=='select' || $this->rtype=='auto') && ! (isset($this->ropts['refer']) || array_key_exists('data',$this->ropts)) )
+			throw new \Exception('Missing referred model or data for select or auto field');
+		if( array_key_exists('data',$this->ropts) && ! is_array($this->ropts['data']) )
+			throw new \Exception('Unvalid referred data');
+	}
+
+}
+
+
+/**
 * Represents a data field, carrying a raw value
 */
 class Field {
@@ -831,12 +880,9 @@ class Field {
 	* Creates the field
 	*
 	* @param mixed value: The raw value
-	* @param array def: The field definition array:
-	*                   'rtype' => the field type,
-	*                   'label' => the field label
-	*                   'descr' => the long description / placeholder
+	* @param array FieldDefinition: The field definition
 	*/
-	public function __construct($value, & $def) {
+	public function __construct($value, FieldDefinition $def) {
 		$this->_value = $value;
 		$this->_def = $def;
 	}
@@ -877,13 +923,13 @@ class Field {
 			throw new \Exception("Unsupported type $type");
 
 		// Handle i18n and relations
-		if( $this->_def['i18n'] )
+		if( $this->_def->i18n )
 			$val = $this->__reprLangLabel($val);
-		elseif( $this->_def['rtype'] == 'select' || $this->_def['rtype'] == 'auto' )
-			if( array_key_exists('data',$this->_def['ropts']) )
-				$val = $this->_def['ropts']['data'][$val];
+		elseif( $this->_def->rtype == 'select' || $this->_def->rtype == 'auto' )
+			if( array_key_exists('data',$this->_def->ropts) )
+				$val = $this->_def->ropts['data'][$val];
 			else
-				$val = \DoPhp::model($this->_def['ropts']['refer'])->summary($val);
+				$val = \DoPhp::model($this->_def->ropts['refer'])->summary($val);
 
 		return $val;
 	}
@@ -910,13 +956,13 @@ class Field {
 	}
 
 	public function label() {
-		return $this->_def['label'];
+		return $this->_def->label;
 	}
 	public function type() {
-		return $this->_def['rtype'];
+		return $this->_def->rtype;
 	}
 	public function descr() {
-		return $this->_def['descr'];
+		return $this->_def->descr;
 	}
 
 }
@@ -937,11 +983,11 @@ class FormField extends Field {
 	*
 	* @see Field::__construct
 	* @param $label string: The label for the field
-	* @param $def array: The field definition (see Field)
+	* @param $def FieldDefinition: The field definition (see Field)
 	* @param $error string: The error message
 	* @param $data array: The related data, array of FormFieldData objects
 	*/
-	public function __construct($value, $def, $error=null, $data=null) {
+	public function __construct($value, FieldDefinition $def, $error=null, $data=null) {
 		parent::__construct($value, $def);
 		$this->_error = $error;
 		$this->_data = $data;

@@ -31,6 +31,8 @@ class DoPhp {
 
 	/** Stores the current instance */
 	private static $__instance = null;
+	/** Stores the execution start time */
+	private static $__start = null;
 
 	/** The configuration array */
 	private $__conf = null;
@@ -97,8 +99,8 @@ class DoPhp {
 		// Don't allow multiple instances of this class
 		if( self::$__instance )
 			throw new Exception('DoPhp is already instantiated');
-		else
-			self::$__instance = $this;
+		self::$__instance = $this;
+		self::$__start = microtime(true);
 
 		// Start the session
 		if( $sess )
@@ -300,6 +302,15 @@ class DoPhp {
 			throw new Exception('Wrong model type');
 
 		return $mobj;
+	}
+
+	/**
+	* Returns execution time so far
+	*
+	* @return double: The execution time, in seconds
+	*/
+	public static function duration() {
+		return microtime(true) - self::$__start;
 	}
 
 }

@@ -355,8 +355,8 @@ class Table {
 	*                     See dophp\Db::buildLimit
 	* @see dophp\Db::buildParams
 	* @see dophp\Db::buildLimit
-	* @return mixed The single fetched row or array(fetched rows, number of records found)
-	*         every element is converted to the right data type
+	* @return mixed Generator of fetched rows.
+	*         Every element is converted to the right data type.
 	*/
 	public function select($params=null, $cols=null, $limit=null) {
 		$q = "SELECT\n\t";
@@ -380,14 +380,8 @@ class Table {
 			$skip = null;
 		$q .= $this->_db->buildLimit($limit, $skip);
 		$st = $this->_db->run($q, $p);
-		if( $limit === true || $limit === 1 )
-			return $this->cast($st->fetch());
-		else {
-			$res = [];
-			while( $row = $st->fetch() )
-				$res[] = $this->cast($row);
-			return array($res, $this->_db->foundRows());
-		}
+		while( $row = $st->fetch() )
+			yield $this->cast($row);
 	}
 
 	/**
@@ -483,13 +477,13 @@ class Table {
 	* @return array: Associative array, with values correctly casted into the
 	*                appropriate type
 	*/
-	public function cast(& $res) {
+	public function cast($res) {
 		// PDOStatement::fetch returns false when no results are found,
 		// this is a bug in my opinion, so working around it
 		if( $res === null || $res === false )
 			return null;
 		$ret = array();
-		
+
 		foreach( $res as $k => $v ) {
 
 			if( $v !== null )

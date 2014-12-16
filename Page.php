@@ -177,6 +177,8 @@ trait CrudFunctionalities {
 	/**
 	* Supported actions' definitions array. Keys:
 	* - pk: if true, action requires PK as input
+	* - url: if given, specify a custom string URL.
+	*        '{page}', '{action}' and '{pk}' placeholders are replaced accordingly
 	* every action MUST have a corresponding _build<Name>() method.
 	*
 	* @see _initActions()
@@ -240,22 +242,8 @@ trait CrudFunctionalities {
 	protected function _buildAdmin() {
 		list($data, $count, $heads) = $this->_model->table();
 
-		foreach( $data as $pk => & $v ) {
-			$v['__actions'] = [];
-			foreach( $this->_actions as $k => $u )
-				if( isset($u['pk']) && $u['pk'] && isset($u['icon']) ) {
-					$v['__actions'][$k] = [
-						'descr' => $u['descr'],
-						'url' => $this->_actionUrl($k,$pk),
-						'icon' => $u['icon'],
-						'confirm' => $u['confirm'],
-					];
-				}
-		}
-		unset($v);
-
 		$this->_smarty->assign('pageTitle', $this->_model->getNames()[1]);
-		$this->_smarty->assign('items', $data);
+		$this->_smarty->assignByRef('items', $data);
 		$this->_smarty->assign('count', $count);
 		$this->_smarty->assign('cols', $heads);
 
@@ -270,11 +258,11 @@ trait CrudFunctionalities {
 		$fields = $this->_model->insert($_POST, $_FILES);
 
 		if( ! $fields ) // Data has been created correctly
-			$this->_headers['Location'] = Utils::fullPageUrl($this->_actionUrl('admin'),null);
+			$this->_headers['Location'] = Utils::fullPageUrl($this->actionUrl('admin'),null);
 
 		$this->_smarty->assign('pageTitle', _('Insert') . ' ' . $this->_model->getNames()[0]);
 		$this->_smarty->assign('fields', $fields);
-		$this->_smarty->assign('submitUrl', $this->_actionUrl('create'));
+		$this->_smarty->assign('submitUrl', $this->actionUrl('create'));
 
 		$this->_template = $this->_templateName('crud/create.tpl');
 	}
@@ -302,12 +290,12 @@ trait CrudFunctionalities {
 		$fields = $this->_model->edit($pk, $_POST, $_FILES);
 
 		if( ! $fields ) // Data has been updated correctly
-			$this->_headers['Location'] = Utils::fullPageUrl($this->_actionUrl('admin',$pk),null);
+			$this->_headers['Location'] = Utils::fullPageUrl($this->actionUrl('admin',$pk),null);
 
 		$this->_smarty->assign('pageTitle', _('Edit') . ' ' . $this->_model->getNames()[0] . " #$pk");
 		$this->_smarty->assign('pk', $pk);
 		$this->_smarty->assign('fields', $fields);
-		$this->_smarty->assign('submitUrl', $this->_actionUrl('update',$pk));
+		$this->_smarty->assign('submitUrl', $this->actionUrl('update',$pk));
 
 		$this->_template = $this->_templateName('crud/update.tpl');
 	}
@@ -322,7 +310,7 @@ trait CrudFunctionalities {
 		$errors = $this->_model->delete($pk);
 
 		if( ! $errors ) // Delete succesful
-			$this->_headers['Location'] = Utils::fullPageUrl($this->_actionUrl('admin',$pk),null);
+			$this->_headers['Location'] = Utils::fullPageUrl($this->actionUrl('admin',$pk),null);
 
 		$this->_smarty->assign('pageTitle', _('Delete') . ' ' . $this->_model->getNames()[0] . " #$pk");
 		$this->_smarty->assign('pk', $pk);
@@ -337,10 +325,17 @@ trait CrudFunctionalities {
 	* @param $action string: Action ID
 	* @return string: The relative URL
 	*/
-	protected function _actionUrl($action, $pk=null) {
-		$url = "?do={$this->_name}&action=$action";
-		if( isset($this->_actions[$action]['pk']) && $this->_actions[$action]['pk'] )
-			$url .= "&pk=$pk";
+	public function actionUrl($action, $pk=null) {
+		if( isset($this->_actions[$action]['url']) ) {
+			$url = $this->_actions[$action]['url'];
+			$url = str_replace('{page}', $this->_name, $url);
+			$url = str_replace('{action}', $action, $url);
+			$url = str_replace('{pk}', $pk, $url);
+		} else {
+			$url = "?do={$this->_name}&action=$action";
+			if( isset($this->_actions[$action]['pk']) && $this->_actions[$action]['pk'] )
+				$url .= "&pk=$pk";
+		}
 		return $url;
 	}
 
