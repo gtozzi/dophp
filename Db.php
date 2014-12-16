@@ -382,8 +382,12 @@ class Table {
 		$st = $this->_db->run($q, $p);
 		if( $limit === true || $limit === 1 )
 			return $this->cast($st->fetch());
-		else
-			return array($this->castMany($st->fetchAll()), $this->_db->foundRows());
+		else {
+			$res = [];
+			while( $row = $st->fetch() )
+				$res[] = $this->cast($row);
+			return array($res, $this->_db->foundRows());
+		}
 	}
 
 	/**
@@ -479,7 +483,7 @@ class Table {
 	* @return array: Associative array, with values correctly casted into the
 	*                appropriate type
 	*/
-	public function cast($res) {
+	public function cast(& $res) {
 		// PDOStatement::fetch returns false when no results are found,
 		// this is a bug in my opinion, so working around it
 		if( $res === null || $res === false )
@@ -521,19 +525,6 @@ class Table {
 			$ret[$k] = $v;
 		}
 
-		return $ret;
-	}
-
-	/**
-	* Similar to cast, but expects an array of rows instead of a single one.
-	* @see cast
-	* @param $res array: Rows data
-	* @return array: Casted rows data
-	*/
-	public function castMany($res) {
-		$ret = array();
-		foreach( $res as $i => $r )
-			$ret[$i] = $this->cast($r);
 		return $ret;
 	}
 
