@@ -735,8 +735,10 @@ class Where {
 * Represents a Decimal, since PHP doesn't really support it
 */
 class Decimal {
-	/** String value, to maintain precision */
-	private $__val;
+	/** String value, to maintain precision, integer part */
+	private $__int;
+	/** String value, to maintain precision, decimal part */
+	private $__dec;
 
 	/**
 	* Construct from string value
@@ -744,11 +746,61 @@ class Decimal {
 	* @param $val string: The string decimal value
 	*/
 	public function __construct($val) {
-		$this->__val = $val;
+		if( $val === null ) {
+			$this->__int = null;
+			$this->__dec = null;
+		} else {
+			$parts = explode('.', $val);
+
+			if( count($parts) > 2 )
+				throw new \Exception("Malformed decimal $val");
+
+			if( ! isset($parts[1]) )
+				$parts[1] = null;
+
+			foreach( $parts as $p )
+				if( ! is_numeric($p) && $p !== null )
+					throw new \Exception("Non-numeric decimal $val");
+
+			list($this->__int, $this->__dec) = $parts;
+		}
 	}
 
 	public function __toString() {
-		return $this->__val;
+		if( $this->__int === null && $this->__dec === null )
+			return null;
+		return $this->__int . '.' . $this->__dec;
+	}
+
+	/**
+	* Returns a formatted version of this decimal
+	*
+	* @param $decimals int: Number of decimals (-1 = all)
+	* @param $dec_point string: Decimal point
+	* @param $thousands_sep string: Thousands separator
+	*/
+	public function format($decimals, $dec_point='.', $thousands_sep=null) {
+		if( $this->__int === null && $this->__dec === null )
+			return '-';
+
+		$str = $this->__int;
+		if( $thousands_sep )
+			for($i=strlen($this->__int)-1; $i>=0; $i--)
+				if($i > 0 && $i % 3 == 0)
+					$str = substr_replace($str, '.', $i+1, 0);
+
+		if( $decimals == -1 )
+			$decimals = strlen($this->__dec);
+
+		if( $decimals != 0 && $this->__dec !== null ) {
+			$str .= $dec_point;
+			if( strlen($this->__dec) < $decimals )
+				$str .= str_pad($this->__dec, $decimals, '0', STR_PAD_RIGHT);
+			else
+				$str .= substr($this->__dec, 0, $decimals);
+		}
+
+		return $str;
 	}
 }
 
