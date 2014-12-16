@@ -830,8 +830,11 @@ class Field {
 	/**
 	* Creates the field
 	*
-	* @param array def: The field definition
 	* @param mixed value: The raw value
+	* @param array def: The field definition array:
+	*                   'rtype' => the field type,
+	*                   'label' => the field label
+	*                   'descr' => the long description / placeholder
 	*/
 	public function __construct($value, & $def) {
 		$this->_value = $value;
@@ -934,11 +937,11 @@ class FormField extends Field {
 	*
 	* @see Field::__construct
 	* @param $label string: The label for the field
-	* @param $type string: The field's type
+	* @param $def array: The field definition (see Field)
 	* @param $error string: The error message
 	* @param $data array: The related data, array of FormFieldData objects
 	*/
-	public function __construct($value, $def, $error, $data) {
+	public function __construct($value, $def, $error=null, $data=null) {
 		parent::__construct($value, $def);
 		$this->_error = $error;
 		$this->_data = $data;

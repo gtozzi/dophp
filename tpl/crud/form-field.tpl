@@ -6,7 +6,7 @@
 			class="col-sm-2 control-label">{{$field->label()}}</label>
 		<div class="col-sm-10 {{if $field->error()}}has-error{{/if}}">
 			{{if $field->type()=='label'}}
-				<input type="text" class="form-control form-label" value="{{(string)$field}}"/>
+				<input type="text" class="form-control form-label" value="{{(string)$field}}" readonly="readonly"/>
 			{{elseif $field->type()=='select' || $field->type()=='multi'}}
 				<select name="{{$name}}{{if $field->type()=='multi'}}[]{{/if}}" class="form-control"
 					{{if $field->type()=='multi'}}multiple{{/if}}
