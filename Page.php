@@ -92,6 +92,8 @@ abstract class PageBase {
 
 /**
 * Implements a page using Smarty template engine
+*
+* @see CrudFunctionalities
 */
 abstract class PageSmarty extends PageBase implements PageInterface {
 
@@ -148,6 +150,218 @@ abstract class PageSmarty extends PageBase implements PageInterface {
 	* Build method to be overridden
 	*/
 	abstract protected function _build();
+}
+
+/**
+* Simple template for implementing a CRUD-based backend page by using the base
+* Smarty implementation and the new Model system. CRUD actions are:
+*
+* Create: show a form for creating a new element
+* Read: show a read-only representation of the element (often not used, used update in place)
+* Update: show a form for editing the element
+* Delete: handles deletion of the element
+*
+* One extra action is implemented:
+* Admin: show a table for displaying a resume of the data. Usually the entry
+*        point for other actions
+*
+* This is intended to apply to PageSmarty-based classes
+*
+* @see PageSmarty
+* @see Model
+*/
+trait CrudFunctionalities {
+
+	/** Name of the underlying model class */
+	protected $_model;
+	/**
+	* Supported actions' definitions array. Keys:
+	* - pk: if true, action requires PK as input
+	* every action MUST have a corresponding _build<Name>() method.
+	*
+	* @see _initActions()
+	*/
+	protected $_actions;
+	/** Should display buttons on admin (resume table) page? */
+	protected $_buttons = true;
+
+	/**
+	* Process and run the CRUD actions, should be called inside _build()
+	*/
+	protected function _crud() {
+		$this->_requireLogin();
+
+		$this->_actions = $this->_initActions();
+
+		// Validate GET parameters
+		if( ! isset($_GET['action']) || ! array_key_exists($_GET['action'], $this->_actions) )
+			throw new PageError('Unvalid or missing action');
+		$action = $_GET['action'];
+		$pk = isset($_GET['pk']) ? $_GET['pk'] : null;
+
+		// Load the model
+		$this->_model = \DoPhp::model($this->_model);
+
+		// Assigns general utility variables
+		$this->_smarty->assign('action', $action);
+		$this->_smarty->assign('buttons', $this->_buttons);
+		$this->_smarty->assign('localeconv', localeconv());
+
+		// Process the requested action
+		$method = '_build' . ucfirst($action);
+		if( ! method_exists($this, $method) )
+			throw new Exception("Unimplemented action \"$action\"");
+
+		if( isset($this->_actions[$action]['pk']) && $this->_actions[$action]['pk'] )
+			$this->$method($pk);
+		else
+			$this->$method();
+	}
+
+	/**
+	* Inits the actions variable, allows for more wide syntax
+	*
+	* @see _actions
+	* @return array: actions variable
+	*/
+	protected function _initActions() {
+		return [
+			'admin'   => [],
+			'create'  => [],
+			'read'    => ['pk'=>true, 'icon'=>'zoom-in', 'descr'=>_('Show')],
+			'update'  => ['pk'=>true, 'icon'=>'pencil',  'descr'=>_('Edit')],
+			'delete'  => ['pk'=>true, 'icon'=>'remove',  'descr'=>_('Delete'), 'confirm'=>_('Are you sure?')],
+		];
+	}
+
+	/**
+	* Runs the "admin" crud action
+	*/
+	protected function _buildAdmin() {
+		list($data, $count, $heads) = $this->_model->table();
+
+		foreach( $data as $pk => & $v ) {
+			$v['__actions'] = [];
+			foreach( $this->_actions as $k => $u )
+				if( isset($u['pk']) && $u['pk'] && isset($u['icon']) ) {
+					$v['__actions'][$k] = [
+						'descr' => $u['descr'],
+						'url' => $this->_actionUrl($k,$pk),
+						'icon' => $u['icon'],
+						'confirm' => $u['confirm'],
+					];
+				}
+		}
+		unset($v);
+
+		$this->_smarty->assign('pageTitle', $this->_model->getNames()[1]);
+		$this->_smarty->assign('items', $data);
+		$this->_smarty->assign('count', $count);
+		$this->_smarty->assign('cols', $heads);
+
+		$this->_template = $this->_templateName('crud/admin.tpl');
+	}
+
+	/**
+	* Runs the "create" crud action
+	*/
+	protected function _buildCreate() {
+
+		$fields = $this->_model->insert($_POST, $_FILES);
+
+		if( ! $fields ) // Data has been created correctly
+			$this->_headers['Location'] = Utils::fullPageUrl($this->_actionUrl('admin'),null);
+
+		$this->_smarty->assign('pageTitle', _('Insert') . ' ' . $this->_model->getNames()[0]);
+		$this->_smarty->assign('fields', $fields);
+		$this->_smarty->assign('submitUrl', $this->_actionUrl('create'));
+
+		$this->_template = $this->_templateName('crud/create.tpl');
+	}
+
+	/**
+	* Runs the "read" crud action
+	*/
+	protected function _buildRead($pk) {
+		if( ! $pk )
+			throw new PageError('Unvalid or missing pk');
+
+		$this->_smarty->assign('pageTitle', $this->_model->getNames()[0] . " #$pk");
+		$this->_smarty->assign('item', $this->_model->read($pk));
+
+		$this->_template = $this->_templateName('crud/read.tpl');
+	}
+
+	/**
+	* Runs the "update" crud action
+	*
+	* @param mixed $pk: The PK to use
+	*/
+	protected function _buildUpdate($pk) {
+
+		$fields = $this->_model->edit($pk, $_POST, $_FILES);
+
+		if( ! $fields ) // Data has been updated correctly
+			$this->_headers['Location'] = Utils::fullPageUrl($this->_actionUrl('admin',$pk),null);
+
+		$this->_smarty->assign('pageTitle', _('Edit') . ' ' . $this->_model->getNames()[0] . " #$pk");
+		$this->_smarty->assign('pk', $pk);
+		$this->_smarty->assign('fields', $fields);
+		$this->_smarty->assign('submitUrl', $this->_actionUrl('update',$pk));
+
+		$this->_template = $this->_templateName('crud/update.tpl');
+	}
+
+	/**
+	* Runs the "delete" crud action
+	*
+	* @param mixed $pk: The PK to use
+	*/
+	protected function _buildDelete($pk) {
+
+		$errors = $this->_model->delete($pk);
+
+		if( ! $errors ) // Delete succesful
+			$this->_headers['Location'] = Utils::fullPageUrl($this->_actionUrl('admin',$pk),null);
+
+		$this->_smarty->assign('pageTitle', _('Delete') . ' ' . $this->_model->getNames()[0] . " #$pk");
+		$this->_smarty->assign('pk', $pk);
+		$this->_smarty->assign('errors', $errors);
+
+		$this->_template = $this->_templateName('crud/delete.tpl');
+	}
+
+	/**
+	* Returns relative URL for the given action
+	*
+	* @param $action string: Action ID
+	* @return string: The relative URL
+	*/
+	protected function _actionUrl($action, $pk=null) {
+		$url = "?do={$this->_name}&action=$action";
+		if( isset($this->_actions[$action]['pk']) && $this->_actions[$action]['pk'] )
+			$url .= "&pk=$pk";
+		return $url;
+	}
+
+	/**
+	* Returns template name to use, giving priority to local one and falling
+	* back to DoPhp's one if not found
+	*/
+	protected function _templateName($name) {
+		if( $this->_smarty->templateExists($name) )
+			return $name;
+
+		return "file:[dophp]$name";
+	}
+
+	/**
+	* Returns list of defined actions
+	*/
+	public function getActions() {
+		return $this->_actions;
+	}
+
 }
 
 /**
