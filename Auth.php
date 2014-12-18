@@ -117,7 +117,8 @@ abstract class AuthBase {
 /**
 * Class for username/password authentication
 *
-* Checks $_REQUEST for 'username' and 'password' variables. 'login' must be true
+* First checks for X-Auth-User and X-Auth-Pass headers, if not found, then 
+* checks $_REQUEST for 'username' and 'password' variables. 'login' must be true
 * for security reasons
 *
 * Database MUST implement a login($user, $password) method returning the user's
@@ -125,11 +126,22 @@ abstract class AuthBase {
 */
 class AuthPlain extends AuthBase implements AuthInterface {
 
+	/** UserId header name ($_SERVER key name) */
+	const HEAD_USER = 'HTTP_X_AUTH_USER';
+	/** Password header name ($_SERVER key name) */
+	const HEAD_SIGN = 'HTTP_X_AUTH_PASS';
+
 	/**
 	* @see AuthBase::_doLogin
 	*/
 	protected function _doLogin() {
-		if( isset($_REQUEST['login']) && $_REQUEST['login'] ) {
+		$user = null;
+		$pwd = null;
+
+		if( isset($_SERVER[self::HEAD_USER]) && isset($_SERVER[self::HEAD_PASS]) ) {
+			$user = $_SERVER[self::HEAD_USER];
+			$pwd = $_SERVER[self::HEAD_PASS];
+		} elseif( isset($_REQUEST['login']) && $_REQUEST['login'] ) {
 			$user = isset($_REQUEST['username']) ? $_REQUEST['username'] : null;
 			$pwd = isset($_REQUEST['password']) ? $_REQUEST['password'] : null;
 		} elseif( $this->_sess ) {
