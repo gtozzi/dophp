@@ -35,7 +35,7 @@ class RpcTest:
 	
 	SEP = '~'
 	
-	def __init__(self, url, user=None, pwd=None, headers={}):
+	def __init__(self, url, user=None, pwd=None, headers={}, auth='sign'):
 		'''
 		Init the RPC Client
 		
@@ -43,6 +43,7 @@ class RpcTest:
 		@param user string: The username
 		@param pwd string: The password
 		@param headers dict: Custom headers
+		@param auth string: Authentication type [sign,plain]. Default: sign
 		'''
 		
 		# Parse the url
@@ -55,6 +56,7 @@ class RpcTest:
 		else:
 			raise ValueError('Unknown scheme', self.baseUrl.scheme)
 		
+		self.auth = auth
 		self.user = user
 		self.pwd = pwd
 		self.headers = headers
@@ -72,14 +74,18 @@ class RpcTest:
 		url = self.baseUrl.path + '?do=' + method
 		if self.user or self.pwd:
 			# Build authentication
-			sign = hashlib.sha1()
-			sign.update(self.user.encode('utf-8'))
-			sign.update(self.SEP.encode('utf-8'))
-			sign.update(self.pwd.encode('utf-8'))
-			sign.update(self.SEP.encode('utf-8'))
-			sign.update(body.encode('utf-8'))
-			headers['X-Auth-User'] = self.user
-			headers['X-Auth-Sign'] = sign.hexdigest()
+			if self.auth == 'sign':
+				sign = hashlib.sha1()
+				sign.update(self.user.encode('utf-8'))
+				sign.update(self.SEP.encode('utf-8'))
+				sign.update(self.pwd.encode('utf-8'))
+				sign.update(self.SEP.encode('utf-8'))
+				sign.update(body.encode('utf-8'))
+				headers['X-Auth-User'] = self.user
+				headers['X-Auth-Sign'] = sign.hexdigest()
+			elif self.auth == 'plain':
+				headers['X-Auth-User'] = self.user
+				headers['X-Auth-Pass'] = self.pwd
 		conn.request('POST', url, body, headers)
 		
 		# Return response
@@ -98,11 +104,16 @@ class RpcTest:
 
 if __name__ == '__main__':
 	# Parse command line
-	parser = argparse.ArgumentParser(description='Call an RPC method on server')
+	parser = argparse.ArgumentParser(
+			description='Call an RPC method on server',
+			formatter_class=argparse.ArgumentDefaultsHelpFormatter
+	)
 	parser.add_argument('url', help='base server URL')
 	parser.add_argument('method', help='name of the method to call')
 	parser.add_argument('-a', '--auth', nargs=2, metavar=('USER','PASS'),
 			help='username and password for authentication')
+	parser.add_argument('-t', '--auth-type', choices=('sign', 'plain'), default='sign',
+			help='authentication type. WARNING: "plain" auth is NOT safe without SSL!')
 	parser.add_argument('-e', '--header', nargs='*', action=ParamAction,
 			help='adds an header <name>=<value>')
 	parser.add_argument('param', nargs='*', action=ParamAction,
@@ -121,7 +132,7 @@ if __name__ == '__main__':
 	headers = args.header if args.header else {}
 
 	if args.auth:
-		rpc = RpcTest(args.url, args.auth[0], args.auth[1], headers=headers)
+		rpc = RpcTest(args.url, args.auth[0], args.auth[1], headers=headers, auth=args.auth_type)
 	else:
 		rpc = RpcTest(args.url, headers=headers)
 

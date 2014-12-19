@@ -129,7 +129,7 @@ class AuthPlain extends AuthBase implements AuthInterface {
 	/** UserId header name ($_SERVER key name) */
 	const HEAD_USER = 'HTTP_X_AUTH_USER';
 	/** Password header name ($_SERVER key name) */
-	const HEAD_SIGN = 'HTTP_X_AUTH_PASS';
+	const HEAD_PASS = 'HTTP_X_AUTH_PASS';
 
 	/**
 	* @see AuthBase::_doLogin
