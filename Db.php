@@ -353,18 +353,32 @@ class Table {
 	*                     must contain two elements: first element is $limit,
 	*                     second is $skip. If null, no limit.
 	*                     See dophp\Db::buildLimit
+	* @param $joins array  Array list Join objects
 	* @see dophp\Db::buildParams
 	* @see dophp\Db::buildLimit
 	* @return mixed Generator of fetched rows.
 	*         Every element is converted to the right data type.
+	*         When using joins, joined column names are in the form table.column
 	*/
-	public function select($params=null, $cols=null, $limit=null) {
+	public function select($params=null, $cols=null, $limit=null, $joins=null) {
 		$q = "SELECT\n\t";
 		$p = array();
 
-		$q .= $this->_buildColumList($cols);
+		if( $joins ) {
+			$i = 1;
+			foreach( $joins as $j ) {
+				$j->setAlias("j$i");
+				$i++;
+			}
+		}
 
-		$q .= "FROM `{$this->_name}`\n";
+		$q .= $this->_buildColumList($cols, 't', $joins);
+
+		$q .= "FROM `{$this->_name}` AS `t`\n";
+
+		if( $joins )
+			foreach( $joins as $j )
+				$q .= $j->getJoin($this, 't');
 
 		if( ! $params instanceof Where )
 			$params = new Where($params);
@@ -381,7 +395,7 @@ class Table {
 		$q .= $this->_db->buildLimit($limit, $skip);
 		$st = $this->_db->run($q, $p);
 		while( $row = $st->fetch() )
-			yield $this->cast($row);
+			yield $this->cast($row, $joins);
 	}
 
 	/**
@@ -474,10 +488,11 @@ class Table {
 	* Put every res element into the right type according to column definition
 	*
 	* @param $res array: Associative array representing a row
+	* @param $joins array: List of Join objects used for the query
 	* @return array: Associative array, with values correctly casted into the
 	*                appropriate type
 	*/
-	public function cast($res) {
+	public function cast($res, $joins=null) {
 		// PDOStatement::fetch returns false when no results are found,
 		// this is a bug in my opinion, so working around it
 		if( $res === null || $res === false )
@@ -486,8 +501,23 @@ class Table {
 
 		foreach( $res as $k => $v ) {
 
+			$type = null;
+			if( in_array($k, $this->getCols()) )
+				$type = $this->getColumnType($k);
+			elseif( preg_match('/^([^.]+)\.([^.]+)$/', $k, $matches) ) {
+				if( $joins )
+					foreach( $joins as $j )
+						if( $j->getTable()->getName() == $matches[1] ) {
+							$type = $j->getTable()->getColumnType($matches[2]);
+							break;
+						}
+				if( ! $type )
+					throw new \Exception("Unknown join column $matches[2] in table $matches[1]");
+			} else
+				throw new \Exception("Unknown column $k");
+
 			if( $v !== null )
-				switch($this->getColumnType($k)) {
+				switch($type) {
 				case 'integer':
 					$v = (int)$v;
 					break;
@@ -513,7 +543,7 @@ class Table {
 					$v = new Time($v);
 					break;
 				default:
-					throw new \Exception("Unsupported column type $dtype");
+					throw new \Exception("Unsupported column type $type");
 				}
 
 			$ret[$k] = $v;
@@ -593,25 +623,46 @@ class Table {
 	*
 	* @param $cols array List of columns to select. Null to select all. True to
 	*                    select only PK columns
+	* @param $alias string: The alias to use for main column names, null if omitted
+	* @param $joins array: List of Join instances
 	*/
-	protected function _buildColumList($cols) {
+	protected function _buildColumList($cols, $alias=null, $joins=null) {
 		if( ! $cols )
 			return "\t*";
 		
 		if( $cols === true )
 			$cols = $this->_pk;
 
-		$cl = '';
-		$first = true;
-		foreach( $cols as $c ) {
-			if( ! array_key_exists($c, $this->_cols) )
-				throw new \Exception("Unknown column name: $c");
+		$buildcol = function($name, $alias, Table $table, $as=null) {
+			$str = '';
+			static $first = true;
+
+			if( ! in_array($name, $table->getCols()) )
+				throw new \Exception("Unknown column name: $name in table " . $table->getName());
+
 			if( $first )
 				$first = false;
 			else
-				$cl .= ",\n\t";
-			$cl .= "`$c`";
-		}
+				$str .= ",\n\t";
+
+			if( $alias )
+				$str .= "`$alias`.";
+
+			$str .= "`$name`";
+
+			if( $as )
+				$str .= " AS `$as`";
+
+			return $str;
+		};
+
+		$cl = '';
+		foreach( $cols as $c )
+			$cl .= $buildcol ($c, $alias, $this);
+		if( $joins )
+			foreach( $joins as $j )
+				foreach( $j->getCols() as $c )
+					$cl .= $buildcol ($c, $j->getAlias(), $j->getTable(), $j->getTable()->getName().'.'.$c);
 		$cl .= "\n";
 
 		return $cl;
@@ -726,6 +777,88 @@ class Where {
 
 	public function getParams() {
 		return $this->_params;
+	}
+
+}
+
+
+/**
+* Represents a join ina query
+*/
+class Join {
+
+	/** The table to be joined */
+	protected $_table = '';
+	/** The columns to be selected */
+	protected $_cols = [];
+	/** The assigned alias */
+	protected $_alias = null;
+
+	/**
+	* Construct the join
+	*
+	* @param $table Table: table instance to be joined
+	* @param $cols array: List of columns to be selected
+	*/
+	public function __construct(Table $table, $cols) {
+		$this->_table = $table;
+		$this->_cols = $cols;
+	}
+
+	/**
+	* Returns join SQL for joining with a given table
+	*
+	* @param $table Table: the table to join with
+	* @param $alias string: the alias assigned to the table
+	* @return string: The SQL code
+	*/
+	public function getJoin(Table $table, $alias) {
+		$sql = "LEFT JOIN `" . $this->_table->getName() . "` AS `" . $this->getAlias() . "`\n";
+		$first = true;
+		foreach( $table->getRefs() as $col => $ref )
+			if( $ref[0] == $this->_table->getName() ) {
+				$sql .= "\t";
+
+				if( $first ) {
+					$sql .= "ON ";
+					$first = false;
+				} else
+					$sql .= "AND ";
+
+				$sql .= "`$alias`.`$col` = `" . $this->getAlias() . "`.`$ref[1]`\n";
+			}
+
+		return $sql;
+	}
+
+	/**
+	* Returns the table instance
+	*/
+	public function getTable() {
+		return $this->_table;
+	}
+
+	/**
+	* Returns list of columns
+	*/
+	public function getCols() {
+		return $this->_cols;
+	}
+
+	/**
+	* Assign a new alias to this join
+	*/
+	public function setAlias($alias) {
+		$this->_alias = $alias;
+	}
+
+	/**
+	* Retrieve the alias
+	*/
+	public function getAlias() {
+		if( $this->_alias === null )
+			throw new \Exception('No alias assigned');
+		return $this->_alias;
 	}
 
 }
