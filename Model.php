@@ -31,6 +31,10 @@ abstract class Model {
 	* Field description array, should be overriden in sub-class
 	* defining an associative array or arrays in the format accepted by
 	* FieldDefinition::__construct()
+	*
+	* Array keys are used as <name> attribute when not numeric if a name has not
+	* already been provided inside the field definition. Numeric keys are ignored.
+	*
 	* @see initFields()
 	*/
 	protected $_fields = null;
@@ -81,7 +85,14 @@ abstract class Model {
 		if( ! $this->_fields || ! is_array($this->_fields) )
 			throw new \Exception('Unvalid fields');
 		foreach( $this->_fields as $f => & $d )
-			$d = new FieldDefinition($d);
+			if( ! $d instanceof FieldDefinition )
+				if( is_array($d) ) {
+					if( ! isset($d['name']) && ! is_int($f) )
+						$d['name'] = $f;
+					$d = new FieldDefinition($d);
+				} else {
+					throw new \Exception('Every field must be array or FieldDefinition');
+				}
 		unset($d);
 	}
 
@@ -417,19 +428,24 @@ abstract class Model {
 		$cols = array();
 		$labels = array();
 		$allLabels = $this->getLabels();
-		foreach($this->_fields as $k => $f )
+		foreach( $this->_fields as $k => $f )
 			if( $f->rtab ) {
-				$cols[] = $k;
+				if( $f->name )
+					$cols[] = $k;
 				$labels[$k] = $allLabels[$k];
 			}
+		foreach( $this->_fields as $f )
+			if( isset($f->ropts['comp']) )
+				foreach( $f->ropts['comp'] as $col )
+					if( ! in_array($col, $cols) )
+						$cols[] = $col;
 
 		$data = array();
-		foreach( $this->_table->select($this->_filter->getRead(), $cols) as $x => $i ) {
-			foreach( $i as $k => & $v )
-				$v = new Field($v, $this->_fields[$k]);
-			unset($v);
-
-			$data[$this->formatPk($i)] = $i;
+		foreach( $this->_table->select($this->_filter->getRead(), $cols) as $x => $res ) {
+			$row = array();
+			foreach( $this->_fields as $k => $f )
+				$row[$k] = is_callable($f->rtab) ? new RenderedField($res,$f) : new Field($res[$k],$f);
+			$data[$this->formatPk($res)] = $row;
 		}
 		$count = $this->_db->foundRows();
 
@@ -513,6 +529,7 @@ abstract class Model {
 			// Assemble data
 			foreach( $data as $k => & $v )
 				$v = new FormFieldData($k, $v, isset($groups[$k])?$groups[$k]:null);
+			unset($v);
 		}
 
 		if( $f['rtype'] == 'password' ) // Do not show password
@@ -766,6 +783,12 @@ abstract class Model {
 */
 class FieldDefinition {
 
+	/**
+	* string: The database column name for this field.
+	*         Must be omitted only for composed read-only fields
+	*/
+	public $name = null;
+
 	/** string: The label to display for this field */
 	public $label = null;
 
@@ -773,7 +796,7 @@ class FieldDefinition {
 	public $descr = null;
 
 	/**
-	* string: The field renderring type:
+	* string: The field renderring type in insert/edit mode:
 	*         - <null> [or missing]: The field is not rendered at all
 	*         - label: The field is rendered as a label
 	*         - select: The field is rendered as a select box
@@ -783,6 +806,17 @@ class FieldDefinition {
 	*         - text: The field is rendered as a text box
 	*/
 	public $rtype = null;
+
+	/**
+	* mixed: If false or null, this field is not rendered in table view.
+	*        If true, this field is rendered in table view with standard rules.
+	*        If this a function, provides a custom rendered. The full row is
+	*        passed byRef and a string must be returned.
+	* Defaults to true.
+	*
+	* @example function( & row ) { return $row['col1'] . $row['col2'] }
+	*/
+	public $rtab = true;
 
 	/**
 	* string: The data type, used for validation, see Validator::__construct
@@ -808,6 +842,8 @@ class FieldDefinition {
 	*                          applicable. Overrides 'refer'.
 	*        'group' => string: Name of the field in the referenced model
 	*                           to use for grouping elements
+	*        'comp' => array: List of components column names for a rendered field.
+	*                         This columns will be included in the query.
 	*/
 	public $ropts = [];
 
@@ -834,12 +870,6 @@ class FieldDefinition {
 	public $edit = true;
 
 	/**
-	* bool: If false, this field is not rendered in table view.
-	* Defaults to true.
-	*/
-	public $rtab = true;
-
-	/**
 	* string: The name of the N:M relation tab for an array field
 	*/
 	public $nmtab = null;
@@ -856,6 +886,8 @@ class FieldDefinition {
 		}
 
 		// Perform some sanity checks
+		if( $this->name !== null && $this->rtype != null )
+			throw new \Exception('Fields without a name cannot be rendered');
 		if( ($this->rtype=='select' || $this->rtype=='auto') && ! (isset($this->ropts['refer']) || array_key_exists('data',$this->ropts)) )
 			throw new \Exception('Missing referred model or data for select or auto field');
 		if( array_key_exists('data',$this->ropts) && ! is_array($this->ropts['data']) )
@@ -878,8 +910,8 @@ class Field {
 	/**
 	* Creates the field
 	*
-	* @param mixed value: The raw value
-	* @param array FieldDefinition: The field definition
+	* @param $value mixed: The raw value
+	* @param $def FieldDefinition: The field definition
 	*/
 	public function __construct($value, FieldDefinition $def) {
 		$this->_value = $value;
@@ -964,6 +996,28 @@ class Field {
 	}
 	public function descr() {
 		return $this->_def->descr;
+	}
+
+}
+
+
+/**
+* Represents a rendered field
+*/
+class RenderedField extends Field {
+
+	/**
+	* Creates the field
+	*
+	* @param $row The raw row
+	* @param $def FieldDefinition: The field definition
+	*/
+	public function __construct(& $row, FieldDefinition $def) {
+		if( ! is_callable($def->rtab) )
+			throw new \Exception('RenderedField must have a callable definition');
+
+		$func = & $def->rtab;
+		parent::__construct($func($row), $def);
 	}
 
 }
