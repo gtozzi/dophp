@@ -876,7 +876,7 @@ class FieldDefinition {
 
 	/**
 	* Set the properties from an associative array. See property descriptions
-	* for list ov available keys
+	* for list of available keys
 	*/
 	public function __construct($array) {
 		foreach( $array as $k => $v ) {
@@ -886,12 +886,14 @@ class FieldDefinition {
 		}
 
 		// Perform some sanity checks
-		if( $this->name !== null && $this->rtype != null )
+		if( $this->name === null && $this->rtype !== null )
 			throw new \Exception('Fields without a name cannot be rendered');
 		if( ($this->rtype=='select' || $this->rtype=='auto') && ! (isset($this->ropts['refer']) || array_key_exists('data',$this->ropts)) )
 			throw new \Exception('Missing referred model or data for select or auto field');
 		if( array_key_exists('data',$this->ropts) && ! is_array($this->ropts['data']) )
 			throw new \Exception('Unvalid referred data');
+		if( array_key_exists('data',$this->ropts) && array_key_exists('refer',$this->ropts) )
+			throw new \Exception('"refer" and "data" options are mutually exclusive');
 	}
 
 }
@@ -958,11 +960,10 @@ class Field {
 		// Handle i18n and relations
 		if( $this->_def->i18n )
 			$val = $this->__reprLangLabel($val);
-		elseif( $this->_def->rtype == 'select' || $this->_def->rtype == 'auto' )
-			if( array_key_exists('data',$this->_def->ropts) )
-				$val = $this->_def->ropts['data'][$val];
-			else
-				$val = \DoPhp::model($this->_def->ropts['refer'])->summary($val);
+		elseif( isset($this->_def->ropts['refer']) )
+			$val = \DoPhp::model($this->_def->ropts['refer'])->summary($val);
+		elseif( isset($this->_def->ropts['data']) )
+			$val = $this->_def->ropts['data'][$val];
 
 		return $val;
 	}
