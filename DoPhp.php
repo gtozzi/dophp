@@ -31,8 +31,6 @@ class DoPhp {
 
 	/** Stores the current instance */
 	private static $__instance = null;
-	/** Stores the execution start time */
-	private static $__start = null;
 
 	/** The configuration array */
 	private $__conf = null;
@@ -42,6 +40,10 @@ class DoPhp {
 	private $__auth = null;
 	/** The Language object instance */
 	private $__lang = null;
+	/** Stores the execution start time */
+	private $__start = null;
+	/** Models instances cache */
+	private $__models = [];
 
 	/**
 	* Handles page rendering and everything
@@ -100,7 +102,7 @@ class DoPhp {
 		if( self::$__instance )
 			throw new Exception('DoPhp is already instantiated');
 		self::$__instance = $this;
-		self::$__start = microtime(true);
+		$this->__start = microtime(true);
 
 		// Start the session
 		if( $sess )
@@ -293,15 +295,20 @@ class DoPhp {
 		if( ! $name )
 			throw new Exception('Must give a model name');
 
-		require_once self::$__instance->__conf['paths']['mod'] . '/' . ucfirst($name) . '.php';
-		$classname = dophp\Utils::findClass(self::MODEL_PREFIX . $name);
-		if( ! $classname )
-			throw new Exception('Model class not found');
-		$mobj = new $classname(self::$__instance->__db);
-		if( ! $mobj instanceof dophp\Model )
-			throw new Exception('Wrong model type');
+		// Use caching if available, load the model instead
+		if( ! isset(self::$__instance->__models[$name]) ) {
+			require_once self::$__instance->__conf['paths']['mod'] . '/' . ucfirst($name) . '.php';
+			$classname = dophp\Utils::findClass(self::MODEL_PREFIX . $name);
+			if( ! $classname )
+				throw new Exception('Model class not found');
+			$mobj = new $classname(self::$__instance->__db);
+			if( ! $mobj instanceof dophp\Model )
+				throw new Exception('Wrong model type');
 
-		return $mobj;
+			self::$__instance->__models[$name] = $mobj;
+		}
+
+		return self::$__instance->__models[$name];
 	}
 
 	/**
@@ -310,7 +317,10 @@ class DoPhp {
 	* @return double: The execution time, in seconds
 	*/
 	public static function duration() {
-		return microtime(true) - self::$__start;
+		if( ! self::$__instance )
+			throw new Exception('Must instatiate DoPhp first');
+
+		return microtime(true) - self::$__instance->__start;
 	}
 
 }
