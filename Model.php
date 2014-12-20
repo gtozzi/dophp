@@ -426,6 +426,8 @@ abstract class Model {
 	*/
 	public function table() {
 		$cols = array();
+		$refs = array();
+		$joins = array();
 		$labels = array();
 		$allLabels = $this->getLabels();
 		foreach( $this->_fields as $k => $f )
@@ -433,18 +435,25 @@ abstract class Model {
 				if( $f->name )
 					$cols[] = $k;
 				$labels[$k] = $allLabels[$k];
+				if( isset($f->ropts['refer']) ) {
+					$refmod = \DoPhp::model($f->ropts['refer']);
+					if( ! in_array($refmod, $refs) )
+						$refs[] = $refmod;
+				}
 			}
 		foreach( $this->_fields as $f )
 			if( isset($f->ropts['comp']) )
 				foreach( $f->ropts['comp'] as $col )
 					if( ! in_array($col, $cols) )
 						$cols[] = $col;
+		foreach( $refs as $r )
+			$joins[] = new Join($refmod->getTable(), $refmod->summaryCols());
 
 		$data = array();
-		foreach( $this->_table->select($this->_filter->getRead(), $cols) as $x => $res ) {
+		foreach( $this->_table->select($this->_filter->getRead(), $cols, null, $joins) as $x => $res ) {
 			$row = array();
 			foreach( $this->_fields as $k => $f )
-				$row[$k] = is_callable($f->rtab) ? new RenderedField($res,$f) : new Field($res[$k],$f);
+				$row[$k] = is_callable($f->rtab) ? new RenderedField($res,$f) : new Field($res[$k],$f,$res);
 			$data[$this->formatPk($res)] = $row;
 		}
 		$count = $this->_db->foundRows();
@@ -654,9 +663,44 @@ abstract class Model {
 	*                if PK is given
 	*/
 	public function summary($pk=null) {
+		$cols = $this->summaryCols();
+		$pars = $this->_filter->getRead();
+		if( $pk )
+			$pars->add(new Where($this->_table->parsePkArgs($pk)));
+		$ret = array();
+		foreach( $this->_table->select($pars, $cols) as $r )
+			$ret[$this->formatPk($r)] = $this->summaryRow($r);
+
+		if( $pk ) {
+			if( count($ret) > 1 )
+				throw new \Exception('More than one row returned when filtering by PK');
+			return array_shift($ret);
+		}
+		return $ret;
+	}
+
+	/**
+	* Returns a string resume of a given data row
+	*
+	* @param $row array: The row
+	*/
+	public function summaryRow(& $row) {
+		$sc = $this->summaryCols();
+		$displayCol = end($sc);
+		$f = new Field($row[$displayCol], $this->_fields[$displayCol]);
+
+		return $f->format();
+	}
+
+	/**
+	* Returns list of columns needed to build a summary, last one is the
+	* column displayed
+	*
+	* @return array: List of column names
+	*/
+	public function summaryCols() {
 		$pks = $this->_table->getPk();
 
-		// Decide which field to use as name
 		$displayCol = null;
 		$intCol = null;
 		foreach( $this->_fields as $n => $f )
@@ -672,24 +716,10 @@ abstract class Model {
 			else
 				$displayCol = $pks[0];
 
-		// Retrieve and format data
 		$cols = $pks;
 		$cols[] = $displayCol;
-		$pars = $this->_filter->getRead();
-		if( $pk )
-			$pars->add(new Where($this->_table->parsePkArgs($pk)));
-		$ret = array();
-		foreach( $this->_table->select($pars, $cols) as $r ) {
-			$f = new Field($r[$displayCol], $this->_fields[$displayCol]);
-			$ret[$this->formatPk($r)] = $f->format();
-		}
 
-		if( $pk ) {
-			if( count($ret) > 1 )
-				throw new \Exception('More than one row returned when filtering by PK');
-			return array_shift($ret);
-		}
-		return $ret;
+		return $cols;
 	}
 
 	/**
@@ -908,16 +938,24 @@ class Field {
 	protected $_value;
 	/** The field definition */
 	protected $_def;
+	/** Format cache */
+	protected $_format = null;
 
 	/**
 	* Creates the field
 	*
 	* @param $value mixed: The raw value
 	* @param $def FieldDefinition: The field definition
+	* @param $data array: Optional related fields data, speed up rendering of
+	*                     related fields
 	*/
-	public function __construct($value, FieldDefinition $def) {
+	public function __construct($value, FieldDefinition $def, $data=null) {
 		$this->_value = $value;
 		$this->_def = $def;
+
+		// Populate format cache now using related data and drop $data to save memory
+		if( isset($this->_def->ropts['refer']) && $data )
+			$this->_format = \DoPhp::model($this->_def->ropts['refer'])->summaryRow($data);
 	}
 
 	/**
@@ -933,6 +971,11 @@ class Field {
 	* @return string: the formatted value
 	*/
 	public function format() {
+		// Use the cache
+		if( isset($this->_format) )
+			return $this->_format;
+
+		// Runtime formatting
 		$type = gettype($this->_value);
 		$lc = localeconv();
 
@@ -965,7 +1008,8 @@ class Field {
 		elseif( isset($this->_def->ropts['data']) )
 			$val = $this->_def->ropts['data'][$val];
 
-		return $val;
+		$this->_format = $val;
+		return $this->_format;
 	}
 
 	/**
