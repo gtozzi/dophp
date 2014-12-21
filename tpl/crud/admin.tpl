@@ -20,26 +20,26 @@
 			$('#tableAdmin{{$page|ucfirst}}').DataTable({
 				"aaSorting": [],
 				'oLanguage': {
-					"sEmptyTable":     "{{_('No data available in table')}}",
-					"sInfo":           "{{_('Showing _START_ to _END_ of _TOTAL_ entries')}}",
-					"sInfoEmpty":      "{{_('Showing 0 to 0 of 0 entries')}}",
-					"sInfoFiltered":   "{{_('(filtered from _MAX_ total entries)')}}",
+					'sEmptyTable':     "{{addslashes($strDT['sEmptyTable'])}}",
+					'sInfo':           "{{addslashes($strDT['sInfo'])}}",
+					'sInfoEmpty':      "{{addslashes($strDT['sInfoEmpty'])}}",
+					'sInfoFiltered':   "{{addslashes($strDT['sInfoFiltered'])}}",
 					"sInfoPostFix":    "",
-					"sInfoThousands":  "{{$localeconv['thousands_sep']}}",
-					"sLengthMenu":     "{{_('Show _MENU_ elements')}}",
-					"sLoadingRecords": "{{_('Loading...')}}",
-					"sProcessing":     "{{_('Processing...')}}",
-					"sSearch":         "{{_('Search')}}:",
-					"sZeroRecords":    "{{_('Search returned zero records')}}.",
+					'sInfoThousands':  "{{addslashes($strDT['sInfoThousands'])}}",
+					'sLengthMenu':     "{{addslashes($strDT['sLengthMenu'])}}",
+					'sLoadingRecords': "{{addslashes($strDT['sLoadingRecords'])}}",
+					'sProcessing':     "{{addslashes($strDT['sProcessing'])}}",
+					'sSearch':         "{{addslashes($strDT['sSearch'])}}",
+					'sZeroRecords':    "{{addslashes($strDT['sZeroRecords'])}}",
 					"oPaginate": {
-						"sFirst":      "{{_('First')}}",
-						"sPrevious":   "{{_('Previous')}}",
-						"sNext":       "{{_('Next')}}",
-						"sLast":       "{{_('Last')}}"
+						'sFirst':      "{{addslashes($strDT['oPaginate']['sFirst'])}}",
+						'sPrevious':   "{{addslashes($strDT['oPaginate']['sPrevious'])}}",
+						'sNext':       "{{addslashes($strDT['oPaginate']['sNext'])}}",
+						'sLast':       "{{addslashes($strDT['oPaginate']['sLast'])}}"
 					},
 					"oAria": {
-						"sSortAscending":  ": {{_('sort the column in ascending order')}}",
-						"sSortDescending": ": {{_('sort the column in descending order')}}"
+						'sSortAscending':  "{{addslashes($strDT['oAria']['sSortAscending'])}}",
+						'sSortDescending': "{{addslashes($strDT['oAria']['sSortDescending'])}}"
 					}
 				},
 				'columns': [

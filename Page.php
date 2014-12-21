@@ -204,6 +204,10 @@ trait CrudFunctionalities {
 		// Load the model
 		$this->_model = \DoPhp::model($this->_model);
 
+		// Assign localized strings
+		$this->_smarty->assign('strEdit', _('Edit'));
+		$this->_smarty->assign('strInsert', _('Insert'));
+
 		// Assigns general utility variables
 		$this->_smarty->assign('action', $action);
 		$this->_smarty->assign('buttons', $this->_buttons);
@@ -241,6 +245,30 @@ trait CrudFunctionalities {
 	*/
 	protected function _buildAdmin() {
 		list($data, $count, $heads) = $this->_model->table();
+
+		$this->_smarty->assign('strDT', [
+			'sEmptyTable' => _('No data available in table'),
+			'sInfo' => _('Showing _START_ to _END_ of _TOTAL_ entries'),
+			'sInfoEmpty' => _('Showing 0 to 0 of 0 entries'),
+			'sInfoFiltered' => _('(filtered from _MAX_ total entries)'),
+			'sInfoPostFix' => '',
+			'sInfoThousands' => localeconv()['thousands_sep'],
+			'sLengthMenu' => _('Show _MENU_ elements'),
+			'sLoadingRecords' => _('Loading...'),
+			'sProcessing' => _('Processing...'),
+			'sSearch' => _('Search') . ':',
+			'sZeroRecords' => _('Search returned zero records') . '.',
+			'oPaginate' => [
+				'sFirst' => _('First'),
+				'sPrevious' => _('Previous'),
+				'sNext' => _('Next'),
+				'sLast' => _('Last'),
+			],
+			'oAria' => [
+				'sSortAscending' => ': ' . _('sort the column in ascending order'),
+				'sSortDescending' => ': ' . _('sort the column in descending order'),
+			],
+		]);
 
 		$this->_smarty->assign('pageTitle', $this->_model->getNames()[1]);
 		$this->_smarty->assignByRef('items', $data);
@@ -311,6 +339,8 @@ trait CrudFunctionalities {
 
 		if( ! $errors ) // Delete succesful
 			$this->_headers['Location'] = Utils::fullPageUrl($this->actionUrl('admin',$pk),null);
+
+		$this->_smarty->assign('strCantDelete', _('Can\'t delete'));
 
 		$this->_smarty->assign('pageTitle', _('Delete') . ' ' . $this->_model->getNames()[0] . " #$pk");
 		$this->_smarty->assign('pk', $pk);
