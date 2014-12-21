@@ -260,8 +260,10 @@ abstract class Model {
 						unset($data[$k]);
 
 					// Runs postprocessors
-					if( isset($f->postp) && array_key_exists($k,$data) )
-						$data[$k] = $f->postp($data[$k]);
+					if( isset($f->postp) && array_key_exists($k,$data) ) {
+						$postp = $f->postp;
+						$data[$k] = $postp($data[$k]);
+					}
 
 					// Save files
 					if( $f->rtype == 'file' && isset($data[$k]) )
