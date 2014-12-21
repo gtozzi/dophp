@@ -327,20 +327,18 @@ class Table {
 	* @param $pk mixed The primary key, array if composite (associative or numeric)
 	* @param $cols array Names of the columns. null to select all. true to
 	*                    select only PKs.
-	* @return The fetched row
+	* @return The fetched row or null if not found
 	*/
 	public function get($pk, $cols=null) {
 		$pk = $this->parsePkArgs($pk);
-		
-		list($w, $p) = Db::buildParams($pk, ' AND ');
-		$q = "
-			SELECT
-		" . $this->_buildColumList($cols) . "
-			FROM `{$this->_name}`
-			WHERE $w
-		";
 
-		return $this->cast($this->_db->run($q,$p)->fetch());
+		$res = (array) $this->select($pk, $cols);
+		if( ! $res )
+			return null;
+		if( count($res) != 1 )
+			throw new \Exception('Multiple rows for get. This should never happen');
+
+		return $res[0];
 	}
 
 	/**
@@ -382,6 +380,7 @@ class Table {
 
 		if( ! $params instanceof Where )
 			$params = new Where($params);
+		$params->setAlias('t');
 
 		if( $w = $params->getCondition() ) {
 			$q .= "WHERE $w\n";
@@ -680,6 +679,8 @@ class Where {
 	protected $_cond = '';
 	/** Parameters to bind array */
 	protected $_params = array();
+	/** The assigned SQL alias for all columns */
+	protected $_alias = null;
 
 	/**
 	* Construct the statement
@@ -771,12 +772,25 @@ class Where {
 				}
 	}
 
+	/**
+	* Return the condition, adding specified alias if needed
+	*/
 	public function getCondition() {
-		return $this->_cond;
+		if( ! $this->_alias )
+			return $this->_cond;
+
+		return preg_replace('/`[^`]+`/', '`'.$this->_alias.'`.$0', $this->_cond);
 	}
 
 	public function getParams() {
 		return $this->_params;
+	}
+
+	/**
+	* Assign a new alias to all columns
+	*/
+	public function setAlias($alias) {
+		$this->_alias = $alias;
 	}
 
 }

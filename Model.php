@@ -404,16 +404,15 @@ abstract class Model {
 	public function read($pk) {
 		if( ! $pk )
 			throw new \Exception('Unvalid or missing pk');
-		$res = $this->_table->get($pk);
-		if( ! $this->isAllowed($res) )
+
+		list($data, $count) = $this->__readData('view', new Where($this->_table->parsePkArgs($pk)));
+
+		if( ! $data )
 			throw new \Exception('Loading forbidden data');
+		if( count($data) != 1 || $count != 1 )
+			throw new \Exception('Received too many data rows: ' . count($data) . '/' . $count);
 
-		$data = array();
-		foreach( $res as $k => $v )
-			if( isset($this->_fields[$k]) )
-				$data[$k] = new Field($v, $this->_fields[$k]);
-
-		return $data;
+		return array_shift($data);
 	}
 
 	/**
@@ -425,13 +424,35 @@ abstract class Model {
 	*                  <heads>: column headers
 	*/
 	public function table() {
+		return $this->__readData('admin');
+	}
+
+	/**
+	* Returns the data for rendering a summary table or a view page
+	*
+	* @todo Support filtering, ordering, etc... (datatables server-side)
+	* @param $action The action name (admin|view)
+	* @param $pk Where instance: The PK to use for view action
+	* @return Array of <data>: associative array of data as <pk> => <Field>
+	*                  <count>: total number of records found
+	*                  <heads>: column headers
+	*/
+	private function __readData($action, Where $pk=null) {
+		if( $action != 'admin' && $action != 'view' )
+			throw new \Exception("Unvalid action $action");
+		if( $action == 'view' && ! $pk )
+			throw new \Exception("Must provide a PK for view action");
+
+		// Init variables
 		$cols = array();
 		$refs = array();
 		$joins = array();
 		$labels = array();
 		$allLabels = $this->getLabels();
+
+		// Add main columns from field definitions
 		foreach( $this->_fields as $k => $f )
-			if( $f->rtab ) {
+			if( ( ($action=='admin' && $f->rtab) || ($action=='view' && $f->rview) ) ) {
 				if( $f->name )
 					$cols[] = $k;
 				$labels[$k] = $allLabels[$k];
@@ -441,19 +462,34 @@ abstract class Model {
 						$refs[] = $refmod;
 				}
 			}
+
+		// Add component columns from field definitions, if missing
 		foreach( $this->_fields as $f )
 			if( isset($f->ropts['comp']) )
 				foreach( $f->ropts['comp'] as $col )
 					if( ! in_array($col, $cols) )
 						$cols[] = $col;
+
+		// Add PK columns, if missing (required to itenfity the row)
+		foreach( $this->_table->getPk() as $c )
+			if( ! in_array($c, $cols) )
+				$cols[] = $c;
+
+		// Build joins
 		foreach( $refs as $r )
 			$joins[] = new Join($refmod->getTable(), $refmod->summaryCols());
 
+		// Prepare filter
+		$filter = $action=='view' ? $pk : new Where();
+		$filter->add($this->_filter->getRead());
+
+		// Run the query and process data
 		$data = array();
-		foreach( $this->_table->select($this->_filter->getRead(), $cols, null, $joins) as $x => $res ) {
+		foreach( $this->_table->select($filter, $cols, null, $joins) as $x => $res ) {
 			$row = array();
 			foreach( $this->_fields as $k => $f )
-				$row[$k] = is_callable($f->rtab) ? new RenderedField($res,$f) : new Field($res[$k],$f,$res);
+				if( ( ($action=='admin' && $f->rtab) || ($action=='view' && $f->rview) ) )
+					$row[$k] = isset($f->ropts['func']) ? new RenderedField($res,$f) : new Field($res[$k],$f,$res);
 			$data[$this->formatPk($res)] = $row;
 		}
 		$count = $this->_db->foundRows();
@@ -838,15 +874,16 @@ class FieldDefinition {
 	public $rtype = null;
 
 	/**
-	* mixed: If false or null, this field is not rendered in table view.
-	*        If true, this field is rendered in table view with standard rules.
-	*        If this a function, provides a custom rendered. The full row is
-	*        passed byRef and a string must be returned.
+	* mixed: If false this field is not rendered in table view.
 	* Defaults to true.
-	*
-	* @example function( & row ) { return $row['col1'] . $row['col2'] }
 	*/
 	public $rtab = true;
+
+	/**
+	* mixed: If false, this field is not rendered in view mode
+	* Defaults to true.
+	*/
+	public $rview = true;
 
 	/**
 	* string: The data type, used for validation, see Validator::__construct
@@ -870,9 +907,13 @@ class FieldDefinition {
 	*        'refer' => class:  Name of the referenced model, if applicable
 	*        'data' => array:  Associative array of data for a select box, if
 	*                          applicable. Overrides 'refer'.
+	*        'func' => array: Provides a custom rendered. The full row is the only
+	*                         argument passed (byRef) and a string must be returned.
+	*                         Ex: function( & row ) { return $row['col1'] . $row['col2'] }
+	*                         Overrides 'refer' and 'data'
 	*        'group' => string: Name of the field in the referenced model
 	*                           to use for grouping elements
-	*        'comp' => array: List of components column names for a rendered field.
+	*        'comp' => array: List of components column names when 'func' is specified.
 	*                         This columns will be included in the query.
 	*/
 	public $ropts = [];
@@ -1058,10 +1099,10 @@ class RenderedField extends Field {
 	* @param $def FieldDefinition: The field definition
 	*/
 	public function __construct(& $row, FieldDefinition $def) {
-		if( ! is_callable($def->rtab) )
-			throw new \Exception('RenderedField must have a callable definition');
+		if( ! isset($def->ropts['func']) || ! is_callable($def->ropts['func']) )
+			throw new \Exception('RenderedField must have a callable "func" option');
 
-		$func = & $def->rtab;
+		$func = & $def->ropts['func'];
 		parent::__construct($func($row), $def);
 	}
 
