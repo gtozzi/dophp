@@ -493,6 +493,7 @@ abstract class Model {
 			foreach( $this->_fields as $k => $f )
 				if( ( ($action=='admin' && $f->rtab) || ($action=='view' && $f->rview) ) )
 					$row[$k] = isset($f->ropts['func']) ? new RenderedField($res,$f) : new Field($res[$k],$f,$res);
+
 			$data[$this->formatPk($res)] = $row;
 		}
 		$count = $this->_db->foundRows();
@@ -722,11 +723,17 @@ abstract class Model {
 	* Returns a string resume of a given data row
 	*
 	* @param $row array: The row
+	* @param $prefix bool: If true, expect column name in the format <table>.<column>
+	* @param $prefix Prefix prepended to column names in data
 	*/
-	public function summaryRow(& $row) {
+	public function summaryRow(& $row, $prefix=false) {
 		$sc = $this->summaryCols();
 		$displayCol = end($sc);
-		$f = new Field($row[$displayCol], $this->_fields[$displayCol]);
+		if( $prefix )
+			$prefix = $this->_table->getName() . '.';
+		else
+			$prefix = '';
+		$f = new Field($row["$prefix$displayCol"], $this->_fields[$displayCol]);
 
 		return $f->format();
 	}
@@ -738,25 +745,30 @@ abstract class Model {
 	* @return array: List of column names
 	*/
 	public function summaryCols() {
-		$pks = $this->_table->getPk();
+		// Use caching
+		static $cols = null;
 
-		$displayCol = null;
-		$intCol = null;
-		foreach( $this->_fields as $n => $f )
-			if( ! in_array($n,$pks) && $f->rtype )
-				if( $f->i18n || $this->_table->getColumnType($n) == 'string' ) {
-					$displayCol = $n;
-					break;
-				} elseif( ! $intCol )
-					$intCol = $n;
-		if( ! $displayCol )
-			if( $intCol )
-				$displayCol = $intCol;
-			else
-				$displayCol = $pks[0];
+		if( ! $cols ) {
+			$pks = $this->_table->getPk();
 
-		$cols = $pks;
-		$cols[] = $displayCol;
+			$displayCol = null;
+			$intCol = null;
+			foreach( $this->_fields as $n => $f )
+				if( ! in_array($n,$pks) && $f->rtype )
+					if( $f->i18n || $this->_table->getColumnType($n) == 'string' ) {
+						$displayCol = $n;
+						break;
+					} elseif( ! $intCol )
+						$intCol = $n;
+			if( ! $displayCol )
+				if( $intCol )
+					$displayCol = $intCol;
+				else
+					$displayCol = $pks[0];
+
+			$cols = $pks;
+			$cols[] = $displayCol;
+		}
 
 		return $cols;
 	}
@@ -999,7 +1011,7 @@ class Field {
 
 		// Populate format cache now using related data and drop $data to save memory
 		if( isset($this->_def->ropts['refer']) && $data )
-			$this->_format = \DoPhp::model($this->_def->ropts['refer'])->summaryRow($data);
+			$this->_format = \DoPhp::model($this->_def->ropts['refer'])->summaryRow($data, true);
 	}
 
 	/**
