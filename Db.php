@@ -332,7 +332,9 @@ class Table {
 	public function get($pk, $cols=null) {
 		$pk = $this->parsePkArgs($pk);
 
-		$res = (array) $this->select($pk, $cols);
+		$res = [];
+		foreach( $this->select($pk, $cols) as $r )
+			$res[] = $r;
 		if( ! $res )
 			return null;
 		if( count($res) != 1 )
