@@ -1099,6 +1099,9 @@ class Field {
 	public function descr() {
 		return $this->_def->descr;
 	}
+	public function name() {
+		return $this->_def->name;
+	}
 
 }
 
