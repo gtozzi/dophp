@@ -165,21 +165,21 @@ abstract class Model {
 	public function getRules($mode=null) {
 		$rules = array();
 		foreach( $this->_fields as $k => $f )
-			if( isset($f['dtype']) ) {
+			if( isset($f->dtype) ) {
 
-				if( $mode=='edit' && ! $f['edit'] )
+				if( $mode=='edit' && ! $f->edit )
 					continue; // Skip rules for non-editable fields on edit mode
 
-				if( $f['i18n'] ) {
+				if( $f->i18n ) {
 					// Copy main rule to all childs
 					$sub = array();
 					foreach( \DoPhp::lang()->getSupportedLanguages() as $l )
-						$sub[$l] = array($f['dtype'], $f['dopts']);
+						$sub[$l] = array($f->dtype, $f->dopts);
 					$rules[$k] = array('array', array('rules'=>$sub));
 					continue;
 				}
 
-				$rules[$k] = array($f['dtype'], $f['dopts']);
+				$rules[$k] = array($f->dtype, $f->dopts);
 			}
 
 		// Parse "required" fields according to mode
@@ -237,11 +237,11 @@ abstract class Model {
 		if( $post ) {
 			foreach( $this->_fields as $k => $f ) {
 				// Set static values
-				if( array_key_exists('value', $f) )
-					$post[$k] = $f['value'];
+				if( isset($f->value) )
+					$post[$k] = $f->value;
 
 				// Remove non editable fields on edit mode
-				if( $mode=='edit' && ! $f['edit'] && array_key_exists($k, $post) )
+				if( $mode=='edit' && ! $f->edit && array_key_exists($k, $post) )
 					unset($post[$k]);
 			}
 
@@ -256,20 +256,20 @@ abstract class Model {
 				foreach( $this->_fields as $k => $f ) {
 
 					// Do not update empty password and file fields
-					if( $mode == 'edit' && in_array($f['rtype'],array('password','file')) && array_key_exists($k,$data) && ! $data[$k] )
+					if( $mode == 'edit' && in_array($f->rtype,array('password','file')) && array_key_exists($k,$data) && ! $data[$k] )
 						unset($data[$k]);
 
 					// Runs postprocessors
-					if( isset($f['postp']) && array_key_exists($k,$data) )
-						$data[$k] = $f['postp']($data[$k]);
+					if( isset($f->postp) && array_key_exists($k,$data) )
+						$data[$k] = $f->postp($data[$k]);
 
 					// Save files
-					if( $f['rtype']=='file' && isset($data[$k]) )
+					if( $f->rtype == 'file' && isset($data[$k]) )
 						$data[$k] = $this->_saveFile($name, $data[$k]);
 
 					// Handle multi fields
-					if( $f['dtype']=='array' )
-						if( ! $f['nmtab'] )
+					if( $f->dtype == 'array' )
+						if( ! $f->nmtab )
 							$data[$k] = serialize($data[$k]);
 						else { // Move data into "related" array and handle it later
 							$related[$k] = $data[$k];
@@ -285,7 +285,7 @@ abstract class Model {
 					$this->_beforeEdit($pk, $data, $related);
 
 					foreach( $data as $k => $v )
-						if( $this->_fields[$k]['i18n'] ) {
+						if( $this->_fields[$k]->i18n ) {
 							// Leave text ID untouched and update text instead
 							$txtid = $this->_table->get($pk, [$k])[$k];
 							\DoPhp::lang()->updText($txtid, $v);
@@ -297,7 +297,7 @@ abstract class Model {
 					$this->_beforeInsert($data, $related);
 
 					foreach( $data as $k => & $v )
-						if( $this->_fields[$k]['i18n'] ) {
+						if( $this->_fields[$k]->i18n ) {
 							// Insert text into text table and replace l18n field
 							// with its text ID
 							$txtid = \DoPhp::lang()->newText($v);
@@ -804,6 +804,7 @@ abstract class Model {
 	/**
 	* Runs custom actions before an item has to be inserted
 	* does nothing by default, may be overridden
+	* Database operations run inside a transaction
 	*
 	* @param $data array: The data to be inserted, may be modified byRef
 	* @param $related array: Optional related data
