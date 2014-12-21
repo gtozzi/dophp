@@ -477,11 +477,14 @@ abstract class Model {
 
 		// Build joins
 		foreach( $refs as $r )
-			$joins[] = new Join($refmod->getTable(), $refmod->summaryCols());
+			$joins[] = new Join($r->getTable(), $r->summaryCols());
 
 		// Prepare filter
-		$filter = $action=='view' ? $pk : new Where();
-		$filter->add($this->_filter->getRead());
+		if( $action == 'view' ) {
+			$filter = $pk;
+			$filter->add($this->_filter->getRead());
+		} else
+			$filter = $this->_filter->getRead();
 
 		// Run the query and process data
 		$data = array();
