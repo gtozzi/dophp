@@ -370,17 +370,17 @@ abstract class Model {
 		// Build fields array
 		$fields = array();
 		foreach( $this->_fields as $k => $f ) {
-			if( ! $f['rtype'] )
+			if( ! $f->rtype )
 				continue;
 
-			if( $mode=='edit' && ! $f['edit'] ) // Don't render non editable fields in edit form
+			if( $mode=='edit' && ! $f->edit ) // Don't render non editable fields in edit form
 				continue;
 
-			if( $f['i18n'] ) {
+			if( $f->i18n ) {
 				// Explode l18n field
 				foreach( \DoPhp::lang()->getSupportedLanguages() as $l ) {
 					$fl = $f;
-					$fl['label'] = $this->__buildLangLabel($fl['label'], $l);
+					$fl->label = $this->__buildLangLabel($fl->label, $l);
 					$val = $data&&isset($data[$k][$l]) ? $data[$k][$l] : (isset($record)?\DoPhp::lang()->getText($record[$k],$l):null);
 					$err = $errors&&isset($errors[$k][$l]) ? $errors[$k][$l] : null;
 					$fields["{$k}[{$l}]"] = $this->__buildField($k, $fl, $val, $err);
@@ -554,19 +554,19 @@ abstract class Model {
 	*/
 	private function __buildField($k, & $f, $value, $error) {
 		$data = null;
-		if( $f['rtype'] == 'select' || $f['rtype'] == 'multi' || $f['rtype'] == 'auto' ) {
+		if( $f->rtype == 'select' || $f->rtype == 'multi' || $f->rtype == 'auto' ) {
 			// Retrieve data
 			$groups = array();
-			if( array_key_exists('data',$f['ropts']) )
-				$data = $f['ropts']['data'];
+			if( array_key_exists('data',$f->ropts) )
+				$data = $f->ropts['data'];
 			else {
-				if( ! isset($f['ropts']['refer']) )
+				if( ! isset($f->ropts['refer']) )
 					throw New \Exception("Need refer or data for $k field");
-				$rmodel = \DoPhp::model($f['ropts']['refer']);
+				$rmodel = \DoPhp::model($f->ropts['refer']);
 				$data = $rmodel->summary();
-				if( isset($f['ropts']['group']) )
+				if( isset($f->ropts['group']) )
 					foreach( $data as $pk => $v )
-						$groups[$pk] = $rmodel->read($pk)[$f['ropts']['group']]->format();
+						$groups[$pk] = $rmodel->read($pk)[$f->ropts['group']]->format();
 			}
 
 			// Filter data
@@ -581,7 +581,7 @@ abstract class Model {
 			unset($v);
 		}
 
-		if( $f['rtype'] == 'password' ) // Do not show password
+		if( $f->rtype == 'password' ) // Do not show password
 			$value = null;
 
 		return new FormField($value, $f, $error, $data);
