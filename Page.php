@@ -285,7 +285,7 @@ trait CrudFunctionalities {
 
 		$fields = $this->_model->insert($_POST, $_FILES);
 
-		if( ! $fields ) // Data has been created correctly
+		if( $fields === null ) // Data has been created correctly
 			$this->_headers['Location'] = Utils::fullPageUrl($this->actionUrl('admin'),null);
 
 		$this->_smarty->assign('pageTitle', _('Insert') . ' ' . $this->_model->getNames()[0]);
@@ -317,7 +317,7 @@ trait CrudFunctionalities {
 
 		$fields = $this->_model->edit($pk, $_POST, $_FILES);
 
-		if( ! $fields ) // Data has been updated correctly
+		if( $fields === null ) // Data has been updated correctly
 			$this->_headers['Location'] = Utils::fullPageUrl($this->actionUrl('admin',$pk),null);
 
 		$this->_smarty->assign('pageTitle', _('Edit') . ' ' . $this->_model->getNames()[0] . " #$pk");
