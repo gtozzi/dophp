@@ -218,6 +218,7 @@ abstract class base_validator implements field_validator {
 * Custom validation rules: 'email'=>true, Validates as e-mail address
 *                          'url'=>true, Validates as absolute URL
 *                          'len'=>array, Validates length bethween [<min>,<max>]
+*                                        (values are inclusive, use null to omit a limit)
 *
 * @return string
 */
@@ -249,9 +250,9 @@ class string_validator extends base_validator {
 	protected function check_len($val, $min, $max) {
 		if( $val === null )
 			return false;
-		if( $min && strlen($val) < $min )
+		if( $min !== null && strlen($val) <= $min )
 			return str_replace('{number}', $min, _('Text must be at least {number} characters long')) . '.';
-		if( $max && strlen($val) > $max )
+		if( $max !== null && strlen($val) >= $max )
 			return str_replace('{number}', $max, _('Text must be no longer than {number} characters')) . '.';
 	}
 }
