@@ -315,11 +315,9 @@ abstract class Model {
  					$rinfo = $this->__analyzeRelation($this->_fields[$k]);
 
 					// Delete unwanted relations
-					list($oldrels, $cnt) = $rinfo['nm']->select(array($rinfo['ncol'] => $pk), true);
-					if( $oldrels )
-						foreach( $oldrels as $k => $r )
-							if( ! $v || ! in_array($r[$rinfo['mcol']], $v) )
-								$rinfo['nm']->delete($r);
+					foreach( $rinfo['nm']->select(array($rinfo['ncol'] => $pk), true) as $k => $r )
+						if( ! $v || ! in_array($r[$rinfo['mcol']], $v) )
+							$rinfo['nm']->delete($r);
 
 					// Insert missing relations
 					if( $v )
@@ -359,9 +357,8 @@ abstract class Model {
 						$record[$n] = unserialize($record[$n]);
 					else { // Read data from relation
 						$rinfo = $this->__analyzeRelation($f);
-						list($res,$cnt) = $rinfo['nm']->select(array($rinfo['ncol']=>$pk), array($rinfo['mcol']));
 						$record[$n] = array();
-						foreach( $res as $r )
+						foreach( $rinfo['nm']->select(array($rinfo['ncol']=>$pk), array($rinfo['mcol'])) as $r )
 							$record[$n][] = $r[$rinfo['mcol']];
 					}
 
@@ -599,6 +596,8 @@ abstract class Model {
 	*                'mcol'  => Name of the column referring to referred in NM table's PK
 	*/
 	private function __analyzeRelation($field) {
+		if( ! isset($field->ropts['refer']) )
+			throw new \Exception('Can\'t analize an unspecified relation');
 
 		// Use caching to avoid multiple long queries
 		static $cache = null;
@@ -606,8 +605,8 @@ abstract class Model {
 			return $cache;
 
 		// If cache is not available, do the full analysis
-		$refer = \DoPhp::model($field['ropts']['refer']);
-		$nm = new Table($this->_db, $field['nmtab']);
+		$refer = \DoPhp::model($field->ropts['refer']);
+		$nm = new Table($this->_db, $field->nmtab);
 
 		$npk = $this->_table->getPk();
 		if( count($npk) != 1 )
