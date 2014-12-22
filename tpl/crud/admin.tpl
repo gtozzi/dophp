@@ -1,4 +1,9 @@
 {{extends file='base-backend.tpl'}}
+{{block name='head' append}}
+	<!-- Load the DataTables jQuery plugin -->
+	<link rel="stylesheet" href="{{$config['dophp']['url']}}/datatables/media/css/jquery.dataTables.min.css">
+	<script src="{{$config['dophp']['url']}}/datatables/media/js/jquery.dataTables.min.js"></script>
+{{/block}}
 {{block name='content'}}
 	<h1>{{$pageTitle}}</h1>
 

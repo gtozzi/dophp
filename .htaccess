@@ -1,2 +1,7 @@
 Order deny,allow
-deny from all
+Deny from all
+
+<Files jquery.dataTables.min.*>
+	Order allow,deny
+	Allow from all
+</Files>
