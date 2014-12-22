@@ -99,7 +99,7 @@ class Lang {
 			if( count($pk) != 1 )
 				throw new \Exception('Language table must have a single PK');
 			$pk = $pk[0];
-			foreach( $this->_langTable->select(null,true)[0] as $r )
+			foreach( $this->_langTable->select(null,true) as $r )
 				$this->_supported[] = $r[$pk];
 
 			// Check the other tables
@@ -292,10 +292,9 @@ class Lang {
 	*/
 	public function getTextLangs($id) {
 		$pk = $this->_txtTable->getPk();
-		list($ret, $cnt) = $this->_txtTable->select(array($pk[0] => $id), array($pk[1]));
 
 		$texts = array();
-		foreach( $ret as $r )
+		foreach( $this->_txtTable->select(array($pk[0] => $id), array($pk[1])) as $r )
 			$texts[] = $r[$pk[1]];
 
 		return $texts;
