@@ -70,7 +70,7 @@ class Db {
 		list($q,$p) = $this->buildInsUpdQuery('ins', $table, $params);
 
 		$this->run($q, $p);
-		return $this->_pdo->lastInsertId();
+		return $this->lastInsertId();
 	}
 
 	/**
@@ -138,6 +138,16 @@ class Db {
 	*/
 	public function rollBack() {
 		$this->_pdo->rollBack();
+	}
+
+	/**
+	* Returns last insert ID
+	*
+	* @see PDO::lastInsertId()
+	* @return The ID of the last inserted row
+	*/
+	public function lastInsertId() {
+		return $this->_pdo->lastInsertId();
 	}
 
 	/**
