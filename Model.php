@@ -699,15 +699,24 @@ abstract class Model {
 	* Returns a short representation of model content, to be used in a select box
 	* By default, only selects first non-hidden field
 	*
-	* @param $pk mixed: The primary key to filter for
+	* @param $filter The filter condition as Where instance or the PK
 	* @return array: Associative array [ <pk> => <description> ], or just <description>
 	*                if PK is given
 	*/
-	public function summary($pk=null) {
+	public function summary($filter=null) {
 		$cols = $this->summaryCols();
-		$pars = $this->_filter->getRead();
-		if( $pk )
-			$pars->add(new Where($this->_table->parsePkArgs($pk)));
+		$pars = new Where();
+		$pars->add($this->_filter->getRead());
+		if( $filter instanceof Where ) {
+			$pars->add($filter);
+			$pk = false;
+		} elseif( $filter === null ) {
+			$pk = false;
+		} else {
+			$pars->add($this->_table->parsePkWhere($pk));
+			$pk = true;
+		}
+
 		$ret = array();
 		foreach( $this->_table->select($pars, $cols) as $r )
 			$ret[$this->formatPk($r)] = $this->summaryRow($r);
