@@ -104,6 +104,8 @@ class Utils {
 	/**
 	* Returns a vormatted version of a time
 	*
+	* @deprecated Use Utils::format() instead, this function will be removed
+	*
 	* @param $str string: Time string in the format hh:mm:ss
 	* @param $format string: Format string accepted by DateTime::format()
 	* @return string: The formatted time
@@ -115,6 +117,8 @@ class Utils {
 
 	/**
 	* Return a formatted version of a number
+	*
+	* @deprecated Use Utils::format() instead, this function will be removed
 	*
 	* @param $num int: The number to be formatted
 	* @param $decimals int: Number of decimals
@@ -129,12 +133,47 @@ class Utils {
 	/**
 	* Return a formatted version of a boolean
 	*
+	* @deprecated Use Utils::format() instead, this function will be removed
+	*
 	* @return string: The formatted version of the boolean
 	*/
 	public static function formatBool($bool) {
 		if( $bool === null )
 			return null;
 		return $bool ? 'Yes' : 'No';
+	}
+
+	/**
+	* Format a value in a nice human-readable form based on value type or class
+	*
+	* @return string: The formatted value
+	*/
+	public static function format($value) {
+		$type = gettype($value);
+		$lc = localeconv();
+
+		if( $type == 'NULL' )
+			$val = '-';
+		elseif( $type == 'string' )
+			$val = $value;
+		elseif( $value instanceof Time )
+			$val = $value->format('H:i:s');
+		elseif( $value instanceof Date )
+			$val = $value->format('d.m.Y');
+		elseif( $value instanceof \DateTime )
+			$val = $value->format('d.m.Y H:i:s');
+		elseif( $type == 'boolean' )
+			$val = $value ? _('Yes') : _('No');
+		elseif( $type == 'integer' )
+			$val = number_format($value, 0, $lc['decimal_point'], $lc['thousands_sep']);
+		elseif( $value instanceof Decimal )
+			$val = $value->format(4, $lc['decimal_point'], $lc['thousands_sep']);
+		elseif( $type == 'double' )
+			$val = number_format($value, 4, $lc['decimal_point'], $lc['thousands_sep']);
+		else
+			throw new \Exception("Unsupported type $type class " . get_class($value));
+
+		return $val;
 	}
 
 	/**

@@ -124,6 +124,7 @@ abstract class PageSmarty extends PageBase implements PageInterface {
 		$this->_smarty->setCompileDir("{$this->_config['paths']['cac']}/");
 		$this->_smarty->setCacheDir("{$this->_config['paths']['cac']}/");
 
+		$this->_smarty->registerPlugin('modifier', 'format', 'dophp\Utils::format');
 		$this->_smarty->registerPlugin('modifier', 'formatTime', 'dophp\Utils::formatTime');
 		$this->_smarty->registerPlugin('modifier', 'formatNumber', 'dophp\Utils::formatNumber');
 

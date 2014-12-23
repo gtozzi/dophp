@@ -1043,29 +1043,7 @@ class Field {
 			return $this->_format;
 
 		// Runtime formatting
-		$type = gettype($this->_value);
-		$lc = localeconv();
-
-		if( $type == 'NULL' )
-			$val = '-';
-		elseif( $type == 'string' )
-			$val = $this->_value;
-		elseif( $this->_value instanceof Time )
-			$val = $this->_value->format('H:i:s');
-		elseif( $this->_value instanceof Date )
-			$val = $this->_value->format('d.m.Y');
-		elseif( $this->_value instanceof \DateTime )
-			$val = $this->_value->format('d.m.Y H:i:s');
-		elseif( $type == 'boolean' )
-			$val = $this->_value ? _('Yes') : _('No');
-		elseif( $type == 'integer' )
-			$val = number_format($this->_value, 0, $lc['decimal_point'], $lc['thousands_sep']);
-		elseif( $this->_value instanceof Decimal )
-			$val = $this->_value->format(-1, $lc['decimal_point'], $lc['thousands_sep']);
-		elseif( $type == 'double' )
-			$val = number_format($this->_value, -1, $lc['decimal_point'], $lc['thousands_sep']);
-		else
-			throw new \Exception("Unsupported type $type class " . get_class($this->_value));
+		$val = Utils::format($this->_value);
 
 		// Handle i18n and relations
 		if( $this->_def->i18n )
