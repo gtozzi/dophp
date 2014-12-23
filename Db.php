@@ -630,6 +630,17 @@ class Table {
 	}
 
 	/**
+	* Gets a primary key argument and format them into a Where object
+	*
+	* @see parsePkArgs
+	* @param $pk mixed: The primary key, array if composite (associative or numeric)
+	* @return Where: The built Where instance
+	*/
+	public function parsePkWhere($pk) {
+		return new Where($this->parsePkArgs($pk));
+	}
+
+	/**
 	* Builds a column list for a select query
 	*
 	* @param $cols array List of columns to select. Null to select all. True to
