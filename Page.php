@@ -216,7 +216,7 @@ trait CrudFunctionalities {
 		// Process the requested action
 		$method = '_build' . ucfirst($action);
 		if( ! method_exists($this, $method) )
-			throw new Exception("Unimplemented action \"$action\"");
+			throw new PageError("Unimplemented action \"$action\"");
 
 		if( isset($this->_actions[$action]['pk']) && $this->_actions[$action]['pk'] )
 			$this->$method($pk);
