@@ -13,7 +13,7 @@
 				>
 					<option value="">{{$field->descr()}}</option>
 					{{$og=null}}
-					{{if $field->data()}}{{foreach $field->data() as $v}}
+					{{strip}}{{if $field->data()}}{{foreach $field->data() as $v}}
 						{{if $v->group() !== $og}}
 							{{if $og !== null}}
 								</optgroup>
@@ -28,7 +28,7 @@
 						{{if $og !== null && $v@last}}
 							</optgroup>
 						{{/if}}
-					{{/foreach}}{{/if}}
+					{{/foreach}}{{/if}}{{/strip}}
 				</select>
 			{{elseif $field->type()=='check'}}
 				<input type="checkbox" name="{{$field->name()}}" value="1" {{if $field->value()}}checked="checked"{{/if}}>
