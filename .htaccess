@@ -1,7 +1,7 @@
 Order deny,allow
 Deny from all
 
-<Files jquery.dataTables.min.*>
+<FilesMatch "\.(js|css|json|png|gif)$">
 	Order allow,deny
 	Allow from all
-</Files>
+</FilesMatch>
