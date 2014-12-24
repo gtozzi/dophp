@@ -1078,6 +1078,9 @@ class Field {
 		return $lang->getText($id, $lang->getDefaultLanguage()) . ' (' . implode(',',$ll) . ')';
 	}
 
+	public function def() {
+		return $this->_def;
+	}
 	public function label() {
 		return $this->_def->label;
 	}
