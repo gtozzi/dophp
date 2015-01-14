@@ -562,7 +562,7 @@ abstract class Model {
 				if( ! isset($f->ropts['refer']) )
 					throw New \Exception("Need refer or data for $k field");
 				$rmodel = \DoPhp::model($f->ropts['refer']['model']);
-				$data = $rmodel->summary(null, $f->ropts['refer']['summary']);
+				$data = $rmodel->summary($f->ropts['refer']['filter'], $f->ropts['refer']['summary']);
 				if( isset($f->ropts['group']) )
 					foreach( $data as $pk => $v )
 						$groups[$pk] = $rmodel->read($pk)[$f->ropts['group']]->format();
@@ -948,6 +948,7 @@ class FieldDefinition {
 	*                           'model' => Name of the referenced model class. Mandatory.
 	*                           'summary' => Name of the field to use when printing
 	*                                        referenced data summary
+	*                           'filter' => A Where instance for filtering
 	*        'data' => array:  Associative array of data for a select box, if
 	*                          applicable. Overrides 'refer'.
 	*        'func' => array: Provides a custom rendered. The full row is the only
@@ -1005,6 +1006,8 @@ class FieldDefinition {
 				$this->ropts['refer'] = ['model' => $this->ropts['refer']];
 			if( ! isset($this->ropts['refer']['summary']) )
 				$this->ropts['refer']['summary'] = null;
+			if( ! isset($this->ropts['refer']['filter']) )
+				$this->ropts['refer']['filter'] = null;
 		}
 
 		// Perform some sanity checks
