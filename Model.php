@@ -456,7 +456,7 @@ abstract class Model {
 					$cols[] = $k;
 				$labels[$k] = $allLabels[$k];
 				if( isset($f->ropts['refer']) ) {
-					$refmod = \DoPhp::model($f->ropts['refer']);
+					$refmod = \DoPhp::model($f->ropts['refer']['model']);
 					if( ! in_array($refmod, $refs) )
 						$refs[] = $refmod;
 				}
@@ -561,8 +561,8 @@ abstract class Model {
 			else {
 				if( ! isset($f->ropts['refer']) )
 					throw New \Exception("Need refer or data for $k field");
-				$rmodel = \DoPhp::model($f->ropts['refer']);
-				$data = $rmodel->summary();
+				$rmodel = \DoPhp::model($f->ropts['refer']['model']);
+				$data = $rmodel->summary(null, $f->ropts['refer']['summary']);
 				if( isset($f->ropts['group']) )
 					foreach( $data as $pk => $v )
 						$groups[$pk] = $rmodel->read($pk)[$f->ropts['group']]->format();
@@ -590,7 +590,7 @@ abstract class Model {
 	* Analyzes a relation, internal function
 	*
 	* @return array: Associative array with informations about the relation:
-	*                'ropts' => [ 'refer' => The referred Model instance ]
+	*                'ropts' => [ 'refer' => The reference definition, associative array ]
 	*                'mn'    => The n:m Table instance
 	*                'ncol'  => Name of the column referring to my table in NM table's PK
 	*                'mcol'  => Name of the column referring to referred in NM table's PK
@@ -605,7 +605,7 @@ abstract class Model {
 			return $cache;
 
 		// If cache is not available, do the full analysis
-		$refer = \DoPhp::model($field->ropts['refer']);
+		$refer = \DoPhp::model($field->ropts['refer']['model']);
 		$nm = new Table($this->_db, $field->nmtab);
 
 		$npk = $this->_table->getPk();
@@ -700,11 +700,17 @@ abstract class Model {
 	* By default, only selects first non-hidden field
 	*
 	* @param $filter The filter condition as Where instance or the PK
+	* @param $col The name of the column to use as display field
 	* @return array: Associative array [ <pk> => <description> ], or just <description>
 	*                if PK is given
 	*/
-	public function summary($filter=null) {
-		$cols = $this->summaryCols();
+	public function summary($filter=null, $col=null) {
+		if( $col ) {
+			$cols = $this->_table->getPk();
+			$cols[] = $col;
+		} else
+			$cols = $this->summaryCols();
+
 		$pars = new Where();
 		$pars->add($this->_filter->getRead());
 		if( $filter instanceof Where ) {
@@ -719,7 +725,7 @@ abstract class Model {
 
 		$ret = array();
 		foreach( $this->_table->select($pars, $cols) as $r )
-			$ret[$this->formatPk($r)] = $this->summaryRow($r);
+			$ret[$this->formatPk($r)] = $this->summaryRow($r, false, $col);
 
 		if( $pk ) {
 			if( count($ret) > 1 )
@@ -735,10 +741,16 @@ abstract class Model {
 	* @param $row array: The row
 	* @param $prefix bool: If true, expect column name in the format <table>.<column>
 	* @param $prefix Prefix prepended to column names in data
+	* @param $summary If given, use this column name as summary column
 	*/
-	public function summaryRow(& $row, $prefix=false) {
-		$sc = $this->summaryCols();
-		$displayCol = end($sc);
+	public function summaryRow(& $row, $prefix=false, $summary=null) {
+		if( $summary ) {
+			$displayCol = $summary;
+		} else {
+			$sc = $this->summaryCols();
+			$displayCol = end($sc);
+		}
+
 		if( $prefix )
 			$prefix = $this->_table->getName() . '.';
 		else
@@ -930,7 +942,12 @@ class FieldDefinition {
 
 	/**
 	* array: Data rendering options, associative array.
-	*        'refer' => class:  Name of the referenced model, if applicable
+	*        'refer' => mixed:  Name of the referenced model class, if applicable
+	*                           or associative array defining an extended reference.
+	*                           Keys:
+	*                           'model' => Name of the referenced model class. Mandatory.
+	*                           'summary' => Name of the field to use when printing
+	*                                        referenced data summary
 	*        'data' => array:  Associative array of data for a select box, if
 	*                          applicable. Overrides 'refer'.
 	*        'func' => array: Provides a custom rendered. The full row is the only
@@ -982,10 +999,18 @@ class FieldDefinition {
 			$this->$k = $v;
 		}
 
+		// Normalize refer options
+		if( isset($this->ropts['refer']) ) {
+			if( ! is_array($this->ropts['refer']) )
+				$this->ropts['refer'] = ['model' => $this->ropts['refer']];
+			if( ! isset($this->ropts['refer']['summary']) )
+				$this->ropts['refer']['summary'] = null;
+		}
+
 		// Perform some sanity checks
 		if( $this->name === null && $this->rtype !== null )
 			throw new \Exception('Fields without a name cannot be rendered');
-		if( ($this->rtype=='select' || $this->rtype=='auto') && ! (isset($this->ropts['refer']) || array_key_exists('data',$this->ropts)) )
+		if( ($this->rtype=='select' || $this->rtype=='auto') && ! (isset($this->ropts['refer']['model']) || array_key_exists('data',$this->ropts)) )
 			throw new \Exception('Missing referred model or data for select or auto field');
 		if( array_key_exists('data',$this->ropts) && ! is_array($this->ropts['data']) )
 			throw new \Exception('Unvalid referred data');
@@ -1022,7 +1047,7 @@ class Field {
 
 		// Populate format cache now using related data and drop $data to save memory
 		if( isset($this->_def->ropts['refer']) && $data )
-			$this->_format = \DoPhp::model($this->_def->ropts['refer'])->summaryRow($data, true);
+			$this->_format = \DoPhp::model($this->_def->ropts['refer']['model'])->summaryRow($data, true, $this->_def->ropts['refer']['summary']);
 	}
 
 	/**
@@ -1049,7 +1074,7 @@ class Field {
 		if( $this->_def->i18n )
 			$val = $this->__reprLangLabel($val);
 		elseif( isset($this->_def->ropts['refer']) )
-			$val = \DoPhp::model($this->_def->ropts['refer'])->summary($val);
+			$val = \DoPhp::model($this->_def->ropts['refer']['model'])->summary($val, $this->_def->ropts['refer']['summary']);
 		elseif( isset($this->_def->ropts['data']) )
 			$val = $this->_def->ropts['data'][$val];
 
