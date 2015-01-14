@@ -470,6 +470,12 @@ abstract class JsonBaseMethod extends PageBase implements PageInterface {
 
 		return $val;
 	}
+
+	/**
+	* Build method to be overridden
+	*/
+	abstract protected function _build();
+
 }
 
 /**
