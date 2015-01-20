@@ -473,8 +473,10 @@ abstract class JsonBaseMethod extends PageBase implements PageInterface {
 
 	/**
 	* Build method to be overridden
+	*
+	* @param $pars array: The parameters associative array, passed byRef
 	*/
-	abstract protected function _build();
+	abstract protected function _build(& $pars);
 
 }
 
