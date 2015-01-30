@@ -78,6 +78,7 @@ class Db {
 	*
 	* @see buildInsUpdQuery
 	* @see buildParams
+	* @return int: Number of affected rows
 	*/
 	public function update($table, $params, $where) {
 		list($s,$ps) = self::buildInsUpdQuery('upd', $table, $params);
@@ -86,19 +87,20 @@ class Db {
 		$q = "$s WHERE $w";
 		$p = array_merge($ps, $pw);
 
-		$this->run($q, $p);
+		return $this->run($q, $p)->rowCount();
 	}
 
 	/**
 	* Runs a DELETE statement
 	*
 	* @see buildParams
+	* @return int: Number of affected rows
 	*/
 	public function delete($table, $where) {
 		list($w,$p) = self::buildParams($where, ' AND ');
 		$q = "DELETE FROM `$table` WHERE $w";
 		
-		$this->run($q, $p);
+		return $this->run($q, $p)->rowCount();
 	}
 
 	/**
