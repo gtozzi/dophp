@@ -420,21 +420,33 @@ abstract class JsonBaseMethod extends PageBase implements PageInterface {
 		$req = $this->_getInput();
 		$val = new Validator($req, $_FILES, $this->_params);
 		list($pars, $errors) = $val->validate();
-		if( $errors ) {
-			$mex = "Unvalid arguments:<br/>\n";
-			foreach( $errors as $n=>$e )
-				$mex .= "- <b>$n</b>: $e<br/>\n";
-			throw new PageError($mex);
-		}
-		
-		$res = $this->_build($pars);
-		
+		if( $errors )
+			$res = $this->_invalid($pars, $errors);
+		else
+			$res = $this->_build($pars);
+
 		$opt = 0;
 		foreach( $this->_jsonOpts as $o );
 			$opt |= $o;
 		if(PHP_VERSION_ID < 50303)
 			$opt ^= JSON_PRETTY_PRINT;
 		return json_encode($res, $opt);
+	}
+
+	/**
+	* Called when arguments are invalid. By default, triggers a PageError exception.
+	* May be overridden to provide custom error handling.
+	*
+	* @param $pars array: Associative array of invalid parameters, passed ByRef
+	* @param $errors array: Associative array of errors, passed ByRef
+	* @throws PageError by default
+	* @return The value to be json-encoded and returned to the client
+	*/
+	protected function _invalid(& $pars, & $errors) {
+		$mex = "Unvalid arguments:<br/>\n";
+		foreach( $errors as $n=>$e )
+			$mex .= "- <b>$n</b>: $e<br/>\n";
+		throw new PageError($mex);
 	}
 
 	/**
@@ -475,6 +487,7 @@ abstract class JsonBaseMethod extends PageBase implements PageInterface {
 	* Build method to be overridden
 	*
 	* @param $pars array: The parameters associative array, passed byRef
+	* @return The value to be json-encoded and returned to the client
 	*/
 	abstract protected function _build(& $pars);
 
