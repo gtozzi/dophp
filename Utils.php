@@ -215,18 +215,14 @@ class Utils {
 		if( ! array_key_exists('path', $url) ) {
 			$uri = self::parseUrl($_SERVER['REQUEST_URI']);
 			$url['path'] = $uri['path'];
-		} else {
-			$path = explode('/', $url['path']);
-			if( count($path) < 2 ) {
-				// Only file name specified, add folder if available
-				$uri = self::parseUrl($_SERVER['REQUEST_URI']);
-				$pathi = explode('/', $uri['path']);
-				if( count($pathi) > 1 ) {
-					array_pop($pathi);
-					$path = array_merge($pathi, $path);
-				}
+		} elseif( $url['path'][0] !== '/' ) {
+			// Relative path, add folder if available
+			$uri = self::parseUrl($_SERVER['REQUEST_URI']);
+			$pathi = explode('/', $uri['path']);
+			if( count($pathi) > 1 ) {
+				array_pop($pathi);
+				$url['path'] = implode('/',$pathi) . '/' . $url['path'];
 			}
-			$url['path'] = implode('/', $path);
 		}
 
 		return self::buildUrl($url);
