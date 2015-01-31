@@ -118,10 +118,18 @@ class Db {
 	/**
 	* Begins a transaction
 	*
+	* @param $loose If transaction is already started, just do nothing
 	* @see PDO::beginTransaction()
+	* @return true When a new transaction has been started
 	*/
-	public function beginTransaction() {
-		$this->_pdo->beginTransaction();
+	public function beginTransaction($loose=false) {
+		try {
+			return $this->_pdo->beginTransaction();
+		} catch( \PDOException $e ) {
+			if( $loose && $e->getCode() == 0 && $e->getMessage() == 'There is already an active transaction' )
+				return false;
+			throw $e;
+		}
 	}
 
 	/**
