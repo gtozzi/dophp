@@ -315,7 +315,7 @@ abstract class Model {
  					$rinfo = $this->__analyzeRelation($this->_fields[$k]);
 
 					// Delete unwanted relations
-					foreach( $rinfo['nm']->select(array($rinfo['ncol'] => $pk), true) as $k => $r )
+					foreach( $rinfo['nm']->select(array($rinfo['ncol'] => $pk), true) as $x => $r )
 						if( ! $v || ! in_array($r[$rinfo['mcol']], $v) )
 							$rinfo['nm']->delete($r);
 
@@ -323,7 +323,12 @@ abstract class Model {
 					if( $v )
 						foreach( $v as $vv ) {
 							$insdata = array($rinfo['ncol'] => $pk, $rinfo['mcol'] => $vv);
-							if( ! $rinfo['nm']->select($insdata,true,true) )
+							$existing = false;
+							foreach( $rinfo['nm']->select($insdata,true,true) as $r ) {
+								$existing = true;
+								break;
+							}
+							if( ! $existing )
 								$rinfo['nm']->insert($insdata);
 						}
 
