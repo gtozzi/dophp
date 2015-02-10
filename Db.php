@@ -286,6 +286,16 @@ class Table {
 		if( ! $this->_name || gettype($this->_name) !== 'string' )
 			throw new \Exception('Unvalid table name');
 
+		// Makes sure that table exists
+		$q = "
+			SELECT
+				`TABLE_TYPE`
+			FROM `information_schema`.`TABLES`
+			WHERE `TABLE_SCHEMA` = DATABASE() AND `TABLE_NAME` = ?
+		";
+		if( ! $this->_db->run($q, array($this->_name))->fetch() )
+			throw new \Exception("Table {$this->_name} not found");
+
 		// Read and cache table structure
 		$q = "
 			SELECT

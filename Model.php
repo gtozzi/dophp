@@ -629,7 +629,7 @@ abstract class Model {
 		}
 
 		if( ! $ncol || ! $mcol )
-			throw new \Exception('Couldn\'t find relations on n:m table');
+			throw new \Exception('Couldn\'t find relations on n:m table ' . $nm->getName() . ' referred by ' . $refer->getTable()->getName());
 		$nmpk = $nm->getPk();
 		if( count($nmpk) < 2 )
 			throw new \Exception('m:m table must have a composite PK');
