@@ -314,22 +314,39 @@ abstract class Model {
 				foreach( $related as $k => $v ) {
  					$rinfo = $this->__analyzeRelation($this->_fields[$k]);
 
-					// Delete unwanted relations
-					foreach( $rinfo['nm']->select(array($rinfo['ncol'] => $pk), true) as $x => $r )
-						if( ! $v || ! in_array($r[$rinfo['mcol']], $v) )
+					// Normalize $v syntax: $v is now an array of associative arrays: $pk => [ extra fields ]
+					// Convert fields using the old syntax (array of pks) to the new one
+					$new = array();
+					foreach( $v as $kk => $vv )
+						if( ! is_array($vv) )
+							$new[$vv] = array();
+						else
+							$new[$kk] = $vv;
+					$v = $new;
+
+					// Delete unwanted relations and update all relations already present
+					// that could have different data
+					foreach( $rinfo['nm']->select(array($rinfo['ncol'] => $pk), true) as $x => $r ) {
+						if( ! $v || ! array_key_exists($r[$rinfo['mcol']], $v) )
 							$rinfo['nm']->delete($r);
+						elseif( array_key_exists($r[$rinfo['mcol']], $v) && is_array($v[$r[$rinfo['mcol']]]) ) {
+							$pkdata = array($rinfo['ncol'] => $pk, $rinfo['mcol'] => $r[$rinfo['mcol']]);
+							$rinfo['nm']->update($pkdata, $v[$r[$rinfo['mcol']]]);
+						}
+					}
 
 					// Insert missing relations
 					if( $v )
-						foreach( $v as $vv ) {
-							$insdata = array($rinfo['ncol'] => $pk, $rinfo['mcol'] => $vv);
+						foreach( $v as $kk => $vv ) {
+							$pkdata = array($rinfo['ncol'] => $pk, $rinfo['mcol'] => $kk);
+
 							$existing = false;
-							foreach( $rinfo['nm']->select($insdata,true,true) as $r ) {
+							foreach( $rinfo['nm']->select($pkdata,true,true) as $r ) {
 								$existing = true;
 								break;
 							}
 							if( ! $existing )
-								$rinfo['nm']->insert($insdata);
+								$rinfo['nm']->insert(array_merge($pkdata, $vv));
 						}
 
 				}
