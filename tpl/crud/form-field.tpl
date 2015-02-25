@@ -23,7 +23,7 @@
 						{{/if}}
 						<option value="{{$v->value()}}"
 							{{if ($field->type()!='multi' && ((string)$field)==$v->value()) || ($field->type()=='multi' && $field->value() && in_array($v->value(),$field->value()))}}
-								selected="1"
+								{{" "}}selected="1"
 							{{/if}}>{{$v->descr()}}</option>
 						{{if $og !== null && $v@last}}
 							</optgroup>
