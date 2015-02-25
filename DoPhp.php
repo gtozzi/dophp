@@ -188,6 +188,10 @@ class DoPhp {
 			if( ! $pobj instanceof dophp\PageInterface )
 				throw new Exception('Wrong page type');
 			$out = $pobj->run();
+		} catch( dophp\InvalidCredentials $e ) {
+			header("HTTP/1.1 401 Unhautorized");
+			echo $e->getMessage();
+			exit();
 		} catch( dophp\PageDenied $e ) {
 			if( $def ) {
 				$to = dophp\Utils::fullPageUrl($def, $key);

@@ -79,13 +79,13 @@ abstract class PageBase {
 	/**
 	* Utility function: checks that a valid user is logged in.
 	*
-	* @throws PageDenied
+	* @throws InvalidCredentials
 	*/
 	protected function _requireLogin() {
 		if( $this->_user->getUid() )
 			return;
 
-		throw new PageDenied('Invalid login');
+		throw new InvalidCredentials('Invalid login');
 	}
 
 }
@@ -540,4 +540,10 @@ class PageError extends \Exception {
 * Exception raised when user is not authorized to see the page
 */
 class PageDenied extends PageError {
+}
+
+/**
+* Exception raised when user is providing invalid credentials
+*/
+class InvalidCredentials extends PageDenied {
 }
