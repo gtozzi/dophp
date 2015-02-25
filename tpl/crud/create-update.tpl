@@ -1,8 +1,8 @@
 {{extends file='base-backend.tpl'}}
 {{block name='head' append}}
 	<!-- Load Select2 (https://ivaynberg.github.io/select2/) -->
-	<link rel="stylesheet" href="{{$config['dophp']['url']}}/select2/select2.css">
-	<script src="{{$config['dophp']['url']}}/select2/select2.min.js"></script>
+	<link rel="stylesheet" href="{{$config['dophp']['url']}}/select2/dist/css/select2.min.css">
+	<script src="{{$config['dophp']['url']}}/select2/dist/js/select2.min.js"></script>
 
 	<!-- Load Select2-Bootstrap (https://fk.github.io/select2-bootstrap-css/) -->
 	<link rel="stylesheet" href="{{$config['dophp']['url']}}/select2-bootstrap/select2-bootstrap.css">
