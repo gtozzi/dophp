@@ -250,9 +250,9 @@ class string_validator extends base_validator {
 	protected function check_len($val, $min, $max) {
 		if( $val === null )
 			return false;
-		if( $min !== null && strlen($val) <= $min )
+		if( $min !== null && strlen($val) < $min )
 			return str_replace('{number}', $min, _('Text must be at least {number} characters long')) . '.';
-		if( $max !== null && strlen($val) >= $max )
+		if( $max !== null && strlen($val) > $max )
 			return str_replace('{number}', $max, _('Text must be no longer than {number} characters')) . '.';
 	}
 }
