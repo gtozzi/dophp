@@ -981,6 +981,7 @@ class FieldDefinition {
 	*        'comp' => array: List of components column names when 'func' is specified.
 	*                         This columns will be included in the query.
 	*        'ajax' => bool: If true, use select2 ajax functionalities to load data
+	*        'step' => float: HTML "step" attribute for type="number" rendering
 	*/
 	public $ropts = [];
 
@@ -1147,6 +1148,9 @@ class Field {
 	}
 	public function ajax() {
 		return $this->_def->ropts && $this->_def->ropts['ajax'];
+	}
+	public function step() {
+		return isset($this->_def->ropts['step']) ? $this->_def->ropts['step'] : null;
 	}
 
 }

@@ -62,6 +62,7 @@
 					{{if $field->type()!='file'}}placeholder="{{$field->descr()}}"{{/if}}
 					value="{{(string)$field}}"
 					{{if $field->type()=='password'}}autocomplete="off"{{/if}}
+					{{if $field->step()}}step="{{sprintf('%F',$field->step())}}"{{/if}}
 				/>
 				{{if $field->type()=='file'}}
 					<p class="help-block">{{$field->descr()}}</p>
