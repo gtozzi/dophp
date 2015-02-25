@@ -191,7 +191,7 @@ class DoPhp {
 		} catch( dophp\InvalidCredentials $e ) {
 			header("HTTP/1.1 401 Unhautorized");
 			echo $e->getMessage();
-			exit();
+			return;
 		} catch( dophp\PageDenied $e ) {
 			if( $def ) {
 				$to = dophp\Utils::fullPageUrl($def, $key);
@@ -199,16 +199,17 @@ class DoPhp {
 				header("Location: $to");
 				echo $e->getMessage();
 				echo "\nPlease login at: $to";
+				return;
 			} else {
 				header("HTTP/1.1 403 Forbidden");
 				echo $e->getMessage();
-				exit();
+				return;
 			}
 		} catch( dophp\PageError $e ) {
 			header("HTTP/1.1 400 Bad Request");
 			echo $e->getMessage();
 			error_log($e->getMessage());
-			exit();
+			return;
 		} catch( Exception $e ) {
 			header("HTTP/1.1 500 Internal Server Error");
 			$err = 'Catched Exception: ' . $e->getCode() . '.' . $e->getMessage() . 
@@ -216,7 +217,7 @@ class DoPhp {
 				"\nTrace:\n" . $e->getTraceAsString();
 			echo $err;
 			error_log($err);
-			exit();
+			return;
 		}
 
 		//Output the headers
