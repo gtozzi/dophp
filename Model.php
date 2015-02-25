@@ -575,7 +575,7 @@ abstract class Model {
 	*/
 	private function __buildField($k, & $f, $value, $error) {
 		$data = null;
-		if( $f->rtype == 'select' || $f->rtype == 'multi' || $f->rtype == 'auto' ) {
+		if( ($f->rtype == 'select' || $f->rtype == 'multi' || $f->rtype == 'auto') && ! ($f->ropts && $f->ropts['ajax']) ) {
 			// Retrieve data
 			$groups = array();
 			if( array_key_exists('data',$f->ropts) )
@@ -980,6 +980,7 @@ class FieldDefinition {
 	*                           to use for grouping elements
 	*        'comp' => array: List of components column names when 'func' is specified.
 	*                         This columns will be included in the query.
+	*        'ajax' => bool: If true, use select2 ajax functionalities to load data
 	*/
 	public $ropts = [];
 
@@ -1029,6 +1030,8 @@ class FieldDefinition {
 				$this->ropts['refer']['summary'] = null;
 			if( ! isset($this->ropts['refer']['filter']) )
 				$this->ropts['refer']['filter'] = null;
+			if( ! isset($this->ropts['refer']['ajax']) )
+				$this->ropts['refer']['ajax'] = false;
 		}
 
 		// Perform some sanity checks
@@ -1141,6 +1144,9 @@ class Field {
 	}
 	public function name() {
 		return $this->_def->name;
+	}
+	public function ajax() {
+		return $this->_def->ropts && $this->_def->ropts['ajax'];
 	}
 
 }

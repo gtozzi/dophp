@@ -8,7 +8,8 @@
 			{{if $field->type()=='label'}}
 				<input type="text" class="form-control form-label" value="{{(string)$field}}" readonly="readonly"/>
 			{{elseif $field->type()=='select' || $field->type()=='multi'}}
-				<select name="{{$field->name()}}{{if $field->type()=='multi'}}[]{{/if}}" class="form-control select2"
+				<select id="field_{{$field->name()}}" name="{{$field->name()}}{{if $field->type()=='multi'}}[]{{/if}}"
+					class="form-control {{if ! $field->ajax()}}select2{{/if}}"
 					{{if $field->type()=='multi'}}multiple{{/if}}
 				>
 					<option value="">{{$field->descr()}}</option>
@@ -30,6 +31,20 @@
 						{{/if}}
 					{{/foreach}}{{/if}}{{/strip}}
 				</select>
+				{{if $field->ajax() }}
+					<script type="text/javascript">
+						$(document).ready(function() {
+							$("#field_{{$field->name()}}").select2({
+								ajax: {
+									url: "?do={{$page}}&action=ajax&field={{$field->name()}}",
+									dataType: 'json',
+									delay: 250,
+									cache: true,
+								},
+							});
+						});
+					</script>
+				{{/if}}
 			{{elseif $field->type()=='check'}}
 				<input type="checkbox" name="{{$field->name()}}" value="1" {{if $field->value()}}checked="checked"{{/if}}>
 				{{$field->descr()}}

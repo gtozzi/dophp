@@ -238,6 +238,7 @@ trait CrudFunctionalities {
 			'read'    => ['pk'=>true, 'icon'=>'zoom-in', 'descr'=>_('Show')],
 			'update'  => ['pk'=>true, 'icon'=>'pencil',  'descr'=>_('Edit')],
 			'delete'  => ['pk'=>true, 'icon'=>'remove',  'descr'=>_('Delete'), 'confirm'=>_('Are you sure?')],
+			'ajax'    => [],
 		];
 	}
 
@@ -348,6 +349,14 @@ trait CrudFunctionalities {
 		$this->_smarty->assign('errors', $errors);
 
 		$this->_template = $this->_templateName('crud/delete.tpl');
+	}
+
+	/**
+	* Runs the "ajax" crud action: searches on this model. This is a special action
+	*/
+	protected function _buildAjax() {
+		$q = $_GET['q'];
+		die(var_dump($q));
 	}
 
 	/**
