@@ -605,14 +605,13 @@ abstract class Model {
 			throw new \Exception('Can\'t analize an unspecified relation');
 
 		// Use caching to avoid multiple long queries
-		static $cache = null;
-		if( $cache !== null )
-			return $cache;
+		static $cache = [];
+		if( isset($cache[$field->name]) )
+			return $cache[$field->name];
 
 		// If cache is not available, do the full analysis
 		$refer = \DoPhp::model($field->ropts['refer']['model']);
 		$nm = new Table($this->_db, $field->nmtab);
-
 		$npk = $this->_table->getPk();
 		if( count($npk) != 1 )
 			throw new \Exception('Unsupported composed or missing PK');
@@ -644,13 +643,13 @@ abstract class Model {
 		if( array_search($ncol, $nmpk) === false || array_search($mcol, $nmpk) === false )
 			throw new \Exception('Couldn\'t find columns in relation');
 
-		$cache = array(
+		$cache[$field->name] = array(
 			'refer' => $refer,
 			'nm' => $nm,
 			'ncol' => $ncol,
 			'mcol' => $mcol,
 		);
-		return $cache;
+		return $cache[$field->name];
 	}
 
 	/**
