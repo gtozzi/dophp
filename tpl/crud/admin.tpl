@@ -9,18 +9,12 @@
 
 	<!-- Uses DataTables script https://datatables.net/ -->
 	<table id="tableAdmin{{$page|ucfirst}}" class="table table-striped"></table>
-	<script type="text/javascript">
-		/**
-		* Called when an action button has been clicked
-		* @param object el: the clicked element
-		* @param string url: the destination url
-		*/
-		function tableAction(el, url) {
-			// gets the ID from the first column
-			var id = $('td:first', $(el).parents('tr')).text().trim();
-			window.location.href = url.replace('__pk__', id);
+	<style>
+		a.table-action:hover {
+			text-decoration: none;
 		}
-
+	</style>
+	<script type="text/javascript">
 		$(document).ready(function() {
 			$('#tableAdmin{{$page|ucfirst}}').DataTable({
 				"aaSorting": [],
@@ -65,14 +59,20 @@
 					{{if $this->getActions()}}
 						{ "orderable": false, "targets": {{count($cols)}} },
 						{
-							"data": null,
-							"defaultContent": '{{strip}}
-								{{foreach $this->getActions() as $name => $action}}
+							"data": function(row) {
+								var id = row[0].trim();
+								var url;
+								var actions = '';
+								{{foreach $this->getActions() as $name => $action}}{{strip}}
 									{{if isset($action['pk']) && $action['pk']}}
-										<span {{if isset($action['descr'])}}title="{{$action['descr']}}"{{/if}} class="clickable glyphicon glyphicon glyphicon-{{$action['icon']}}" onclick="tableAction(this,\'{{addslashes(addslashes($this->actionUrl($name,'__pk__')))}}\');"></span>&nbsp;
+										url = '{{addslashes($this->actionUrl($name,"__pk__"))}}'.replace('__pk__', id);
+										{{"\n"}}
+										actions += '<a {{if isset($action["descr"])}}title="{{$action["descr"]}}"{{/if}} class="glyphicon glyphicon glyphicon-{{$action["icon"]}} table-action" href="' + url + '"></a>&nbsp;';
+										{{"\n"}}
 									{{/if}}
-								{{/foreach}}
-							{{/strip}}',
+								{{/strip}}{{/foreach}}
+								return actions;
+							},
 							"targets": {{count($cols)}}
 						},
 					{{/if}}
