@@ -64,6 +64,10 @@ class DoPhp {
 	*                     'usr'=> Database username
 	*                     'pwd'=> Database password
 	*                 )
+	*                 'memcache' => array( // Memcached configuration
+	*                     // see http://php.net/manual/en/memcache.connect.php
+	*                     'host'=> Valid host or unix socket
+	*                     'port'=> Valid port or 0
 	*                 'lang' => array( //see Lang class description
 	*                     'supported' => array() List of supported languages,
 	*                                    in the form 'en' or 'en_US'. First one is
@@ -178,7 +182,21 @@ class DoPhp {
 			return;
 		}
 
+		// Init memcached if in use
+		$cache = null;
+		if( isset($conf['memcache']) && isset($conf['memcache']['host']) && isset($conf['memcache']['port']) ) {
+			if( class_exists('Memcache') ) {
+				$cache = new Memcache;
+				if( ! $cache->connect($conf['memcache']['host'], $conf['memcache']['port']) ) {
+					$cache = null;
+					error_log("Couldn't connect to memcached at {$conf['memcache']['host']}:{$conf['memcache']['port']}");
+				}
+			} else
+				error_log("DoPhp is configured to use memcached but memcached extension is not loaded");
+		}
+
 		// Init return var and execute page
+		$fromCache = false;
 		try {
 			require $inc_file;
 			$classname = dophp\Utils::findClass(self::className($page));
@@ -187,7 +205,18 @@ class DoPhp {
 			$pobj = new $classname($this->__conf, $this->__db, $this->__auth, $page );
 			if( ! $pobj instanceof dophp\PageInterface )
 				throw new Exception('Wrong page type');
-			$out = $pobj->run();
+			if( $cache !== null ) {
+				$cacheKey = $pobj->cacheKey();
+				if( $cacheKey !== null ) {
+					// Try to retrieve data from the cache
+					$headers = $cache->get("$page::$cacheKey::headers");
+					$out = $cache->get("$page::$cacheKey::output");
+					if( $headers !== false && $out !== false )
+						$fromCache = true;
+				}
+			}
+			if( ! $fromCache )
+				$out = $pobj->run();
 		} catch( dophp\InvalidCredentials $e ) {
 			header("HTTP/1.1 401 Unhautorized");
 			echo $e->getMessage();
@@ -225,11 +254,22 @@ class DoPhp {
 			return;
 		}
 
-		//Output the headers
-		foreach( $pobj->headers() as $k=>$v )
-			header("$k: $v");
+		//Get the headers
+		if( ! $fromCache )
+			$headers = $pobj->headers();
 
-		//Output the content
+		// Write cache if needed
+		if( $cache && $cacheKey !== null && ! $fromCache ) {
+			$expire = $pobj->cacheExpire();
+			if( $expire !== null ) {
+				$cache->set("$page::$cacheKey::headers", $headers, 0, $expire);
+				$cache->set("$page::$cacheKey::output", $out, 0, $expire);
+			}
+		}
+
+		//Output headers and content
+		foreach( $headers as $k=>$v )
+			header("$k: $v");
 		echo $out;
 	}
 

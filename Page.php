@@ -25,6 +25,24 @@ interface PageInterface {
 	public function __construct(& $config, $db, $user, $name);
 
 	/**
+	* Method called prior of page execution to determine if the page can be
+	* retrieved from the cache.
+	*
+	* @return Must return an unique cache KEY that will be used as the key for
+	*         storing the output after page had been executed. When running the
+	*         page again, if a valid key will be found in the cache it will be
+	*         used instead of calling run() again.
+	*         Returning NULL disables caching.
+	*/
+	public function cacheKey();
+
+	/**
+	* Returns cache expiration time, in seconds
+	* 0 means never, keep data forever, null disables cache storage
+	*/
+	public function cacheExpire();
+
+	/**
 	* Method called when the page is executed
 	*
 	* Must return page output (usually HTML) or lauch a PageError exception
@@ -67,6 +85,8 @@ abstract class PageBase {
 	* by client
 	*/
 	protected $_forceCompress = false;
+	/** After how many seconds cache will expire (cache is not enabled by default) */
+	protected $_cacheExpire = 300;
 
 	/**
 	* Constructor
@@ -78,6 +98,20 @@ abstract class PageBase {
 		$this->_db = $db;
 		$this->_user = $user;
 		$this->_name = $name;
+	}
+
+	/**
+	* Caching is disabled by default
+	*/
+	public function cacheKey() {
+		return null;
+	}
+
+	/**
+	* Return cache expiration time
+	*/
+	public function cacheExpire() {
+		return $this->_cacheExpire;
 	}
 
 	/**
