@@ -54,6 +54,19 @@ abstract class PageBase {
 	protected $_name;
 	/** Headers to be output */
 	protected $_headers = array();
+	/**
+		ZLib deflate compression level for output
+		if different than 0, enables compression. -1 to 9 or bool true.
+		If true or -1, uses default zlib's compression level.
+	*/
+	protected $_compress = 0;
+	/**
+	* If false, use compression as preferred when configured above and accepted
+	* by client in the Accept-Encoding header.
+	* If true, refuse to send the page when compression is enabled but not accepted
+	* by client
+	*/
+	protected $_forceCompress = false;
 
 	/**
 	* Constructor
@@ -88,6 +101,39 @@ abstract class PageBase {
 		throw new InvalidCredentials('Invalid login');
 	}
 
+	/**
+	* Utility function: compresses the output according to compression settings
+	* and adds required header
+	*
+	* @param $str string: The uncompressed data
+	* @return string: The data compressed or not according to compression settings
+	*/
+	protected function _compress($str) {
+		if( $this->_compress === true )
+			$this->_compress = -1;
+
+		if( $this->_compress ) {
+			$head = Utils::headers();
+			$supported = array();
+			if( isset($head['Accept-Encoding']) )
+				$supported = array_map(trim, explode(',', $head['Accept-Encoding']));
+
+			$accepted = false;
+			foreach( $supported as $s )
+				if( $s == 'gzip' || $s == 'deflate' ) {
+					$accepted = $s;
+					break;
+				}
+
+			if( $accepted ) {
+				$this->_headers['Content-Encoding'] = $accepted;
+				return gzcompress($str, $this->_compress, $accepted == 'gzip' ? ZLIB_ENCODING_GZIP : ZLIB_ENCODING_DEFLATE);
+			} elseif( $this->_forceCompress )
+				throw new NotAcceptable('Compression is required but not accepted');
+		}
+
+		return $str;
+	}
 }
 
 /**
@@ -439,7 +485,7 @@ abstract class JsonBaseMethod extends PageBase implements PageInterface {
 			$opt |= $o;
 		if(PHP_VERSION_ID < 50303)
 			$opt ^= JSON_PRETTY_PRINT;
-		return json_encode($res, $opt);
+		return $this->_compress(json_encode($res, $opt));
 	}
 
 	/**
@@ -534,6 +580,12 @@ abstract class HybridRpcMethod extends JsonBaseMethod {
 * Exception raised if something goes wrong during page rendering
 */
 class PageError extends \Exception {
+}
+
+/**
+* Exception raised when client is asking for an unavailable encoding
+*/
+class NotAcceptable extends PageError {
 }
 
 /**

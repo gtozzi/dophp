@@ -205,6 +205,11 @@ class DoPhp {
 				echo $e->getMessage();
 				return;
 			}
+		} catch( dophp\NotAcceptable $e ) {
+			header("HTTP/1.1 406 Not Acceptable");
+			echo $e->getMessage();
+			error_log($e->getMessage());
+			return;
 		} catch( dophp\PageError $e ) {
 			header("HTTP/1.1 400 Bad Request");
 			echo $e->getMessage();
