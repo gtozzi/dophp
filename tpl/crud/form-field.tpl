@@ -31,20 +31,20 @@
 						{{/if}}
 					{{/foreach}}{{/if}}{{/strip}}
 				</select>
-				{{if $field->ajax() }}
-					<script type="text/javascript">
-						$(document).ready(function() {
-							$("#field_{{$field->name()}}").select2({
+				<script type="text/javascript">
+					$(document).ready(function() {
+						$("#field_{{$field->name()}}").select2({
+							{{if $field->ajax() }}
 								ajax: {
 									url: "?do={{$page}}&action=ajax&field={{$field->name()}}",
 									dataType: 'json',
 									delay: 250,
 									cache: true,
 								},
-							});
+							{{/if}}
 						});
-					</script>
-				{{/if}}
+					});
+				</script>
 			{{elseif $field->type()=='check'}}
 				<input type="checkbox" name="{{$field->name()}}" value="1" {{if $field->value()}}checked="checked"{{/if}}>
 				{{$field->descr()}}

@@ -23,10 +23,4 @@
 			</div>
 		</div>
 	</form>
-	<script type="text/javascript">
-		// Init select2 script
-		$(document).ready(function() {
-			$('.select2').select2();
-		});
-	</script>
 {{/block}}
