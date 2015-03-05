@@ -561,9 +561,13 @@ abstract class Model {
 	*
 	* @param $name string: The name of the field
 	* @param $q string: The search query string to filter (null = don't filter)
+	* @param $pks mixed: If given, only return the given PK or PKs if array
+	*
 	* @return associative array of key => FormFieldData
 	*/
-	public function fieldData($name, $q=null) {
+	public function fieldData($name, $q=null, $pks=null) {
+		if( $pks !== null && ! is_array($pks) )
+			$pks = array($pks);
 		$data = null;
 		$f = & $this->_fields[$name];
 
@@ -582,19 +586,17 @@ abstract class Model {
 						$groups[$pk] = $rmodel->read($pk)[$f->ropts['group']]->format();
 			}
 
-			// Filter data
-			if( isset($this->_filter) )
+			// Filter data, apply query and PKs
+			if( isset($this->_filter) || ($q !== null && $q !== '') || $pks )
 				foreach( $data as $pk => $v )
-					if( ! $this->_filter->isAllowed($k, $pk) )
+					if(
+						( isset($this->_filter) && ! $this->_filter->isAllowed($k, $pk) )
+						||
+						( $q !== null && $q !== '' && strpos(strtolower($v), $q) === false )
+						||
+						( $pks && ! in_array($pk, $pks) )
+					)
 						unset($data[$pk]);
-
-			// Apply query
-			if( $q !== null && $q !== '' ) {
-				$q = strtolower($q);
-				foreach( $data as $pk => $v )
-					if( strpos(strtolower($v), $q) === false )
-						unset($data[$pk]);
-			}
 
 			// Assemble data
 			foreach( $data as $k => & $v )
@@ -626,7 +628,7 @@ abstract class Model {
 		if( ! ($f->ropts && $f->ropts['ajax']) )
 			$data = $this->fieldData($k);
 		else
-			$data = null;
+			$data = $this->fieldData($k, null, $value);
 
 		if( $f->rtype == 'password' ) // Do not show password
 			$value = null;
