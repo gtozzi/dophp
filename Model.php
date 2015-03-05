@@ -557,25 +557,17 @@ abstract class Model {
 	}
 
 	/**
-	* Builds a localized label
-	*/
-	private function __buildLangLabel($label, $lang) {
-		return $label . ' (' . \Locale::getDisplayLanguage($lang) . ')';
-	}
-
-	/**
-	* Builds a single field, internal function
+	* Builds related data for the given field as an associative array of key => FormFieldData
 	*
-	* @param $k string: The field name
-	* @param $f array: The field definition
-	* @param $value mixed: The field value
-	* @param $error string: The error message
-	*
-	* @return FormField: The built field
+	* @param $name string: The name of the field
+	* @param $q string: The search query string to filter (null = don't filter)
+	* @return associative array of key => FormFieldData
 	*/
-	private function __buildField($k, & $f, $value, $error) {
+	public function fieldData($name, $q=null) {
 		$data = null;
-		if( ($f->rtype == 'select' || $f->rtype == 'multi' || $f->rtype == 'auto') && ! ($f->ropts && $f->ropts['ajax']) ) {
+		$f = & $this->_fields[$name];
+
+		if( $f->rtype == 'select' || $f->rtype == 'multi' || $f->rtype == 'auto' ) {
 			// Retrieve data
 			$groups = array();
 			if( array_key_exists('data',$f->ropts) )
@@ -596,11 +588,45 @@ abstract class Model {
 					if( ! $this->_filter->isAllowed($k, $pk) )
 						unset($data[$pk]);
 
+			// Apply query
+			if( $q !== null && $q !== '' ) {
+				$q = strtolower($q);
+				foreach( $data as $pk => $v )
+					if( strpos(strtolower($v), $q) === false )
+						unset($data[$pk]);
+			}
+
 			// Assemble data
 			foreach( $data as $k => & $v )
 				$v = new FormFieldData($k, $v, isset($groups[$k])?$groups[$k]:null);
 			unset($v);
 		}
+
+		return $data;
+	}
+
+	/**
+	* Builds a localized label
+	*/
+	private function __buildLangLabel($label, $lang) {
+		return $label . ' (' . \Locale::getDisplayLanguage($lang) . ')';
+	}
+
+	/**
+	* Builds a single field, internal function
+	*
+	* @param $k string: The field name
+	* @param $f array: The field definition
+	* @param $value mixed: The field value
+	* @param $error string: The error message
+	*
+	* @return FormField: The built field
+	*/
+	private function __buildField($k, & $f, $value, $error) {
+		if( ! ($f->ropts && $f->ropts['ajax']) )
+			$data = $this->fieldData($k);
+		else
+			$data = null;
 
 		if( $f->rtype == 'password' ) // Do not show password
 			$value = null;

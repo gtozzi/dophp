@@ -40,6 +40,12 @@
 									dataType: 'json',
 									delay: 250,
 									cache: true,
+									data: function (params) {
+										return {
+											q: params.term,
+										};
+									},
+									minimumInputLength: 3,
 								},
 							{{/if}}
 						});

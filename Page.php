@@ -435,8 +435,17 @@ trait CrudFunctionalities {
 	* Runs the "ajax" crud action: searches on this model. This is a special action
 	*/
 	protected function _buildAjax() {
+		$field = $_GET['field'];
 		$q = $_GET['q'];
-		die(var_dump($q));
+
+		$data = [];
+		foreach( $this->_model->fieldData($field, $q) as $d )
+			$data[] = [ 'id'=>$d->value(), 'text'=>$d->descr() ];
+
+		$this->_headers['Content-type'] = 'application/json';
+
+		$this->_template = $this->_templateName('crud/ajax.tpl');
+		$this->_smarty->assign('data', json_encode($data));
 	}
 
 	/**
