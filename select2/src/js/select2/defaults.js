@@ -29,6 +29,7 @@ define([
   './dropdown/attachBody',
   './dropdown/minimumResultsForSearch',
   './dropdown/selectOnClose',
+  './dropdown/closeOnSelect',
 
   './i18n/en'
 ], function ($, ResultsList,
@@ -42,7 +43,7 @@ define([
              MinimumInputLength, MaximumInputLength, MaximumSelectionLength,
 
              Dropdown, DropdownSearch, HidePlaceholder, InfiniteScroll,
-             AttachBody, MinimumResultsForSearch, SelectOnClose,
+             AttachBody, MinimumResultsForSearch, SelectOnClose, CloseOnSelect,
 
              EnglishTranslation) {
   function Defaults () {
@@ -146,10 +147,17 @@ define([
         options.dropdownAdapter = SearchableDropdown;
       }
 
-      if (options.minimumResultsForSearch > 0) {
+      if (options.minimumResultsForSearch !== 0) {
         options.dropdownAdapter = Utils.Decorate(
           options.dropdownAdapter,
           MinimumResultsForSearch
+        );
+      }
+
+      if (options.closeOnSelect) {
+        options.dropdownAdapter = Utils.Decorate(
+          options.dropdownAdapter,
+          CloseOnSelect
         );
       }
 
@@ -172,13 +180,13 @@ define([
           options.selectionAdapter,
           Placeholder
         );
+      }
 
-        if (options.allowClear) {
-          options.selectionAdapter = Utils.Decorate(
-            options.selectionAdapter,
-            AllowClear
-          );
-        }
+      if (options.allowClear) {
+        options.selectionAdapter = Utils.Decorate(
+          options.selectionAdapter,
+          AllowClear
+        );
       }
 
       if (options.multiple) {
@@ -229,7 +237,7 @@ define([
             // The translation could not be loaded at all. Sometimes this is
             // because of a configuration problem, other times this can be
             // because of how Select2 helps load all possible translation files.
-            if (console && console.warn) {
+            if (window.console && console.warn) {
               console.warn(
                 'Select2: The lanugage file for "' + name + '" could not be ' +
                 'automatically loaded. A fallback will be used instead.'
@@ -309,6 +317,8 @@ define([
     this.defaults = {
       amdBase: 'select2/',
       amdLanguageBase: 'select2/i18n/',
+      closeOnSelect: true,
+      escapeMarkup: Utils.escapeMarkup,
       language: EnglishTranslation,
       matcher: matcher,
       minimumInputLength: 0,

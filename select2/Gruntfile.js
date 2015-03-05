@@ -14,9 +14,13 @@ module.exports = function (grunt) {
 
     'select2/compat/matcher',
     'select2/compat/initSelection',
+    'select2/compat/inputData',
     'select2/compat/query',
 
-    'select2/dropdown/attachContainer'
+    'select2/dropdown/attachContainer',
+    'select2/dropdown/stopPropagation',
+
+    'select2/selection/stopPropagation'
   ].concat(includes);
 
   var i18nModules = [];
@@ -25,6 +29,21 @@ module.exports = function (grunt) {
   var i18nFiles = grunt.file.expand({
     cwd: 'src/js'
   }, 'select2/i18n/*.js');
+
+  var testFiles = grunt.file.expand('tests/**/*.html');
+  var testUrls = testFiles.map(function (filePath) {
+    return 'http://localhost:9999/' + filePath;
+  });
+
+  var testBuildNumber = "unknown";
+
+  if (process.env.TRAVIS_JOB_ID) {
+    testBuildNumber = "travis-" + process.env.TRAVIS_JOB_ID;
+  } else {
+    var currentTime = new Date();
+
+    testBuildNumber = "manual-" + currentTime.getTime();
+  }
 
   for (var i = 0; i < i18nFiles.length; i++) {
     var file = i18nFiles[i];
@@ -42,6 +61,16 @@ module.exports = function (grunt) {
       docs: ['docs/_site']
     },
 
+    connect: {
+      tests: {
+        options: {
+          base: '.',
+          hostname: '127.0.0.1',
+          port: 9999
+        }
+      }
+    },
+
     uglify: {
       'dist': {
         src: 'dist/js/select2.js',
@@ -54,9 +83,48 @@ module.exports = function (grunt) {
     },
 
     qunit: {
-      all: [
-        'tests/**/*.html'
-      ]
+      all: {
+        options: {
+          urls: testUrls
+        }
+      }
+    },
+
+    'saucelabs-qunit': {
+      all: {
+        options: {
+          build: testBuildNumber,
+          tags: ['tests', 'qunit'],
+          urls: testUrls,
+          testname: 'QUnit test for Select2',
+          browsers: [
+            {
+              browserName: 'internet explorer',
+              version: '9'
+            },
+            {
+              browserName: 'internet explorer',
+              version: '10'
+            },
+
+            {
+              browserName: 'firefox'
+            },
+
+            {
+              browserName: 'chrome'
+            },
+
+            {
+              browserName: 'opera',
+              version: '12'
+            },
+            {
+              browserName: 'opera'
+            }
+          ]
+        }
+      }
     },
 
     'gh-pages': {
@@ -231,6 +299,7 @@ module.exports = function (grunt) {
 
   grunt.loadNpmTasks('grunt-contrib-clean');
   grunt.loadNpmTasks('grunt-contrib-concat');
+  grunt.loadNpmTasks('grunt-contrib-connect');
   grunt.loadNpmTasks('grunt-contrib-jshint');
   grunt.loadNpmTasks('grunt-contrib-qunit');
   grunt.loadNpmTasks('grunt-contrib-requirejs');
@@ -240,13 +309,29 @@ module.exports = function (grunt) {
 
   grunt.loadNpmTasks('grunt-gh-pages');
   grunt.loadNpmTasks('grunt-jekyll');
+  grunt.loadNpmTasks('grunt-saucelabs');
   grunt.loadNpmTasks('grunt-sass');
 
   grunt.registerTask('default', ['compile', 'test', 'minify']);
 
   grunt.registerTask('compile', ['requirejs', 'sass:dev']);
   grunt.registerTask('minify', ['uglify', 'sass:dist']);
-  grunt.registerTask('test', ['qunit', 'jshint']);
+  grunt.registerTask('test', ['connect:tests', 'qunit', 'jshint']);
+
+  var ciTasks = [];
+
+  ciTasks.push('compile')
+  ciTasks.push('connect:tests');
+
+  // Can't run Sauce Labs tests in pull requests
+  if (process.env.TRAVIS_PULL_REQUEST == 'false') {
+    ciTasks.push('saucelabs-qunit');
+  }
+
+  ciTasks.push('qunit');
+  ciTasks.push('jshint');
+
+  grunt.registerTask('ci', ciTasks);
 
   grunt.registerTask('docs', ['symlink:docs', 'jekyll:serve']);
 

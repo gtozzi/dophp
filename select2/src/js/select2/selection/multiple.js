@@ -52,8 +52,9 @@ define([
 
   MultipleSelection.prototype.display = function (data) {
     var template = this.options.get('templateSelection');
+    var escapeMarkup = this.options.get('escapeMarkup');
 
-    return template(data);
+    return escapeMarkup(template(data));
   };
 
   MultipleSelection.prototype.selectionContainer = function () {
@@ -84,6 +85,8 @@ define([
       var $selection = this.selectionContainer();
 
       $selection.append(formatted);
+      $selection.prop('title', selection.title || selection.text);
+
       $selection.data('data', selection);
 
       $selections.push($selection);

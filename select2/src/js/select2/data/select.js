@@ -47,9 +47,9 @@ define([
         data.push.apply(data, currentData);
 
         for (var d = 0; d < data.length; d++) {
-          id = data[d].id;
+          var id = data[d].id;
 
-          if (val.indexOf(id) === -1) {
+          if ($.inArray(id, val) === -1) {
             val.push(id);
           }
         }
@@ -61,7 +61,6 @@ define([
       var val = data.id;
 
       this.$element.val(val);
-
       this.$element.trigger('change');
     }
   };
@@ -85,9 +84,9 @@ define([
       var val = [];
 
       for (var d = 0; d < currentData.length; d++) {
-        id = currentData[d].id;
+        var id = currentData[d].id;
 
-        if (id !== data.id && val.indexOf(id) === -1) {
+        if (id !== data.id && $.inArray(id, val) === -1) {
           val.push(id);
         }
       }
@@ -147,6 +146,10 @@ define([
     });
   };
 
+  SelectAdapter.prototype.addOptions = function ($options) {
+    this.$element.append($options);
+  };
+
   SelectAdapter.prototype.option = function (data) {
     var option;
 
@@ -155,7 +158,12 @@ define([
       option.label = data.text;
     } else {
       option = document.createElement('option');
-      option.innerText = data.text;
+
+      if (option.textContent !== undefined) {
+        option.textContent = data.text;
+      } else {
+        option.innerText = data.text;
+      }
     }
 
     if (data.id) {
@@ -168,6 +176,10 @@ define([
 
     if (data.selected) {
       option.selected = true;
+    }
+
+    if (data.title) {
+      option.title = data.title;
     }
 
     var $option = $(option);
@@ -195,12 +207,14 @@ define([
         id: $option.val(),
         text: $option.html(),
         disabled: $option.prop('disabled'),
-        selected: $option.prop('selected')
+        selected: $option.prop('selected'),
+        title: $option.prop('title')
       };
     } else if ($option.is('optgroup')) {
       data = {
         text: $option.prop('label'),
-        children: []
+        children: [],
+        title: $option.prop('title')
       };
 
       var $children = $option.children('option');
