@@ -9,8 +9,7 @@
 				<input type="text" class="form-control form-label" value="{{(string)$field}}" readonly="readonly"/>
 			{{elseif $field->type()=='select' || $field->type()=='multi'}}
 				<select id="field_{{$field->name()}}" name="{{$field->name()}}{{if $field->type()=='multi'}}[]{{/if}}"
-					class="form-control {{if ! $field->ajax()}}select2{{/if}}"
-					{{if $field->type()=='multi'}}multiple{{/if}}
+					class="form-control" {{if $field->type()=='multi'}}multiple{{/if}}
 				>
 					<option value="">{{$field->descr()}}</option>
 					{{$og=null}}
