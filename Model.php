@@ -430,7 +430,7 @@ abstract class Model {
 
 		if( ! $data )
 			throw new \Exception('Loading forbidden data');
-		if( count($data) != 1 || $count != 1 )
+		if( count($data) != 1 )
 			throw new \Exception('Received too many data rows: ' . count($data) . '/' . $count);
 
 		return array_shift($data);
@@ -474,10 +474,10 @@ abstract class Model {
 		// Add main columns from field definitions
 		foreach( $this->_fields as $k => $f )
 			if( ( ($action=='admin' && $f->rtab) || ($action=='view' && $f->rview) ) ) {
-				if( $f->name )
+				if( $f->name && ! $f->nmtab )
 					$cols[] = $k;
 				$labels[$k] = $allLabels[$k];
-				if( isset($f->ropts['refer']) ) {
+				if( isset($f->ropts['refer']) && ! $f->nmtab ) {
 					$refmod = \DoPhp::model($f->ropts['refer']['model']);
 					if( ! in_array($refmod, $refs) )
 						$refs[] = $refmod;

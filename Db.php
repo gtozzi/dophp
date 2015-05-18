@@ -863,19 +863,23 @@ class Join {
 	*/
 	public function getJoin(Table $table, $alias) {
 		$sql = "LEFT JOIN `" . $this->_table->getName() . "` AS `" . $this->getAlias() . "`\n";
-		$first = true;
+		$refs = 0;
+
 		foreach( $table->getRefs() as $col => $ref )
 			if( $ref[0] == $this->_table->getName() ) {
+				$refs++;
 				$sql .= "\t";
 
-				if( $first ) {
+				if( $refs == 1 )
 					$sql .= "ON ";
-					$first = false;
-				} else
+				else
 					$sql .= "AND ";
 
 				$sql .= "`$alias`.`$col` = `" . $this->getAlias() . "`.`$ref[1]`\n";
 			}
+
+		if( ! $refs )
+			throw new \Exception('Unable to parse reference for join');
 
 		return $sql;
 	}
