@@ -42,6 +42,7 @@
 					}
 				},
 				'columns': [
+					{ "title": "PK", },
 					{{foreach $cols as $h => $e}}
 						{ "title": '{{addslashes($e)}}', },
 					{{/foreach}}
@@ -50,6 +51,9 @@
 					{{foreach $items as $it}}{{strip}}
 						[
 							{{foreach $cols as $h => $e}}
+								{{if $e@first}}
+									{{json_encode($it[$h]->value())}},
+								{{/if}}
 								{{json_encode($it[$h]->format())}},
 							{{/foreach}}
 						],{{"\n"}}
@@ -57,10 +61,11 @@
 				],
 				"columnDefs": [
 					{{if $this->getActions()}}
+						{ "visible": false, "targets": 0 },
 						{ "orderable": false, "targets": {{count($cols)}} },
 						{
 							"data": function(row) {
-								var id = row[0].trim();
+								var id = row[0];
 								var url;
 								var actions = '';
 								{{foreach $this->getActions() as $name => $action}}{{strip}}
