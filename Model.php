@@ -312,6 +312,9 @@ abstract class Model {
 
 				// Update related data, if needed
 				foreach( $related as $k => $v ) {
+					if( $v === null )
+						continue;
+
  					$rinfo = $this->__analyzeRelation($this->_fields[$k]);
 
 					// Normalize $v syntax: $v is now an array of associative arrays: $pk => [ extra fields ]
