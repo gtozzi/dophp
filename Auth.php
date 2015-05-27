@@ -137,31 +137,48 @@ class AuthPlain extends AuthBase implements AuthInterface {
 	protected function _doLogin() {
 		$user = null;
 		$pwd = null;
+		$source = null;
 
 		if( isset($_SERVER[self::HEAD_USER]) && isset($_SERVER[self::HEAD_PASS]) ) {
+			$source = 'headers';
 			$user = $_SERVER[self::HEAD_USER];
 			$pwd = $_SERVER[self::HEAD_PASS];
 		} elseif( isset($_REQUEST['login']) && $_REQUEST['login'] ) {
+			$source = 'user';
 			$user = isset($_REQUEST['username']) ? $_REQUEST['username'] : null;
 			$pwd = isset($_REQUEST['password']) ? $_REQUEST['password'] : null;
 		} elseif( $this->_sess ) {
+			$source = 'session';
 			$user = $_SESSION[self::SESS_VAR.'username'];
 			$pwd = $_SESSION[self::SESS_VAR.'password'];
 		}
 
-		if( ! $user || ! $pwd )
+		if( ! $user || ! $pwd || ! $source )
 			return null;
 
-		$uid = $this->_login($user, $pwd);
+		$uid = $this->_login($user, $pwd, $source);
 		if( ! $uid )
 			return null;
 
+		$this->saveSession($user, $pwd);
+
+		return $uid;
+	}
+
+	/**
+	* Save login credentials in session
+	*
+	* @param $user string: The username
+	* @param $pwd string: The password
+	* @return bool: True if session has been saved
+	*/
+	public function saveSession($user, $pwd) {
 		if( $this->_sess ) {
 			$_SESSION[self::SESS_VAR.'username'] = $user;
 			$_SESSION[self::SESS_VAR.'password'] = $pwd;
+			return true;
 		}
-
-		return $uid;
+		return false;
 	}
 
 	/**
@@ -169,10 +186,11 @@ class AuthPlain extends AuthBase implements AuthInterface {
 	*
 	* @param $user string: The username
 	* @param $pwd string: The password
+	* @param $source string: The source for the credendials (headers|user|session)
 	* @return integer The user's ID on success
 	*/
-	protected function _login($user, $pwd) {
-		return $this->_db->login($user, $pwd);
+	protected function _login($user, $pwd, $source) {
+		return $this->_db->login($user, $pwd, $source);
 	}
 
 }
@@ -220,13 +238,27 @@ class AuthSign extends AuthBase implements AuthInterface {
 		if( $sign !== $countersign )
 			return null;
 
-		if( $this->_sess ) {
-			$_SESSION[self::SESS_VAR.'user'] = $user;
-			$_SESSION[self::SESS_VAR.'sign'] = $sign;
-		}
+		$this->saveSession($user, $sign);
 
 		return $uid;
 	}
+
+	/**
+	* Save login credentials in session
+	*
+	* @param $user string: The username
+	* @param $sign string: The signature
+	* @return bool: True if session has been saved
+	*/
+	public function saveSession($user, $sign) {
+		if( $this->_sess ) {
+			$_SESSION[self::SESS_VAR.'user'] = $user;
+			$_SESSION[self::SESS_VAR.'sign'] = $sign;
+			return true;
+		}
+		return false;
+	}
+
 
 	/**
 	* Reads user's ID and password from database, may be overridden
