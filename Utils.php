@@ -299,7 +299,7 @@ class Utils {
 	*
 	* @todo Merge with Validator
 	* @param $value string: The input value
-	* @param $type string: The type
+	* @param $type string: The type (null = bypass cleaning)
 	* @return mixed: The correctly typed value
 	*/
 	public static function cleanValue($value, $type) {
@@ -312,6 +312,8 @@ class Utils {
 			return (double)$value;
 		case 'bool':
 			return (bool)$value;
+		case null:
+			return $value;
 		default:
 			throw new \Exception("Uknown type $t");
 		}
