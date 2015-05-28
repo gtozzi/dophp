@@ -78,7 +78,7 @@
 								{{/strip}}{{/foreach}}
 								return actions;
 							},
-							"targets": {{count($cols)}}
+							"targets": {{count($cols)+1}}
 						},
 					{{/if}}
 				]
