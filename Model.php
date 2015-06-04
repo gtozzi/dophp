@@ -250,7 +250,7 @@ abstract class Model {
 
 			$related = array();
 			if( ! $errors ) {
-				if( ! $this->isAllowed($data) )
+				if( ! $this->isAllowed($data, true) )
 					throw new \Exception('Saving forbidden data');
 
 				foreach( $this->_fields as $k => $f ) {
@@ -387,7 +387,7 @@ abstract class Model {
 							$record[$n][] = $r[$rinfo['mcol']];
 					}
 
-			if( ! $this->isAllowed($record) )
+			if( ! $this->isAllowed($record, true) )
 				throw new \Exception('Loading forbidden data');
 		}
 
@@ -593,7 +593,7 @@ abstract class Model {
 			if( isset($this->_filter) || ($q !== null && $q !== '') || $pks )
 				foreach( $data as $pk => $v )
 					if(
-						( isset($this->_filter) && ! $this->_filter->isAllowed($k, $pk) )
+						( isset($this->_filter) && ! $this->_filter->isAllowed($k, $pk, false) )
 						||
 						( $q !== null && $q !== '' && strpos(strtolower($v), $q) === false )
 						||
@@ -862,14 +862,15 @@ abstract class Model {
 	* Checks if a given record is allowed based on current filter
 	*
 	* @param $record array: a query result or post record
+	* @param $write boolean: if true, use is trying write access, read if false
 	* @return boolean: True when allowed
 	*/
-	protected function isAllowed($record) {
+	protected function isAllowed($record, $write) {
 		if( ! $this->_filter )
 			return true;
 
 		foreach( $record as $c => $v )
-			if( ! $this->_filter->isAllowed($c, $v) )
+			if( ! $this->_filter->isAllowed($c, $v, $write) )
 				return false;
 
 		return true;
@@ -1291,8 +1292,9 @@ interface AccessFilterInterface {
 	*
 	* @param $field string: name of the field
 	* @param $val mixed: the value to be assigned
+	* @param $write bool: if true, user is requetsing write access
 	*/
-	public function isAllowed($field, $val);
+	public function isAllowed($field, $val, $write);
 
 }
 
@@ -1345,7 +1347,7 @@ class SimpleAccessFilter implements AccessFilterInterface {
 		return $this->_where;
 	}
 
-	public function isAllowed($field, $val) {
+	public function isAllowed($field, $val, $write) {
 		if( array_key_exists($field, $this->_conditions) ) {
 			if( ( is_array($this->_conditions[$field]) && in_array($val, $this->_conditions[$field]) ) || $this->_conditions[$field] === $val )
 				return true;
@@ -1372,7 +1374,7 @@ class NullAccessFilter implements AccessFilterInterface {
 		return $this->_where;
 	}
 
-	public function isAllowed($field, $val) {
+	public function isAllowed($field, $val, $write) {
 		return true;
 	}
 
