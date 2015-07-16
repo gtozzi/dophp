@@ -171,12 +171,19 @@ class DoPhp {
 		if(array_key_exists($key, $_REQUEST) && $_REQUEST[$key] && !strpos($_REQUEST[$key], '/') && file_exists($inc_file))
 			$page = $_REQUEST[$key];
 		elseif( $def ) {
+			if( $def == $_REQUEST[$key] ) {
+				// Prevent loop redirection
+				header("HTTP/1.1 500 Internal Server Error");
+				echo('SERVER ERROR: Invalid default page');
+				return;
+			}
+
 			$to = dophp\Utils::fullPageUrl($def, $key);
 			header("HTTP/1.1 301 Moved Permanently");
 			header("Location: $to");
 			echo $to;
 			return;
-		}else{
+		} else {
 			header("HTTP/1.1 400 Bad Request");
 			echo('Unknown Page');
 			return;
@@ -223,6 +230,13 @@ class DoPhp {
 			return;
 		} catch( dophp\PageDenied $e ) {
 			if( $def ) {
+				if( $def == $page ) {
+					// Prevent loop redirection
+					header("HTTP/1.1 500 Internal Server Error");
+					echo('SERVER ERROR: Login required in login page');
+					return;
+				}
+
 				$to = dophp\Utils::fullPageUrl($def, $key);
 				header("HTTP/1.1 303 Login Required");
 				header("Location: $to");
