@@ -405,12 +405,12 @@ abstract class Model {
 				foreach( \DoPhp::lang()->getSupportedLanguages() as $l ) {
 					$fl = $f;
 					$fl->label = $this->__buildLangLabel($fl->label, $l);
-					$val = $data&&isset($data[$k][$l]) ? $data[$k][$l] : (isset($record)?\DoPhp::lang()->getText($record[$k],$l):null);
+					$val = $data&&isset($data[$k][$l]) ? $data[$k][$l] : (isset($record)?\DoPhp::lang()->getText($record[$k],$l):$f->getDefault());
 					$err = $errors&&isset($errors[$k][$l]) ? $errors[$k][$l] : null;
 					$fields["{$k}[{$l}]"] = $this->__buildField($k, $fl, $val, $err);
 				}
 			} else {
-				$val = $data&&isset($data[$k]) ? $data[$k] : (isset($record)?$record[$k]:null);
+				$val = $data&&isset($data[$k]) ? $data[$k] : (isset($record)?$record[$k]:$f->getDefault());
 				$err = $errors&&isset($errors[$k]) ? $errors[$k] : null;
 				$fields[$k] = $this->__buildField($k, $f, $val, $err);
 			}
@@ -1023,6 +1023,12 @@ class FieldDefinition {
 	public $postp = null;
 
 	/**
+	* mixed: If given, this will be the default value suggested on insert
+	*        it can also be a lambda function that will be called with no arguments
+	*/
+	public $default = null;
+
+	/**
 	* mixed: If given, this field will always be set to this static value
 	*/
 	public $value = null;
@@ -1076,6 +1082,16 @@ class FieldDefinition {
 			throw new \Exception('Unvalid referred data');
 		if( array_key_exists('data',$this->ropts) && array_key_exists('refer',$this->ropts) )
 			throw new \Exception('"refer" and "data" options are mutually exclusive');
+	}
+
+	/**
+	* Returns default value on insert
+	*/
+	public function getDefault() {
+		$def = & $this->default;
+		if( is_callable($def) )
+			return $def();
+		return $def;
 	}
 
 }
