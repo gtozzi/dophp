@@ -333,8 +333,10 @@ abstract class Model {
 						if( ! $v || ! array_key_exists($r[$rinfo['mcol']], $v) )
 							$rinfo['nm']->delete($r);
 						elseif( array_key_exists($r[$rinfo['mcol']], $v) && is_array($v[$r[$rinfo['mcol']]]) ) {
-							$pkdata = array($rinfo['ncol'] => $pk, $rinfo['mcol'] => $r[$rinfo['mcol']]);
-							$rinfo['nm']->update($pkdata, $v[$r[$rinfo['mcol']]]);
+							if( count($v[$r[$rinfo['mcol']]]) ) {
+								$pkdata = array($rinfo['ncol'] => $pk, $rinfo['mcol'] => $r[$rinfo['mcol']]);
+								$rinfo['nm']->update($pkdata, $v[$r[$rinfo['mcol']]]);
+							}
 						}
 					}
 
