@@ -84,7 +84,7 @@ class Validator {
 			elseif( substr($type,0,5) == 'array' )
 				$validator = new $vname($this->__post[$k], $options, $this->__post);
 			else
-				$validator = new $vname(trim($this->__post[$k]), $options, $this->__post);
+				$validator = new $vname($this->__post[$k], $options, $this->__post);
 			$data[$k] = $validator->clean();
 			if( $err = $validator->validate() )
 				$errors[$k] = $err;
