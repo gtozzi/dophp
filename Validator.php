@@ -342,9 +342,31 @@ class bool_validator extends base_validator {
 /**
 * Validate as DateTime
 *
+* Custom validation rules: 'min'=>val, Date must be greater or equal than value
+*                          'max'=>val, Date must be lesser or equal than value
+*
 * @return object DateTime
 */
 class date_validator extends base_validator {
+
+	protected function do_validate( &$v, &$o ) {
+		if( isset($o['min']) )
+			if( $err = $this->check_min($v, $o['min']) )
+				return $err;
+		if( isset($o['max']) )
+			if( $err = $this->check_max($v, $o['max']) )
+				return $err;
+	}
+	protected function check_min($val, $min) {
+		if( $val === null || $val >= $min )
+			return false;
+		return str_replace('{date}', $this->format_date($min), _('Date must be {date} or after')) . '.';
+	}
+	protected function check_max($val, $max) {
+		if( $val === null || $val <= $max )
+			return false;
+		return str_replace('{date}', $this->format_date($max), _('Date must be {date} or before')) . '.';
+	}
 
 	protected function do_clean($val) {
 		if( gettype($val) == 'object' && $val instanceof \DateTime )
@@ -355,6 +377,13 @@ class date_validator extends base_validator {
 			return null;
 		}
 		return $date;
+	}
+
+	/**
+	* Utility function to convert a date to string
+	*/
+	protected function format_date($date) {
+		return strftime('%c', $date->format('U'));
 	}
 }
 

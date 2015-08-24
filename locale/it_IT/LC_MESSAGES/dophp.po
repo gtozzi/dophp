@@ -6,156 +6,164 @@ msgid ""
 msgstr ""
 "Project-Id-Version: DoPhp\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2014-12-21 22:46+0100\n"
-"PO-Revision-Date: 2014-12-21 22:49+0200\n"
-"Last-Translator: Gabriele Tozzi <gabriele@tozzi.eu>\n"
+"POT-Creation-Date: 2015-08-24 18:53+0200\n"
+"PO-Revision-Date: 2015-08-24 18:55+0100\n"
+"Last-Translator: \n"
 "Language-Team: Gabriele Tozzi <tozzi@despammed.com>\n"
 "Language: it\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
-"X-Generator: Virtaal 0.7.1\n"
+"X-Generator: Poedit 1.5.4\n"
 "X-Poedit-SourceCharset: UTF-8\n"
 "X-Poedit-Basepath: ../../../\n"
 
-#: Model.php:526
+#: Model.php:552
 msgid "item is in use"
 msgstr "l'elemento è in uso"
 
-#: Model.php:1049
-msgid "Yes"
-msgstr "Sì"
-
-#: Model.php:1049
-msgid "No"
-msgstr "No"
-
-#: Page.php:208 Page.php:238 Page.php:323
+#: Page.php:289 Page.php:319 Page.php:405
 msgid "Edit"
 msgstr "Modifica"
 
-#: Page.php:209 Page.php:291
+#: Page.php:290 Page.php:373
 msgid "Insert"
 msgstr "Inserisci"
 
-#: Page.php:237
+#: Page.php:318
 msgid "Show"
 msgstr "Mostra"
 
-#: Page.php:239 Page.php:345
+#: Page.php:320 Page.php:427
 msgid "Delete"
 msgstr "Cancella"
 
-#: Page.php:239
+#: Page.php:320
 msgid "Are you sure?"
 msgstr "Sei sicuro?"
 
-#: Page.php:250
+#: Page.php:332
 msgid "No data available in table"
 msgstr "Nessun dato presente nella tabella"
 
-#: Page.php:251
+#: Page.php:333
 msgid "Showing _START_ to _END_ of _TOTAL_ entries"
 msgstr "Vista da _START_ a _END_ di _TOTAL_ elementi"
 
-#: Page.php:252
+#: Page.php:334
 msgid "Showing 0 to 0 of 0 entries"
 msgstr "Vista da 0 a 0 di 0 elementi"
 
-#: Page.php:253
+#: Page.php:335
 msgid "(filtered from _MAX_ total entries)"
 msgstr "strCantDelete"
 
-#: Page.php:256
+#: Page.php:338
 msgid "Show _MENU_ elements"
 msgstr "Visualizza _MENU_ elementi"
 
-#: Page.php:257
+#: Page.php:339
 msgid "Loading..."
 msgstr "Caricamento..."
 
-#: Page.php:258
+#: Page.php:340
 msgid "Processing..."
 msgstr "Elaborazione..."
 
-#: Page.php:259
+#: Page.php:341
 msgid "Search"
 msgstr "Cerca"
 
-#: Page.php:260
+#: Page.php:342
 msgid "Search returned zero records"
 msgstr "La ricerca non ha portato alcun risultato"
 
-#: Page.php:262
+#: Page.php:344
 msgid "First"
 msgstr "Primo"
 
-#: Page.php:263
+#: Page.php:345
 msgid "Previous"
 msgstr "Precedente"
 
-#: Page.php:264
+#: Page.php:346
 msgid "Next"
 msgstr "Successivo"
 
-#: Page.php:265
+#: Page.php:347
 msgid "Last"
 msgstr "Ultimo"
 
-#: Page.php:268
+#: Page.php:350
 msgid "sort the column in ascending order"
 msgstr "ordina la colonna in ordine crescente"
 
-#: Page.php:269
+#: Page.php:351
 msgid "sort the column in descending order"
 msgstr "ordina la colonna in ordine decrescente"
 
-#: Page.php:343
+#: Page.php:425
 msgid "Can't delete"
 msgstr "Non posso cancellare"
+
+#: Utils.php:166
+msgid "Yes"
+msgstr "Sì"
+
+#: Utils.php:166
+msgid "No"
+msgstr "No"
 
 #: Validator.php:174
 msgid "Field must be one of"
 msgstr "Il campo deve essere uno tra"
 
-#: Validator.php:206 Validator.php:405 Validator.php:438
+#: Validator.php:206 Validator.php:435 Validator.php:468
 msgid "Field can't be empty"
 msgstr "Il campo non può essere vuoto"
 
-#: Validator.php:241
+#: Validator.php:242
 msgid "Unvalid eMail"
 msgstr "eMail non valida"
 
-#: Validator.php:247
+#: Validator.php:248
 msgid "Unvalid absolute URL"
 msgstr "URL assoluto non valido"
 
-#: Validator.php:253
+#: Validator.php:254
 msgid "Text must be at least {number} characters long"
 msgstr "Il testo deve essere lungo almeno {number} caratteri"
 
-#: Validator.php:255
+#: Validator.php:256
 msgid "Text must be no longer than {number} characters"
 msgstr "Il testo non deve essere più lungo di {number} caratteri"
 
-#: Validator.php:278
+#: Validator.php:279
 msgid "Number must be at least {number}"
 msgstr "Il numero deve essere almeno {number}"
 
-#: Validator.php:283
+#: Validator.php:284
 msgid "Number must not be bigger than {number}"
 msgstr "Il numero non deve essere più grande di {number}"
 
-#: Validator.php:407
+#: Validator.php:363
+msgid "Date must be {date} or after"
+msgstr "La data deve essere {date} o successiva"
+
+#: Validator.php:368
+msgid "Date must be {date} or before"
+msgstr "La data deve essere {date} o precedente"
+
+#: Validator.php:437
 msgid "Unvalid file size"
 msgstr "Dimensione file non valida"
 
-#: Validator.php:419
+#: Validator.php:449
 msgid "Unsupported file type"
 msgstr "Tipo file non supportato"
 
-#: Validator.php:441
+#: Validator.php:471
 msgid "Must be an array"
 msgstr "Deve essere un array"
 
