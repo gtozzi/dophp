@@ -131,7 +131,7 @@ class RpcTest:
 		try:
 			return json.loads(decoded.decode('utf-8'))
 		except ValueError:
-			raise RuntimeError("Unvalid response data:\n%s" % data)
+			raise RuntimeError("Unvalid response data:\n%s\nRaw:\n%s" % (decoded, data))
 
 # -----------------------------------------------------------------------------
 
