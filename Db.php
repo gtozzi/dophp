@@ -15,9 +15,17 @@ namespace dophp;
 */
 class Db {
 
+	/** If true, enables debug functions */
+	public $debug = false;
+
 	/** PDO instance */
 	protected $_pdo;
-	
+
+	/** Wiritten in debug mode, do not use for different purposes */
+	public $lastQuery = null;
+	/** Wiritten in debug mode, do not use for different purposes */
+	public $lastParams = null;
+
 	/**
 	* Starts a PDO connection to DB
 	*
@@ -42,6 +50,7 @@ class Db {
 	public function run($query, $params=array()) {
 		if( ! is_array($params) )
 			$params = array($params);
+
 		foreach($params as & $p)
 			if( gettype($p) == 'boolean' ) { // PDO would convert false into null otherwise
 				if( $p === true )
@@ -55,8 +64,15 @@ class Db {
 				$p = $p->format('H:i:s');
 			elseif( $p instanceof \DateTime )
 				$p = $p->format('Y-m-d H:i:s');
+
+		if( $this->debug ) {
+			$this->lastQuery = $query;
+			$this->lastParams = $params;
+		}
+
 		$st = $this->_pdo->prepare($query);
 		$st->execute($params);
+
 		return $st;
 	}
 

@@ -91,6 +91,8 @@ class DoPhp {
 	*                     'path' => relative or absolute DoPhp root path
 	*                               Default: automatically detect it
 	*                 )
+	*                 'debug' => enables debug info, should be false in production servers
+	*
 	* @param $db     string: Name of the class to use for the database connection
 	* @param $auth   string: Name of the class to use for user authentication
 	* @param $lang   string: Name of the class to use for multilanguage handling
@@ -137,6 +139,8 @@ class DoPhp {
 			$this->__conf['dophp']['url'] = preg_replace('/^'.preg_quote($_SERVER['DOCUMENT_ROOT'],'/').'/', '', __DIR__, 1);
 		if( ! array_key_exists('path', $this->__conf['dophp']) )
 			$this->__conf['dophp']['path'] = __DIR__;
+		if( ! array_key_exists('debug', $this->__conf) )
+			$this->__conf['debug'] = false;
 
 		//Set the locale
 		bindtextdomain(self::TEXT_DOMAIN, __DIR__ . '/locale');
@@ -153,6 +157,8 @@ class DoPhp {
 		// Creates database connection, if needed
 		if( array_key_exists('db', $this->__conf) )
 			$this->__db = new $db($this->__conf['db']['dsn'], $this->__conf['db']['user'], $this->__conf['db']['pass']);
+		if( $this->__conf['debug'] )
+			$this->__db->debug = true;
 
 		// Creates the locale object
 		$this->__lang = new $lang($this->__db, $this->__conf['lang']['supported'], $this->__conf['lang']['coding'], $this->__conf['lang']['tables']);
@@ -260,11 +266,21 @@ class DoPhp {
 			return;
 		} catch( Exception $e ) {
 			header("HTTP/1.1 500 Internal Server Error");
-			$err = 'Catched Exception: ' . $e->getCode() . '.' . $e->getMessage() . 
-				"\nFile: " . $e->getFile() . "\nLine: " . $e->getLine() .
-				"\nTrace:\n" . $e->getTraceAsString();
-			echo $err;
-			error_log($err);
+			$err = "<html><h1>DoPhp Catched Exception</h1>\n" .
+				'<p>&#8220;' . $e->getCode() . '.' . $e->getMessage() . "&#8220;</p>\n" .
+				'<ul>' .
+				'<li><b>File:</b> ' . $e->getFile() . "</li>\n" .
+				'<li><b>Line:</b> ' . $e->getLine() . "</li>\n" .
+				'<li><b>Trace:</b> ' . nl2br($e->getTraceAsString()) . "</li>";
+			if( $this->__conf['debug'] ) {
+				// Add extra useful information
+				if( $e instanceof PDOException )
+					$err .= "\n<li><b>Last Query:</b> " . $this->__db->lastQuery . "</li>\n" .
+						'<li><b>Last Params:</b> ' . nl2br(print_r($this->__db->lastParams,true)) . "</li>\n";
+			}
+			$err .= '</ul></html>';
+			echo($err);
+			error_log(strip_tags($err));
 			return;
 		}
 
