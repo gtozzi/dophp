@@ -272,7 +272,7 @@ class Utils {
 	* @return array: the parsed array. Cointains the keys specified on both
 	*                input and template, type is casted according to template.
 	*/
-	public static function cleanArray($array, $template) {
+	public static function cleanArray(& $array, $template) {
 		$out = array();
 		foreach( $template as $k => $t )
 			if( $k === 0 ) {
@@ -302,7 +302,7 @@ class Utils {
 	* @param $type string: The type (null = bypass cleaning)
 	* @return mixed: The correctly typed value
 	*/
-	public static function cleanValue($value, $type) {
+	public static function cleanValue(& $value, $type) {
 		switch($type) {
 		case 'string':
 			return (string)$value;
@@ -313,7 +313,7 @@ class Utils {
 		case 'bool':
 			return (bool)$value;
 		case null:
-			return $value;
+			return null;
 		default:
 			throw new \Exception("Uknown type $t");
 		}
