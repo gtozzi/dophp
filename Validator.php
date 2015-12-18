@@ -484,6 +484,6 @@ class array_validator implements field_validator {
 	}
 
 	public function validate() {
-		return $this->__error;
+		return $this->__error ? print_r($this->__error, true) : $this->__error;
 	}
 }

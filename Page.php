@@ -142,7 +142,7 @@ abstract class PageBase {
 	* @param $str string: The uncompressed data
 	* @return string: The data compressed or not according to compression settings
 	*/
-	protected function _compress(& $str) {
+	protected function _compress($str) {
 		if( $this->_compress === true )
 			$this->_compress = -1;
 
