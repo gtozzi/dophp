@@ -73,9 +73,9 @@ abstract class PageBase {
 	/** Headers to be output */
 	protected $_headers = array();
 	/**
-		ZLib deflate compression level for output
-		if different than 0, enables compression. -1 to 9 or bool true.
-		If true or -1, uses default zlib's compression level.
+	* ZLib deflate compression level for output
+	* if different than 0, enables compression. -1 to 9 or bool true.
+	* If true or -1, uses default zlib's compression level.
 	*/
 	protected $_compress = 0;
 	/**
@@ -541,7 +541,7 @@ abstract class JsonBaseMethod extends PageBase implements PageInterface {
 	* @return The value to be json-encoded and returned to the client
 	*/
 	protected function _invalid(& $pars, & $errors) {
-		$mex = "Unvalid arguments:<br/>\n";
+		$mex = "Invalid arguments:<br/>\n";
 		foreach( $errors as $n=>$e )
 			$mex .= "- <b>$n</b>: $e<br/>\n";
 		throw new PageError($mex);
