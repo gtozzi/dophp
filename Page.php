@@ -600,7 +600,13 @@ abstract class JsonRpcMethod extends JsonBaseMethod {
 	* Parses input JSON
 	*/
 	public function _getInput() {
-		return json_decode(file_get_contents("php://input"), true);
+		if( isset($_SERVER['HTTP_CONTENT_ENCODING']) && $_SERVER['HTTP_CONTENT_ENCODING'] == 'gzip' ) {
+			$input = gzdecode(file_get_contents("php://input"));
+			if( $input === false )
+				throw new PageError('Couldn\'t decode gzip input');
+		} else
+			$input = file_get_contents("php://input");
+		return json_decode($input, true);
 	}
 
 }
