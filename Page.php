@@ -85,6 +85,8 @@ abstract class PageBase {
 	* by client
 	*/
 	protected $_forceCompress = false;
+	/** If set, will not compress data below this size */
+	protected $_minCompressSize = null;
 	/** After how many seconds cache will expire (cache is not enabled by default) */
 	protected $_cacheExpire = 300;
 
@@ -146,7 +148,9 @@ abstract class PageBase {
 		if( $this->_compress === true )
 			$this->_compress = -1;
 
-		if( $this->_compress ) {
+		if( $this->_compress &&
+			( $this->_minCompressSize === null || strlen($str) >= $this->_minCompressSize )
+		) {
 			$head = Utils::headers();
 			$supported = array();
 			if( isset($head['Accept-Encoding']) )
