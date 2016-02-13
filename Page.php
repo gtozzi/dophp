@@ -228,7 +228,7 @@ abstract class PageSmarty extends PageBase implements PageInterface {
 		$this->_build();
 
 		// Run smarty
-		return $this->_smarty->fetch($this->_template);
+		return $this->_compress($this->_smarty->fetch($this->_template));
 	}
 
 	/**
