@@ -232,6 +232,8 @@ class DoPhp {
 				$out = $pobj->run();
 		} catch( dophp\InvalidCredentials $e ) {
 			header("HTTP/1.1 401 Unhautorized");
+			// Required by RFC 7235
+			header("WWW-Authenticate: Custom");
 			echo $e->getMessage();
 			return;
 		} catch( dophp\PageDenied $e ) {
