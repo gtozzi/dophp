@@ -135,17 +135,26 @@ class Lang {
 		if( $manual && in_array($manual, $this->_supported) )
 			return $this->setLanguage($manual);
 
-		if( isset($_GET[self::LANG_KEY]) && in_array($_GET[self::LANG_KEY], $this->_supported) )
-			return $this->setLanguage($_GET[self::LANG_KEY]);
+		if( isset($_GET[self::LANG_KEY]) ) {
+			$lang = $this->getSupportedLanguageName(trim($_GET[self::LANG_KEY]));
+			if( $lang )
+				return $this->setLanguage($lang);
+		}
 
-		if( isset($_POST[self::LANG_KEY]) && in_array($_POST[self::LANG_KEY], $this->_supported) )
-			return $this->setLanguage($_POST[self::LANG_KEY]);
+		if( isset($_POST[self::LANG_KEY]) ) {
+			$lang = $this->getSupportedLanguageName(trim($_POST[self::LANG_KEY]));
+			if( $lang )
+				return $this->setLanguage($lang);
+		}
 
 		if( isset($_SESSION[self::LANG_KEY]) )
 			return $this->setLanguage($_SESSION[self::LANG_KEY]);
 
-		if( isset($_COOKIE[self::LANG_KEY]) && in_array($_COOKIE[self::LANG_KEY], $this->_supported) )
-			return $this->setLanguage($_COOKIE[self::LANG_KEY]);
+		if( isset($_COOKIE[self::LANG_KEY]) ) {
+			$lang = $this->getSupportedLanguageName($_COOKIE[self::LANG_KEY]);
+			if( $lang )
+				return $this->setLanguage($lang);
+		}
 
 		return $this->setLanguage(Utils::getBrowserLanguage($this->_supported));
 	}
@@ -166,6 +175,31 @@ class Lang {
 	*/
 	public function getSupportedLanguages() {
 		return $this->_supported;
+	}
+
+	/**
+	* Checks if a language name is supported, returns the closest matching
+	* supported language
+	*
+	* @return string: The full supported name, or null if not supported
+	* @example getSupportedLanguageName('en') could return 'en_US'
+	*/
+	public function getSupportedLanguageName($lang) {
+		if( ! $lang )
+			return null;
+
+		if( in_array($lang, $this->_supported) )
+			return $lang;
+
+		$country = $this->getCountryCode($lang);
+		if( ! $country )
+			return null;
+
+		foreach( $this->_supported as $l )
+			if( strlen($l) >= strlen($lang) && substr($l,0,strlen($lang)) == $lang )
+				return $l;
+
+		return null;
 	}
 
 	/**
