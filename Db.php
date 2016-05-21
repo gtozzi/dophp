@@ -120,6 +120,18 @@ class Db {
 	}
 
 	/**
+	* Runs an INSERT ON DUPLICATE KEY UPDATE statement from an associative array
+	*
+	* @see buildInsUpdQuery
+	*/
+	public function insertOrUpdate($table, $params) {
+		list($q,$p) = $this->buildInsUpdQuery('insupd', $table, $params);
+
+		$this->run($q, $p);
+		// Does not return LAST_INSERT_ID because it is not updated on UPDATE
+	}
+
+	/**
 	* Runs FOUND_ROWS() and returns result
 	*
 	* @return int: Number of found rows
@@ -171,8 +183,10 @@ class Db {
 	/**
 	* Builds a partial query suitable for insert or update in the format
 	* "SET col1 = val1, col2 = val2, ..."
+	* The "insupd" type builds and INSERT query with an
+	* "ON DUPLICATE KEY UPDATE" condition for all the values
 	*
-	* @param $type string: The query type (ins, upd)
+	* @param $type string: The query type (ins, upd, insupd)
 	* @param $table string: The name of the table
 	* @see buildParams
 	* @return array [query string, params]
@@ -180,6 +194,7 @@ class Db {
 	public static function buildInsUpdQuery($type, $table, $params) {
 		switch( $type ) {
 		case 'ins':
+		case 'insupd':
 			$q = 'INSERT INTO';
 			break;
 		case 'upd':
@@ -191,6 +206,8 @@ class Db {
 
 		list($cols, $p) = self::buildParams($params);
 		$q .= " `$table` SET $cols" ;
+		if( $type == 'insupd' )
+			$q .= " ON DUPLICATE KEY UPDATE $cols";
 		return array($q, $p);
 	}
 
