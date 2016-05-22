@@ -149,8 +149,8 @@ class AuthPlain extends AuthBase implements AuthInterface {
 			$pwd = isset($_REQUEST['password']) ? $_REQUEST['password'] : null;
 		} elseif( $this->_sess ) {
 			$source = 'session';
-			$user = $_SESSION[self::SESS_VAR.'username'];
-			$pwd = $_SESSION[self::SESS_VAR.'password'];
+			$user = isset($_SESSION[self::SESS_VAR.'username']) ? $_SESSION[self::SESS_VAR.'username'] : null;
+			$pwd = isset($_SESSION[self::SESS_VAR.'password']) ? $_SESSION[self::SESS_VAR.'password'] : null;
 		}
 
 		if( ! $user || ! $pwd || ! $source )
