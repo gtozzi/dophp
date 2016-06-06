@@ -34,13 +34,13 @@ class ParamAction(argparse.Action):
 
 
 class RpcTest:
-	
+
 	SEP = '~'
-	
+
 	def __init__(self, url, user=None, pwd=None, headers={}, auth='sign', gzip=False, deflate=False):
 		'''
 		Init the RPC Client
-		
+
 		@param url string: The base URL
 		@param user string: The username
 		@param pwd string: The password
@@ -58,7 +58,7 @@ class RpcTest:
 			self.conn = http.client.HTTPSConnection
 		else:
 			raise ValueError('Unknown scheme', self.baseUrl.scheme)
-		
+
 		self.auth = auth
 		self.user = user
 		self.pwd = pwd
@@ -105,10 +105,10 @@ class RpcTest:
 		self.log.debug("BODY:\n%s", body)
 
 		conn.request('POST', url, body, headers)
-		
+
 		# Return response
 		return conn.getresponse()
-	
+
 	def parse(self, res):
 		# Retrieve response
 		data = res.read()
@@ -116,7 +116,7 @@ class RpcTest:
 		self.log.info("Parsing response %s - %s, %d bytes of %s encoded data", res.status, res.reason, len(data), encoding)
 		self.log.debug("HEADERS:\n%s", res.getheaders())
 		if res.status != 200:
-			raise RuntimeError("Unvalid response status %d:\n%s" % (res.status, data))
+			raise RuntimeError("Invalid response status %d:\n%s" % (res.status, data))
 
 		# Decode response
 		if not encoding:
@@ -131,7 +131,7 @@ class RpcTest:
 		try:
 			return json.loads(decoded.decode('utf-8'))
 		except ValueError:
-			raise RuntimeError("Unvalid response data:\n%s\nRaw:\n%s" % (decoded, data))
+			raise RuntimeError("Invalid response data:\n%s\nRaw:\n%s" % (decoded, data))
 
 # -----------------------------------------------------------------------------
 
