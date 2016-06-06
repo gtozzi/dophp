@@ -80,11 +80,11 @@ class Validator {
 			$vname = 'dophp\\' . $type . '_validator';
 
 			if( substr($type,0,4) == 'file' )
-				$validator = new $vname($this->__files[$k], $options, $this->__files);
+				$validator = new $vname(isset($this->__files[$k])?$this->__files[$k]:null, $options, $this->__files);
 			elseif( substr($type,0,5) == 'array' )
-				$validator = new $vname($this->__post[$k], $options, $this->__post);
+				$validator = new $vname(isset($this->__post[$k])?$this->__post[$k]:null, $options, $this->__post);
 			else
-				$validator = new $vname($this->__post[$k], $options, $this->__post);
+				$validator = new $vname(isset($this->__post[$k])?$this->__post[$k]:null, $options, $this->__post);
 			$data[$k] = $validator->clean();
 			if( $err = $validator->validate() )
 				$errors[$k] = $err;
