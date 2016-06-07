@@ -78,9 +78,10 @@ class RpcTest:
 			accept.append('deflate')
 
 		# Request the page
-		body = json.dumps(param)
+		body = self.encode(**param)
 		headers = self.headers.copy()
-		headers['Content-Type'] = 'application/json'
+		if not 'Content-Type' in headers.keys():
+			headers['Content-Type'] = 'application/json'
 		if accept:
 			headers['Accept-Encoding'] = ', '.join(accept)
 
@@ -109,8 +110,12 @@ class RpcTest:
 		# Return response
 		return conn.getresponse()
 
-	def parse(self, res):
-		# Retrieve response
+	def encode(self, **param):
+		''' Encodes the data into JSON '''
+		return json.dumps(param)
+
+	def decode(self, res):
+		''' Decode the response, return raw data '''
 		data = res.read()
 		encoding = res.getheader('Content-Encoding')
 		self.log.info("Parsing response %s - %s, %d bytes of %s encoded data", res.status, res.reason, len(data), encoding)
@@ -128,6 +133,9 @@ class RpcTest:
 		else:
 			raise RuntimeError("Unsupported encoding %s" % encoding)
 
+		return decoded
+
+	def parse(self, decoded):
 		try:
 			return json.loads(decoded.decode('utf-8'))
 		except ValueError:
@@ -181,5 +189,5 @@ if __name__ == '__main__':
 		res = rpc.run(args.method)
 
 	# Show result
-	print(rpc.parse(res))
+	print(rpc.parse(rpc.decode(res)))
 	sys.exit(0)

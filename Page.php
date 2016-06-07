@@ -282,7 +282,7 @@ trait CrudFunctionalities {
 
 		// Validate GET parameters
 		if( ! isset($_GET['action']) || ! array_key_exists($_GET['action'], $this->_actions) )
-			throw new PageError('Unvalid or missing action');
+			throw new PageError('Invalid or missing action');
 		$action = $_GET['action'];
 		$pk = isset($_GET['pk']) ? $_GET['pk'] : null;
 
@@ -386,7 +386,7 @@ trait CrudFunctionalities {
 	*/
 	protected function _buildRead($pk) {
 		if( ! $pk )
-			throw new PageError('Unvalid or missing pk');
+			throw new PageError('Invalid or missing pk');
 
 		$this->_smarty->assign('pageTitle', $this->_model->getNames()[0] . " #$pk");
 		$this->_smarty->assign('item', $this->_model->read($pk));
@@ -492,10 +492,11 @@ trait CrudFunctionalities {
 
 }
 
+
 /**
-* Implements a RPC method, returning JSON response
+* Implements a generic RPC method
 */
-abstract class JsonBaseMethod extends PageBase implements PageInterface {
+abstract class BaseMethod extends PageBase implements PageInterface {
 
 	/**
 	* Associative array defining accepted parameters, used for request
@@ -505,16 +506,12 @@ abstract class JsonBaseMethod extends PageBase implements PageInterface {
 	*/
 	protected $_params = array();
 
-	/** Default headers for JSON output */
-	protected $_headers = array(
-		'Content-type' => 'application/json',
-	);
-
-	/** JSON options */
-	protected $_jsonOpts = array(JSON_PRETTY_PRINT);
+	/** Default headers to output */
+	protected $_headers = array();
 
 	/**
-	* Prepares the enviroment and passes excution to _build()
+	* Prepares the enviroment and passes excution to _build() or _inavlid()
+	* If succesfull, calls _output()
 	*
 	* @see PageInterface::run
 	*/
@@ -527,12 +524,7 @@ abstract class JsonBaseMethod extends PageBase implements PageInterface {
 		else
 			$res = $this->_build($pars);
 
-		$opt = 0;
-		foreach( $this->_jsonOpts as $o );
-			$opt |= $o;
-		if(PHP_VERSION_ID < 50303)
-			$opt ^= JSON_PRETTY_PRINT;
-		return $this->_compress(json_encode($res, $opt));
+		return $this->_output($res);
 	}
 
 	/**
@@ -552,8 +544,26 @@ abstract class JsonBaseMethod extends PageBase implements PageInterface {
 	}
 
 	/**
+	* Returns the raw input data, after decoding
+	* This is not used directly, but it may be useful when called inside _getInput()
+	*
+	* @return The raw decoded input
+	*/
+	protected function _decodeInput() {
+		if( isset($_SERVER['HTTP_CONTENT_ENCODING']) && $_SERVER['HTTP_CONTENT_ENCODING'] == 'gzip' ) {
+			$input = gzdecode(file_get_contents("php://input"));
+			if( $input === false )
+				throw new PageError('Couldn\'t decode gzip input');
+		} else
+			$input = file_get_contents("php://input");
+
+		return $input;
+	}
+
+	/**
 	* Returns input parameters
 	*
+	* @see _decodeInput()
 	* @return array Input data
 	*/
 	abstract protected function _getInput();
@@ -579,7 +589,7 @@ abstract class JsonBaseMethod extends PageBase implements PageInterface {
 			$val = new \DateTime($val);
 			break;
 		default:
-			throw new PageError("Unvalid type $type");
+			throw new PageError("Invalid type $type");
 		}
 
 		return $val;
@@ -589,9 +599,41 @@ abstract class JsonBaseMethod extends PageBase implements PageInterface {
 	* Build method to be overridden
 	*
 	* @param $pars array: The parameters associative array, passed byRef
-	* @return The value to be json-encoded and returned to the client
+	* @return The value to be formatted and returned to the client
 	*/
 	abstract protected function _build(& $pars);
+
+	/**
+	* Formats and outputs the built data
+	*
+	* @param $res mixed: The value to be formatted and outputted
+	*/
+	abstract protected function _output(& $res);
+}
+
+
+/**
+* Implements a RPC method, returning JSON response
+*/
+abstract class JsonBaseMethod extends BaseMethod {
+
+	/** Default headers for JSON output */
+	protected $_headers = array(
+		'Content-type' => 'application/json',
+	);
+
+	/** JSON options */
+	protected $_jsonOpts = array(JSON_PRETTY_PRINT);
+
+	/** Encodes the response into JSON */
+	protected function _output(& $res) {
+		$opt = 0;
+		foreach( $this->_jsonOpts as $o );
+			$opt |= $o;
+		if(PHP_VERSION_ID < 50303)
+			$opt ^= JSON_PRETTY_PRINT;
+		return $this->_compress(json_encode($res, $opt));
+	}
 
 }
 
@@ -604,13 +646,7 @@ abstract class JsonRpcMethod extends JsonBaseMethod {
 	* Parses input JSON
 	*/
 	public function _getInput() {
-		if( isset($_SERVER['HTTP_CONTENT_ENCODING']) && $_SERVER['HTTP_CONTENT_ENCODING'] == 'gzip' ) {
-			$input = gzdecode(file_get_contents("php://input"));
-			if( $input === false )
-				throw new PageError('Couldn\'t decode gzip input');
-		} else
-			$input = file_get_contents("php://input");
-		return json_decode($input, true);
+		return json_decode($this->_decodeInput(), true);
 	}
 
 }
