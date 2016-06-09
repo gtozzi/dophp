@@ -538,8 +538,11 @@ abstract class BaseMethod extends PageBase implements PageInterface {
 	*/
 	protected function _invalid(& $pars, & $errors) {
 		$mex = "Invalid arguments:<br/>\n";
-		foreach( $errors as $n=>$e )
+		foreach( $errors as $n=>$e ) {
 			$mex .= "- <b>$n</b>: $e<br/>\n";
+			if( $this->_config['debug'] )
+				$mex .= '  (received: "' . print_r($pars[$n],true) . "\")<br/>\n";
+		}
 		throw new PageError($mex);
 	}
 
