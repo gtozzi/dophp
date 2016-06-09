@@ -190,7 +190,7 @@ class DoPhp {
 			echo $to;
 			return;
 		} else {
-			header("HTTP/1.1 400 Bad Request");
+			header("HTTP/1.1 404 Not Found");
 			echo('Unknown Page');
 			return;
 		}
