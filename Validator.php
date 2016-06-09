@@ -166,10 +166,11 @@ abstract class base_validator implements field_validator {
 					return $err;
 			}
 		}
-		if( array_key_exists('custom',$o) && $o['custom'] )
+		if( array_key_exists('custom',$o) && $o['custom'] ) {
 			$err = $o['custom']($v, $this->__values);
 			if( $err )
 				return $err;
+		}
 		if( isset($o['choices']) && ! in_array($v, $o['choices']) )
 			return _('Field must be one of') . ' "' . implode($o['choices'],',') . '".';
 
