@@ -630,7 +630,7 @@ abstract class Model {
 	* @return FormField: The built field
 	*/
 	private function __buildField($k, & $f, $value, $error) {
-		if( ! ($f->ropts && $f->ropts['ajax']) )
+		if( ! ($f->ropts && isset($f->ropts['ajax']) && $f->ropts['ajax']) )
 			$data = $this->fieldData($k);
 		else
 			$data = $this->fieldData($k, null, $value);
