@@ -271,12 +271,15 @@ trait CrudFunctionalities {
 	protected $_actions;
 	/** Should display buttons on admin (resume table) page? */
 	protected $_buttons = true;
+	/** If set to true, will not call _requireLogin() */
+	protected $_public = false;
 
 	/**
 	* Process and run the CRUD actions, should be called inside _build()
 	*/
 	protected function _crud() {
-		$this->_requireLogin();
+		if( ! $this->_public )
+			$this->_requireLogin();
 
 		$this->_actions = $this->_initActions();
 
