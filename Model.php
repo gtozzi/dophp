@@ -55,6 +55,16 @@ abstract class Model {
 	protected $_filter = null;
 
 	/**
+	* Used internally for caching summary cols
+	*/
+	private $__sumColsCache = [];
+
+	/**
+	* Used internally for caching relations
+	*/
+	private $__relsCache = [];
+
+	/**
 	* Class constuctor
 	*
 	* @param $db object: Database instance
@@ -655,9 +665,8 @@ abstract class Model {
 			throw new \Exception('Can\'t analize an unspecified relation');
 
 		// Use caching to avoid multiple long queries
-		static $cache = [];
-		if( isset($cache[$field->name]) )
-			return $cache[$field->name];
+		if( isset($this->__relsCache[$field->name]) )
+			return $this->__relsCache[$field->name];
 
 		// If cache is not available, do the full analysis
 		$refer = \DoPhp::model($field->ropts['refer']['model']);
@@ -693,13 +702,13 @@ abstract class Model {
 		if( array_search($ncol, $nmpk) === false || array_search($mcol, $nmpk) === false )
 			throw new \Exception('Couldn\'t find columns in relation');
 
-		$cache[$field->name] = array(
+		$this->__relsCache[$field->name] = array(
 			'refer' => $refer,
 			'nm' => $nm,
 			'ncol' => $ncol,
 			'mcol' => $mcol,
 		);
-		return $cache[$field->name];
+		return $this->__relsCache[$field->name];
 	}
 
 	/**
@@ -822,9 +831,7 @@ abstract class Model {
 	*/
 	public function summaryCols() {
 		// Use caching
-		static $cols = null;
-
-		if( ! $cols ) {
+		if( ! $this->__sumColsCache ) {
 			$pks = $this->_table->getPk();
 
 			$displayCol = null;
@@ -842,11 +849,11 @@ abstract class Model {
 				else
 					$displayCol = $pks[0];
 
-			$cols = $pks;
-			$cols[] = $displayCol;
+			$this->__sumColsCache = $pks;
+			$this->__sumColsCache[] = $displayCol;
 		}
 
-		return $cols;
+		return $this->__sumColsCache;
 	}
 
 	/**
