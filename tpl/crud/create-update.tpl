@@ -19,7 +19,7 @@
 
 		<div class="form-group">
 			<div class="col-sm-offset-2 col-sm-10">
-				<button name="submit" value="submit" type="submit" class="btn btn-primary">{{if $pk}}{{$strEdit}}{{else}}{{$strInsert}}{{/if}}</button>
+				<button name="submit" value="submit" type="submit" class="btn btn-primary">{{if isset($pk) && $pk}}{{$strEdit}}{{else}}{{$strInsert}}{{/if}}</button>
 			</div>
 		</div>
 	</form>
