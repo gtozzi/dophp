@@ -283,6 +283,22 @@ class Db {
 		return $lim;
 	}
 
+	/**
+	* Builds an "order by" statement
+	*
+	* @param $order array: Names of the columns to order by
+	* @return string: the ORDER BY statement
+	*/
+	public static function buildOrderBy($order=null) {
+		if( ! $order )
+			return '';
+
+		$ord = 'ORDER BY ';
+		$ord .= implode(', ', $order);
+
+		return $ord;
+	}
+
 }
 
 
@@ -408,14 +424,15 @@ class Table {
 	*                     must contain two elements: first element is $limit,
 	*                     second is $skip. If null, no limit.
 	*                     See dophp\Db::buildLimit
-	* @param $joins array  Array list Join objects
+	* @param $joins array Array list Join objects
+	* @param $order array Names of the columns to order by as strings.
 	* @see dophp\Db::buildParams
 	* @see dophp\Db::buildLimit
 	* @return mixed Generator of fetched rows.
 	*         Every element is converted to the right data type.
 	*         When using joins, joined column names are in the form table.column
 	*/
-	public function select($params=null, $cols=null, $limit=null, $joins=null) {
+	public function select($params=null, $cols=null, $limit=null, $joins=null, $order=null) {
 		$q = "SELECT\n\t";
 		$p = array();
 
@@ -443,6 +460,8 @@ class Table {
 			$q .= "WHERE $w\n";
 			$p = array_merge($p, $params->getParams());
 		}
+
+		$q .= $this->_db->buildOrderBy($order);
 
 		if( is_array($limit) )
 			list($limit, $skip) = $limit;

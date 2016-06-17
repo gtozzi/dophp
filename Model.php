@@ -53,12 +53,15 @@ abstract class Model {
 	* @see SimpleAccessFilter::__construct()
 	*/
 	protected $_filter = null;
+	/**
+	* The default order to apply when selecting (if any)
+	*/
+	protected $_order = null;
 
 	/**
 	* Used internally for caching summary cols
 	*/
 	private $__sumColsCache = [];
-
 	/**
 	* Used internally for caching relations
 	*/
@@ -78,6 +81,8 @@ abstract class Model {
 			$this->_names = $this->initNames();
 		if( $this->_filter === null )
 			$this->_filter = $this->initFilter();
+		if( $this->_order === null )
+			$this->_order = $this->initOrder();
 		$this->_table = new Table($this->_db, $this->_table);
 
 		// Build and validate the filter
@@ -139,6 +144,18 @@ abstract class Model {
 	* @see SimpleAccessFilter::__construct()
 	*/
 	protected function initFilter() {
+		return array();
+	}
+
+	/**
+	* Returns default order to apply when selecting, called when $this->_order
+	* is not defined.
+	* Allows order definition at runtime
+	*
+	* @return array in $_order valid order
+	* @see $_order
+	*/
+	protected function initOrder() {
 		return array();
 	}
 
@@ -524,7 +541,7 @@ abstract class Model {
 
 		// Run the query and process data
 		$data = array();
-		foreach( $this->_table->select($filter, $cols, null, $joins) as $x => $res ) {
+		foreach( $this->_table->select($filter, $cols, null, $joins, $this->_order) as $x => $res ) {
 			$row = array();
 			foreach( $this->_fields as $k => $f )
 				if( ( ($action=='admin' && $f->rtab) || ($action=='view' && $f->rview) ) )
@@ -787,7 +804,7 @@ abstract class Model {
 		}
 
 		$ret = array();
-		foreach( $this->_table->select($pars, $cols) as $r )
+		foreach( $this->_table->select($pars, $cols, null, null, $this->_order) as $r )
 			$ret[$this->formatPk($r)] = $this->summaryRow($r, false, $col);
 
 		if( $pk ) {
