@@ -605,7 +605,7 @@ abstract class Model {
 			if( isset($this->_filter) || ($q !== null && $q !== '') || $pks )
 				foreach( $data as $pk => $v )
 					if(
-						( isset($this->_filter) && ! $this->_filter->isAllowed($k, $pk, false) )
+						( isset($this->_filter) && ! $this->_filter->isAllowed($pk, $v, false) )
 						||
 						( $q !== null && $q !== '' && strpos(strtolower($v), $q) === false )
 						||
