@@ -42,6 +42,29 @@ class Db {
 	}
 
 	/**
+	 * Prepares this object to be serialized
+	 *
+	 * @warning This makes the object serializable, but unusable after
+	 *          unserialization
+	 * @return list of properties to include in serialized object
+	 */
+	public function __sleep() {
+		$vars = get_object_vars($this);
+		unset($vars['_pdo']);
+		return array_keys($vars);
+	}
+
+	/**
+	 * When waking up, try to get the actual PDO from the running db
+	 */
+	public function __wakeup() {
+		$curDb = \DoPhp::db();
+		if( ! $curDb )
+			return;
+		$this->_pdo = $curDb->_pdo;
+	}
+
+	/**
 	* Prepares a statement, executes it with given parameters and returns it
 	*
 	* @param $query string: The query to be executed
