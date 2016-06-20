@@ -177,7 +177,7 @@ class DoPhp {
 		if(array_key_exists($key, $_REQUEST) && $_REQUEST[$key] && !strpos($_REQUEST[$key], '/') && file_exists($inc_file))
 			$page = $_REQUEST[$key];
 		elseif( $def ) {
-			if( $def == $_REQUEST[$key] ) {
+			if( isset($_REQUEST[$key]) && $def == $_REQUEST[$key] ) {
 				// Prevent loop redirection
 				header("HTTP/1.1 500 Internal Server Error");
 				echo('SERVER ERROR: Invalid default page');
