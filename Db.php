@@ -257,7 +257,7 @@ class Db {
 			$c = "`$k` = ";
 			if( is_array($v) ) {
 				if( count($v) != 2 || ! array_key_exists(0,$v) || ! array_key_exists(1,$v) )
-					throw new \Exception('Unvalid number of array components');
+					throw new \Exception('Invalid number of array components');
 				if( is_array($v[0]) ) {
 					$f = $v[1];
 					foreach( $v[0] as $n => $vv ) {
@@ -356,7 +356,7 @@ class Table {
 		if( ! $this->_db instanceof Db )
 			throw new \Exception('Db must be a valid dophp\Db instance');
 		if( ! $this->_name || gettype($this->_name) !== 'string' )
-			throw new \Exception('Unvalid table name');
+			throw new \Exception('Invalid table name');
 
 		// Makes sure that table exists
 		$q = "
