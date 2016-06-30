@@ -154,7 +154,7 @@ abstract class PageBase {
 			$head = Utils::headers();
 			$supported = array();
 			if( isset($head['Accept-Encoding']) )
-				$supported = array_map(trim, explode(',', $head['Accept-Encoding']));
+				$supported = array_map('trim', explode(',', $head['Accept-Encoding']));
 
 			$accepted = false;
 			foreach( $supported as $s )
