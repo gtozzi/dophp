@@ -90,6 +90,9 @@ abstract class PageBase {
 	/** After how many seconds cache will expire (cache is not enabled by default) */
 	protected $_cacheExpire = 300;
 
+	/** Will store the last login error occurred, if any */
+	protected $_loginError = null;
+
 	/**
 	* Constructor
 	*
@@ -100,6 +103,11 @@ abstract class PageBase {
 		$this->_db = $db;
 		$this->_user = $user;
 		$this->_name = $name;
+
+		if( isset($_SESSION[\DoPhp::SESS_LOGIN_ERROR]) ) {
+			$this->_loginError = $_SESSION[\DoPhp::SESS_LOGIN_ERROR];
+			unset($_SESSION[\DoPhp::SESS_LOGIN_ERROR]);
+		}
 	}
 
 	/**
@@ -219,6 +227,7 @@ abstract class PageSmarty extends PageBase implements PageInterface {
 			$this->_smarty->assign($k, $v);
 		$this->_smarty->assign('config', $this->_config);
 		$this->_smarty->assignByRef('user', $this->_user);
+		$this->_smarty->assignByRef('loginError', $this->_loginError);
 
 		// Init default template name
 		$base_file = basename($_SERVER['PHP_SELF'], '.php');

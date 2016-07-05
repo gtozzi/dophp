@@ -28,6 +28,8 @@ class DoPhp {
 	const TEXT_DOMAIN = 'dophp';
 	/** This is the prefix used for model classes */
 	const MODEL_PREFIX = 'm';
+	/** The is the key used for the login failed info in $_SESSION */
+	const SESS_LOGIN_ERROR = 'DoPhp::LoginError';
 
 	/** Stores the current instance */
 	private static $__instance = null;
@@ -230,12 +232,6 @@ class DoPhp {
 			}
 			if( ! $fromCache )
 				$out = $pobj->run();
-		} catch( dophp\InvalidCredentials $e ) {
-			header("HTTP/1.1 401 Unhautorized");
-			// Required by RFC 7235
-			header("WWW-Authenticate: Custom");
-			echo $e->getMessage();
-			return;
 		} catch( dophp\PageDenied $e ) {
 			if( $def ) {
 				if( $def == $page ) {
@@ -245,11 +241,20 @@ class DoPhp {
 					return;
 				}
 
+				if( $sess )
+					$_SESSION[self::SESS_LOGIN_ERROR] = $e;
+
 				$to = dophp\Utils::fullPageUrl($def, $key);
 				header("HTTP/1.1 303 Login Required");
 				header("Location: $to");
 				echo $e->getMessage();
 				echo "\nPlease login at: $to";
+				return;
+			} elseif( $e instanceof dophp\InvalidCredentials ) {
+				header("HTTP/1.1 401 Unhautorized");
+				// Required by RFC 7235
+				header("WWW-Authenticate: Custom");
+				echo $e->getMessage();
 				return;
 			} else {
 				header("HTTP/1.1 403 Forbidden");
