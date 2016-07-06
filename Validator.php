@@ -199,7 +199,9 @@ abstract class base_validator implements field_validator {
 	* Cleans the value and converts it to right type before being validated
 	*/
 	protected function do_clean($val) {
-		return $this->nullify(trim($val));
+		if( is_string($val) )
+			$val = trim($val);
+		return $this->nullify($val);
 	}
 
 	protected function check_required($val) {
