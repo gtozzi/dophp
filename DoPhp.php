@@ -160,7 +160,8 @@ class DoPhp {
 		if( array_key_exists('db', $this->__conf) )
 			$this->__db = new $db($this->__conf['db']['dsn'], $this->__conf['db']['user'], $this->__conf['db']['pass']);
 		if( $this->__conf['debug'] )
-			$this->__db->debug = true;
+			if( $this->__db )
+				$this->__db->debug = true;
 
 		// Creates the locale object
 		$this->__lang = new $lang($this->__db, $this->__conf['lang']['supported'], $this->__conf['lang']['coding'], $this->__conf['lang']['tables']);
@@ -182,7 +183,7 @@ class DoPhp {
 			if( isset($_REQUEST[$key]) && $def == $_REQUEST[$key] ) {
 				// Prevent loop redirection
 				header("HTTP/1.1 500 Internal Server Error");
-				echo('SERVER ERROR: Invalid default page');
+				echo("SERVER ERROR: Invalid default page \"$def\"");
 				return;
 			}
 
