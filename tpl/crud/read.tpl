@@ -1,4 +1,4 @@
-{{extends file='base-backend.tpl'}}
+{{extends file=$baseTpl}}
 {{block name='content'}}
 	<div class="formHolder">
 		<h1>{{$pageTitle}}</h1>

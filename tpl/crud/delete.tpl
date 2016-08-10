@@ -1,4 +1,4 @@
-{{extends file='base-backend.tpl'}}
+{{extends file=$baseTpl}}
 {{block name='content'}}
 	<h1>{{$pageTitle}}</h1>
 

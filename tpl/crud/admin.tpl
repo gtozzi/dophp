@@ -1,4 +1,4 @@
-{{extends file='base-backend.tpl'}}
+{{extends file=$baseTpl}}
 {{block name='head' append}}
 	<!-- Load the DataTables jQuery plugin -->
 	<link rel="stylesheet" href="{{$config['dophp']['url']}}/datatables/media/css/jquery.dataTables.min.css">
