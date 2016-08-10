@@ -369,6 +369,7 @@ trait CrudFunctionalities {
 				'sSortAscending' => ': ' . _('sort the column in ascending order'),
 				'sSortDescending' => ': ' . _('sort the column in descending order'),
 			],
+			'cInsert' => _('Insert'),
 		]);
 
 		$this->_smarty->assign('pageTitle', $this->_model->getNames()[1]);

@@ -13,10 +13,15 @@
 		a.table-action:hover {
 			text-decoration: none;
 		}
+		div.dtToolbar {
+			float: right;
+			margin-left: 1em;
+		}
 	</style>
 	<script type="text/javascript">
 		$(document).ready(function() {
 			$('#tableAdmin{{$page|ucfirst}}').DataTable({
+				'dom': 'l<"dtToolbar">frtip',
 				"aaSorting": [],
 				'oLanguage': {
 					'sEmptyTable':     "{{addslashes($strDT['sEmptyTable'])}}",
@@ -83,6 +88,8 @@
 					{{/if}}
 				]
 			});
+
+			$("div.dtToolbar").html('<a class="btn-primary btn" href="{{addslashes($this->actionUrl("create"))}}">{{addslashes($strDT["cInsert"])}}</a>');
 		});
 	</script>
 {{/block}}
