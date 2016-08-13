@@ -11,6 +11,9 @@ namespace dophp;
 
 class Utils {
 
+	/** Formatted version of NULL, for internal usage */
+	const NULL_FMT = '-';
+
 	/** Default ports used for URL protocols */
 	public static $DEFAULT_PORTS = array(
 		'http' => 80,
@@ -102,23 +105,22 @@ class Utils {
 	}
 
 	/**
-	* Returns a vormatted version of a time
-	*
-	* @deprecated Use Utils::format() instead, this function will be removed
+	* Returns a formatted version of a time
 	*
 	* @param $str string: Time string in the format hh:mm:ss
 	* @param $format string: Format string accepted by DateTime::format()
 	* @return string: The formatted time
 	*/
 	public static function formatTime($str, $format='H:i') {
+		if( $str === null )
+			return self::NULL_FMT;
+
 		$time = new \DateTime($str);
 		return $time->format($format);
 	}
 
 	/**
 	* Return a formatted version of a number
-	*
-	* @deprecated Use Utils::format() instead, this function will be removed
 	*
 	* @param $num int: The number to be formatted
 	* @param $decimals int: Number of decimals
@@ -127,22 +129,25 @@ class Utils {
 	* @return string: The formatted version of the number
 	*/
 	public static function formatNumber($num, $decimals=null, $dec_point=',', $thousands_sep='.') {
+		if( $num === null )
+			return self::NULL_FMT;
+
 		if( $decimals === null )
 			$decimals = self::guessDecimals($num);
+
 		return number_format($num, $decimals, $dec_point, $thousands_sep);
 	}
 
 	/**
 	* Return a formatted version of a boolean
 	*
-	* @deprecated Use Utils::format() instead, this function will be removed
-	*
 	* @return string: The formatted version of the boolean
 	*/
 	public static function formatBool($bool) {
 		if( $bool === null )
-			return null;
-		return $bool ? 'Yes' : 'No';
+			return self::NULL_FMT;
+
+		return $bool ? _('Yes') : _('No');
 	}
 
 	/**
@@ -155,7 +160,7 @@ class Utils {
 		$lc = localeconv();
 
 		if( $type == 'NULL' )
-			$val = '-';
+			$val = self::NULL_FMT;
 		elseif( $type == 'string' )
 			$val = $value;
 		elseif( $value instanceof Time )
@@ -165,7 +170,7 @@ class Utils {
 		elseif( $value instanceof \DateTime )
 			$val = $value->format('d.m.Y H:i:s');
 		elseif( $type == 'boolean' )
-			$val = $value ? _('Yes') : _('No');
+			$val = self::formatBool($value);
 		elseif( $type == 'integer' )
 			$val = self::formatNumber($value, 0, $lc['decimal_point'], $lc['thousands_sep']);
 		elseif( $value instanceof Decimal )
