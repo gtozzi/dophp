@@ -126,7 +126,9 @@ class Utils {
 	* @param $thousands_sep str: Thousands separator
 	* @return string: The formatted version of the number
 	*/
-	public static function formatNumber($num, $decimals=2, $dec_point=',', $thousands_sep='.') {
+	public static function formatNumber($num, $decimals=null, $dec_point=',', $thousands_sep='.') {
+		if( $decimals === null )
+			$decimals = self::guessDecimals($num);
 		return number_format($num, $decimals, $dec_point, $thousands_sep);
 	}
 
@@ -165,15 +167,35 @@ class Utils {
 		elseif( $type == 'boolean' )
 			$val = $value ? _('Yes') : _('No');
 		elseif( $type == 'integer' )
-			$val = number_format($value, 0, $lc['decimal_point'], $lc['thousands_sep']);
+			$val = self::formatNumber($value, 0, $lc['decimal_point'], $lc['thousands_sep']);
 		elseif( $value instanceof Decimal )
-			$val = $value->format(4, $lc['decimal_point'], $lc['thousands_sep']);
+			$val = $value->format(null, $lc['decimal_point'], $lc['thousands_sep']);
 		elseif( $type == 'double' )
-			$val = number_format($value, 4, $lc['decimal_point'], $lc['thousands_sep']);
+			$val = self::formatNumber($value, null, $lc['decimal_point'], $lc['thousands_sep']);
 		else
 			throw new \Exception("Unsupported type $type class " . get_class($value));
 
 		return $val;
+	}
+
+	/**
+	 * Guesses the number of decimals in the given number
+	 *
+	 * @return int: The number of decimals
+	 */
+	public static function guessDecimals($num) {
+		if( gettype($num) == 'integer' )
+			return 0;
+
+		Lang::pushLocale(LC_NUMERIC);
+		$numStr = (string)$num;
+		Lang::popLocale();
+
+		$dot = strpos($numStr, '.');
+		if( $dot === false )
+			return 0;
+
+		return strlen($numStr) - $dot - 1;
 	}
 
 	/**
