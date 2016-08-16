@@ -199,7 +199,9 @@ abstract class base_validator implements field_validator {
 	* Cleans the value and converts it to right type before being validated
 	*/
 	protected function do_clean($val) {
-		return $this->nullify(trim($val));
+		if( is_string($val) )
+			$val = trim($val);
+		return $this->nullify($val);
 	}
 
 	protected function check_required($val) {
@@ -251,9 +253,9 @@ class string_validator extends base_validator {
 	protected function check_len($val, $min, $max) {
 		if( $val === null )
 			return false;
-		if( $min !== null && strlen($val) < $min )
+		if( $min !== null && mb_strlen($val) < $min )
 			return str_replace('{number}', $min, _('Text must be at least {number} characters long')) . '.';
-		if( $max !== null && strlen($val) > $max )
+		if( $max !== null && mb_strlen($val) > $max )
 			return str_replace('{number}', $max, _('Text must be no longer than {number} characters')) . '.';
 	}
 }

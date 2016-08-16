@@ -28,6 +28,8 @@ class DoPhp {
 	const TEXT_DOMAIN = 'dophp';
 	/** This is the prefix used for model classes */
 	const MODEL_PREFIX = 'm';
+	/** The is the key used for the login failed info in $_SESSION */
+	const SESS_LOGIN_ERROR = 'DoPhp::LoginError';
 
 	/** Stores the current instance */
 	private static $__instance = null;
@@ -158,7 +160,8 @@ class DoPhp {
 		if( array_key_exists('db', $this->__conf) )
 			$this->__db = new $db($this->__conf['db']['dsn'], $this->__conf['db']['user'], $this->__conf['db']['pass']);
 		if( $this->__conf['debug'] )
-			$this->__db->debug = true;
+			if( $this->__db )
+				$this->__db->debug = true;
 
 		// Creates the locale object
 		$this->__lang = new $lang($this->__db, $this->__conf['lang']['supported'], $this->__conf['lang']['coding'], $this->__conf['lang']['tables']);
@@ -180,7 +183,7 @@ class DoPhp {
 			if( isset($_REQUEST[$key]) && $def == $_REQUEST[$key] ) {
 				// Prevent loop redirection
 				header("HTTP/1.1 500 Internal Server Error");
-				echo('SERVER ERROR: Invalid default page');
+				echo("SERVER ERROR: Invalid default page \"$def\"");
 				return;
 			}
 
@@ -230,12 +233,6 @@ class DoPhp {
 			}
 			if( ! $fromCache )
 				$out = $pobj->run();
-		} catch( dophp\InvalidCredentials $e ) {
-			header("HTTP/1.1 401 Unhautorized");
-			// Required by RFC 7235
-			header("WWW-Authenticate: Custom");
-			echo $e->getMessage();
-			return;
 		} catch( dophp\PageDenied $e ) {
 			if( $def ) {
 				if( $def == $page ) {
@@ -245,11 +242,20 @@ class DoPhp {
 					return;
 				}
 
+				if( $sess )
+					$_SESSION[self::SESS_LOGIN_ERROR] = $e;
+
 				$to = dophp\Utils::fullPageUrl($def, $key);
 				header("HTTP/1.1 303 Login Required");
 				header("Location: $to");
 				echo $e->getMessage();
 				echo "\nPlease login at: $to";
+				return;
+			} elseif( $e instanceof dophp\InvalidCredentials ) {
+				header("HTTP/1.1 401 Unhautorized");
+				// Required by RFC 7235
+				header("WWW-Authenticate: Custom");
+				echo $e->getMessage();
 				return;
 			} else {
 				header("HTTP/1.1 403 Forbidden");

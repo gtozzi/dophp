@@ -37,7 +37,9 @@ class RpcTest:
 
 	SEP = '~'
 
-	def __init__(self, url, user=None, pwd=None, headers={}, auth='sign', gzip=False, deflate=False):
+	COMPPRESSIONS = ('gzip', 'zlib')
+
+	def __init__(self, url, user=None, pwd=None, headers={}, auth='sign', gzip=False, deflate=False, compress=None):
 		'''
 		Init the RPC Client
 
@@ -46,6 +48,9 @@ class RpcTest:
 		@param pwd string: The password
 		@param headers dict: Custom headers
 		@param auth string: Authentication type [sign,plain]. Default: sign
+		@param gzip bool: If true, accepts gzip response
+		@param deflate bool: If true, accepts deflate response
+		@param compress string: Use given compression, if any ('gzip' or 'deflate')
 		'''
 		self.log = logging.getLogger(self.__class__.__name__)
 
@@ -65,6 +70,10 @@ class RpcTest:
 		self.headers = headers
 		self.gzip = gzip
 		self.deflate = deflate
+		self.compress = compress
+
+		if self.compress and self.compress not in self.COMPPRESSIONS:
+			raise ValueError('Unknown compression', self.compress)
 
 	def run(self, method, **param):
 		# Connect
@@ -78,12 +87,15 @@ class RpcTest:
 			accept.append('deflate')
 
 		# Request the page
-		body = self.encode(**param)
+		data = self.dump(**param)
+		encoding, body = self.encode(data)
 		headers = self.headers.copy()
 		if not 'Content-Type' in headers.keys():
 			headers['Content-Type'] = 'application/json'
 		if accept:
 			headers['Accept-Encoding'] = ', '.join(accept)
+		if encoding:
+			headers['Content-Encoding'] = encoding
 
 		url = self.baseUrl.path + '?do=' + method
 		if self.user or self.pwd:
@@ -94,7 +106,7 @@ class RpcTest:
 				sign.update(self.SEP.encode('utf-8'))
 				sign.update(self.pwd.encode('utf-8'))
 				sign.update(self.SEP.encode('utf-8'))
-				sign.update(body.encode('utf-8'))
+				sign.update(body)
 				headers['X-Auth-User'] = self.user
 				headers['X-Auth-Sign'] = sign.hexdigest()
 			elif self.auth == 'plain':
@@ -110,9 +122,18 @@ class RpcTest:
 		# Return response
 		return conn.getresponse()
 
-	def encode(self, **param):
-		''' Encodes the data into JSON '''
-		return json.dumps(param)
+	def encode(self, data):
+		''' Encode the data, return (content-encoding, encoded) '''
+		enc = None
+		data = data.encode('utf-8')
+		if self.compress == 'gzip':
+			enc = 'gzip'
+			data = gzip.compress(data)
+		elif self.compress == 'deflate':
+			enc = 'deflate'
+			data = zlib.compress(data)
+
+		return (enc, data)
 
 	def decode(self, res):
 		''' Decode the response, return raw data '''
@@ -121,7 +142,7 @@ class RpcTest:
 		self.log.info("Parsing response %s - %s, %d bytes of %s encoded data", res.status, res.reason, len(data), encoding)
 		self.log.debug("HEADERS:\n%s", res.getheaders())
 		if res.status != 200:
-			raise RuntimeError("Invalid response status %d:\n%s" % (res.status, data))
+			raise StatusError(res.status, data)
 
 		# Decode response
 		if not encoding:
@@ -131,15 +152,47 @@ class RpcTest:
 		elif encoding == 'deflate':
 			decoded = zlib.decompress(data)
 		else:
-			raise RuntimeError("Unsupported encoding %s" % encoding)
+			raise UnsupportedEncodingError(encoding)
 
 		return decoded
+
+	def dump(self, **param):
+		''' Creates a json dump for the data JSON '''
+		return json.dumps(param)
 
 	def parse(self, decoded):
 		try:
 			return json.loads(decoded.decode('utf-8'))
 		except ValueError:
-			raise RuntimeError("Invalid response data:\n%s\nRaw:\n%s" % (decoded, data))
+			raise ParseError(decoded)
+
+
+class ParseError(RuntimeError):
+	''' Exception raise when failing to parse the data '''
+	def __init__(self, data):
+		self.data = data
+		super().__init__("Invalid response data:\n%s" % data)
+
+
+class DecodeError(RuntimeError):
+	''' Exception raised by 'decode' method '''
+	pass
+
+
+class StatusError(RuntimeError):
+	''' Raised when status is not 200 '''
+	def __init__(self, code, data):
+		self.code = code
+		self.data = data
+		super().__init__("Invalid response status %d" % self.code)
+
+
+class UnsupportedEncodingError(RuntimeError):
+	''' Raised when encoding is not supported '''
+	def __init__(self, encoding):
+		self.encoding = encoding
+		super().__init__("Unsupported encoding %s" % encoding)
+
 
 # -----------------------------------------------------------------------------
 

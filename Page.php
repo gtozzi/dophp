@@ -90,6 +90,9 @@ abstract class PageBase {
 	/** After how many seconds cache will expire (cache is not enabled by default) */
 	protected $_cacheExpire = 300;
 
+	/** Will store the last login error occurred, if any */
+	protected $_loginError = null;
+
 	/**
 	* Constructor
 	*
@@ -100,6 +103,11 @@ abstract class PageBase {
 		$this->_db = $db;
 		$this->_user = $user;
 		$this->_name = $name;
+
+		if( isset($_SESSION[\DoPhp::SESS_LOGIN_ERROR]) ) {
+			$this->_loginError = $_SESSION[\DoPhp::SESS_LOGIN_ERROR];
+			unset($_SESSION[\DoPhp::SESS_LOGIN_ERROR]);
+		}
 	}
 
 	/**
@@ -154,7 +162,7 @@ abstract class PageBase {
 			$head = Utils::headers();
 			$supported = array();
 			if( isset($head['Accept-Encoding']) )
-				$supported = array_map(trim, explode(',', $head['Accept-Encoding']));
+				$supported = array_map('trim', explode(',', $head['Accept-Encoding']));
 
 			$accepted = false;
 			foreach( $supported as $s )
@@ -219,6 +227,7 @@ abstract class PageSmarty extends PageBase implements PageInterface {
 			$this->_smarty->assign($k, $v);
 		$this->_smarty->assign('config', $this->_config);
 		$this->_smarty->assignByRef('user', $this->_user);
+		$this->_smarty->assignByRef('loginError', $this->_loginError);
 
 		// Init default template name
 		$base_file = basename($_SERVER['PHP_SELF'], '.php');
@@ -273,6 +282,8 @@ trait CrudFunctionalities {
 	protected $_buttons = true;
 	/** If set to true, will not call _requireLogin() */
 	protected $_public = false;
+	/** Name of the base template to extend */
+	protected $_baseTpl = 'base-backend.tpl';
 
 	/**
 	* Process and run the CRUD actions, should be called inside _build()
@@ -300,6 +311,7 @@ trait CrudFunctionalities {
 		$this->_smarty->assign('action', $action);
 		$this->_smarty->assign('buttons', $this->_buttons);
 		$this->_smarty->assign('localeconv', localeconv());
+		$this->_smarty->assign('baseTpl', $this->_baseTpl);
 
 		// Process the requested action
 		$method = '_build' . ucfirst($action);
@@ -357,6 +369,7 @@ trait CrudFunctionalities {
 				'sSortAscending' => ': ' . _('sort the column in ascending order'),
 				'sSortDescending' => ': ' . _('sort the column in descending order'),
 			],
+			'cInsert' => _('Insert'),
 		]);
 
 		$this->_smarty->assign('pageTitle', $this->_model->getNames()[1]);

@@ -1,4 +1,4 @@
-{{extends file='base-backend.tpl'}}
+{{extends file=$baseTpl}}
 {{block name='head' append}}
 	<!-- Load Select2 (https://ivaynberg.github.io/select2/) -->
 	<link rel="stylesheet" href="{{$config['dophp']['url']}}/select2/dist/css/select2.min.css">

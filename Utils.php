@@ -11,6 +11,9 @@ namespace dophp;
 
 class Utils {
 
+	/** Formatted version of NULL, for internal usage */
+	const NULL_FMT = '-';
+
 	/** Default ports used for URL protocols */
 	public static $DEFAULT_PORTS = array(
 		'http' => 80,
@@ -102,15 +105,16 @@ class Utils {
 	}
 
 	/**
-	* Returns a vormatted version of a time
-	*
-	* @deprecated Use Utils::format() instead, this function will be removed
+	* Returns a formatted version of a time
 	*
 	* @param $str string: Time string in the format hh:mm:ss
 	* @param $format string: Format string accepted by DateTime::format()
 	* @return string: The formatted time
 	*/
 	public static function formatTime($str, $format='H:i') {
+		if( $str === null )
+			return self::NULL_FMT;
+
 		$time = new \DateTime($str);
 		return $time->format($format);
 	}
@@ -118,29 +122,32 @@ class Utils {
 	/**
 	* Return a formatted version of a number
 	*
-	* @deprecated Use Utils::format() instead, this function will be removed
-	*
 	* @param $num int: The number to be formatted
 	* @param $decimals int: Number of decimals
 	* @param $dec_point str: Decimal point
 	* @param $thousands_sep str: Thousands separator
 	* @return string: The formatted version of the number
 	*/
-	public static function formatNumber($num, $decimals=2, $dec_point=',', $thousands_sep='.') {
+	public static function formatNumber($num, $decimals=null, $dec_point=',', $thousands_sep='.') {
+		if( $num === null )
+			return self::NULL_FMT;
+
+		if( $decimals === null )
+			$decimals = self::guessDecimals($num);
+
 		return number_format($num, $decimals, $dec_point, $thousands_sep);
 	}
 
 	/**
 	* Return a formatted version of a boolean
 	*
-	* @deprecated Use Utils::format() instead, this function will be removed
-	*
 	* @return string: The formatted version of the boolean
 	*/
 	public static function formatBool($bool) {
 		if( $bool === null )
-			return null;
-		return $bool ? 'Yes' : 'No';
+			return self::NULL_FMT;
+
+		return $bool ? _('Yes') : _('No');
 	}
 
 	/**
@@ -153,7 +160,7 @@ class Utils {
 		$lc = localeconv();
 
 		if( $type == 'NULL' )
-			$val = '-';
+			$val = self::NULL_FMT;
 		elseif( $type == 'string' )
 			$val = $value;
 		elseif( $value instanceof Time )
@@ -163,17 +170,37 @@ class Utils {
 		elseif( $value instanceof \DateTime )
 			$val = $value->format('d.m.Y H:i:s');
 		elseif( $type == 'boolean' )
-			$val = $value ? _('Yes') : _('No');
+			$val = self::formatBool($value);
 		elseif( $type == 'integer' )
-			$val = number_format($value, 0, $lc['decimal_point'], $lc['thousands_sep']);
+			$val = self::formatNumber($value, 0, $lc['decimal_point'], $lc['thousands_sep']);
 		elseif( $value instanceof Decimal )
-			$val = $value->format(4, $lc['decimal_point'], $lc['thousands_sep']);
+			$val = $value->format(null, $lc['decimal_point'], $lc['thousands_sep']);
 		elseif( $type == 'double' )
-			$val = number_format($value, 4, $lc['decimal_point'], $lc['thousands_sep']);
+			$val = self::formatNumber($value, null, $lc['decimal_point'], $lc['thousands_sep']);
 		else
 			throw new \Exception("Unsupported type $type class " . get_class($value));
 
 		return $val;
+	}
+
+	/**
+	 * Guesses the number of decimals in the given number
+	 *
+	 * @return int: The number of decimals
+	 */
+	public static function guessDecimals($num) {
+		if( gettype($num) == 'integer' )
+			return 0;
+
+		Lang::pushLocale(LC_NUMERIC);
+		$numStr = (string)$num;
+		Lang::popLocale();
+
+		$dot = strpos($numStr, '.');
+		if( $dot === false )
+			return 0;
+
+		return strlen($numStr) - $dot - 1;
 	}
 
 	/**

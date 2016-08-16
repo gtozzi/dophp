@@ -257,7 +257,7 @@ class Db {
 			$c = "`$k` = ";
 			if( is_array($v) ) {
 				if( count($v) != 2 || ! array_key_exists(0,$v) || ! array_key_exists(1,$v) )
-					throw new \Exception('Unvalid number of array components');
+					throw new \Exception('Invalid number of array components');
 				if( is_array($v[0]) ) {
 					$f = $v[1];
 					foreach( $v[0] as $n => $vv ) {
@@ -356,7 +356,7 @@ class Table {
 		if( ! $this->_db instanceof Db )
 			throw new \Exception('Db must be a valid dophp\Db instance');
 		if( ! $this->_name || gettype($this->_name) !== 'string' )
-			throw new \Exception('Unvalid table name');
+			throw new \Exception('Invalid table name');
 
 		// Makes sure that table exists
 		$q = "
@@ -1036,11 +1036,11 @@ class Decimal {
 	/**
 	* Returns a formatted version of this decimal
 	*
-	* @param $decimals int: Number of decimals (-1 = all)
+	* @param $decimals int: Number of decimals (null = all)
 	* @param $dec_point string: Decimal point
 	* @param $thousands_sep string: Thousands separator
 	*/
-	public function format($decimals, $dec_point='.', $thousands_sep=null) {
+	public function format($decimals=null, $dec_point='.', $thousands_sep=null) {
 		if( $this->__int === null && $this->__dec === null )
 			return '-';
 
@@ -1050,7 +1050,13 @@ class Decimal {
 				if($i > 0 && $i % 3 == 0)
 					$str = substr_replace($str, '.', $i+1, 0);
 
-		if( $decimals == -1 )
+		// Deprecated and undocumented: -1 is the same as null
+		if( $decimals == -1 ) {
+			trigger_error('Deprecated usage of -1 as format() argument, ' .
+					'please use null instead', E_USER_WARNING);
+			$decimals = null;
+		}
+		if( $decimals === null )
 			$decimals = strlen($this->__dec);
 
 		if( $decimals != 0 && $this->__dec !== null ) {
