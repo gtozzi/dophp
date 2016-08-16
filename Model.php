@@ -314,7 +314,7 @@ abstract class Model {
 					$this->_beforeEdit($pk, $data, $related);
 
 					foreach( $data as $k => $v )
-						if( $this->_fields[$k]->i18n ) {
+						if( isset($this->_fields[$k]) && $this->_fields[$k]->i18n ) {
 							// Leave text ID untouched and update text instead
 							$txtid = $this->_table->get($pk, [$k])[$k];
 							\DoPhp::lang()->updText($txtid, $v);
@@ -1157,6 +1157,18 @@ class Field {
 	*/
 	public function value() {
 		return $this->_value;
+	}
+
+	/**
+	* Returns the value for this field, formatted for the html input "value" attribute
+	*
+	* @return string
+	*/
+	public function formValue() {
+		Lang::pushLocale(LC_NUMERIC);
+		$val = (string)$this;
+		Lang::popLocale(LC_NUMERIC);
+		return $val;
 	}
 
 	/**
