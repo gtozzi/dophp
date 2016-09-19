@@ -200,32 +200,49 @@ abstract class PageSmarty extends PageBase implements PageInterface {
 	protected $_template;
 
 	/**
+	 * Creates an DoPhp-inited instance of smarty and returns it
+	 *
+	 * Useful when also using smarty in different context (eg. when sending
+	 * emails)
+	 *
+	 * @param $config array: DoPhp config array
+	 * @return Smarty instance
+	 */
+	public static function newSmarty(& $config) {
+		$smarty = new \Smarty();
+
+		$smarty->left_delimiter = self::TAG_START;
+		$smarty->right_delimiter = self::TAG_END;
+		$smarty->setTemplateDir(array(
+			"{$config['paths']['tpl']}/",
+			'dophp' => "{$config['dophp']['path']}/tpl/"
+		));
+		$smarty->setCompileDir("{$config['paths']['cac']}/");
+		$smarty->setCacheDir("{$config['paths']['cac']}/");
+
+		$smarty->registerPlugin('modifier', 'format', 'dophp\Utils::format');
+		$smarty->registerPlugin('modifier', 'formatTime', 'dophp\Utils::formatTime');
+		$smarty->registerPlugin('modifier', 'formatNumber', 'dophp\Utils::formatNumber');
+
+		$smarty->assign('config', $config);
+
+		return $smarty;
+	}
+
+	/**
 	* Prepares the template system and passes execution to _build()
 	*
 	* @see PageInterface::run
 	*/
 	public function run() {
 		// Init smarty
-		$this->_smarty = new \Smarty();
-		$this->_smarty->left_delimiter = self::TAG_START;
-		$this->_smarty->right_delimiter = self::TAG_END;
-		$this->_smarty->setTemplateDir(array(
-			"{$this->_config['paths']['tpl']}/",
-			'dophp' => "{$this->_config['dophp']['path']}/tpl/"
-		));
-		$this->_smarty->setCompileDir("{$this->_config['paths']['cac']}/");
-		$this->_smarty->setCacheDir("{$this->_config['paths']['cac']}/");
-
-		$this->_smarty->registerPlugin('modifier', 'format', 'dophp\Utils::format');
-		$this->_smarty->registerPlugin('modifier', 'formatTime', 'dophp\Utils::formatTime');
-		$this->_smarty->registerPlugin('modifier', 'formatNumber', 'dophp\Utils::formatNumber');
+		$this->_smarty = self::newSmarty($this->_config);
 
 		// Assign utility variables
 		$this->_smarty->assign('this', $this);
 		$this->_smarty->assign('page', $this->_name);
 		foreach( $this->_config['paths'] as $k => $v )
 			$this->_smarty->assign($k, $v);
-		$this->_smarty->assign('config', $this->_config);
 		$this->_smarty->assignByRef('user', $this->_user);
 		$this->_smarty->assignByRef('loginError', $this->_loginError);
 
