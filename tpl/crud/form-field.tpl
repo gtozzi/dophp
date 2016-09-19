@@ -65,7 +65,7 @@
 				<input name="{{$field->name()}}" type="{{if $field->type()=='auto'}}text{{else}}{{$field->type()}}{{/if}}"
 					class="{{if $field->type()!='file'}}form-control{{/if}} {{if $field->type()=='auto'}}autocomplete{{/if}}"
 					{{if $field->type()!='file'}}placeholder="{{$field->descr()}}"{{/if}}
-					value="{{(string)$field}}"
+					value="{{$field->formValue()}}"
 					{{if $field->type()=='password'}}autocomplete="off"{{/if}}
 					{{if $field->step()}}step="{{sprintf('%F',$field->step())}}"{{/if}}
 				/>

@@ -299,6 +299,8 @@ trait CrudFunctionalities {
 	protected $_buttons = true;
 	/** If set to true, will not call _requireLogin() */
 	protected $_public = false;
+	/** Name of the base template to extend */
+	protected $_baseTpl = 'base-backend.tpl';
 
 	/**
 	* Process and run the CRUD actions, should be called inside _build()
@@ -326,6 +328,7 @@ trait CrudFunctionalities {
 		$this->_smarty->assign('action', $action);
 		$this->_smarty->assign('buttons', $this->_buttons);
 		$this->_smarty->assign('localeconv', localeconv());
+		$this->_smarty->assign('baseTpl', $this->_baseTpl);
 
 		// Process the requested action
 		$method = '_build' . ucfirst($action);
@@ -383,6 +386,7 @@ trait CrudFunctionalities {
 				'sSortAscending' => ': ' . _('sort the column in ascending order'),
 				'sSortDescending' => ': ' . _('sort the column in descending order'),
 			],
+			'cInsert' => _('Insert'),
 		]);
 
 		$this->_smarty->assign('pageTitle', $this->_model->getNames()[1]);
