@@ -37,8 +37,19 @@ class Db {
 		$this->_pdo = new \PDO($dsn, $user, $pass);
 		$this->_pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
 		$this->_pdo->setAttribute(\PDO::ATTR_DEFAULT_FETCH_MODE, \PDO::FETCH_ASSOC);
-		$this->_pdo->exec('SET sql_mode = \'TRADITIONAL,STRICT_ALL_TABLES,NO_AUTO_VALUE_ON_ZERO,NO_ZERO_DATE,NO_ZERO_IN_DATE\'');
-		$this->_pdo->exec('SET NAMES utf8');
+		switch( $this->_pdo->getAttribute(\PDO::ATTR_DRIVER_NAME) ) {
+		case 'mysql':
+			$this->_pdo->exec('SET sql_mode = \'TRADITIONAL,STRICT_ALL_TABLES,NO_AUTO_VALUE_ON_ZERO,NO_ZERO_DATE,NO_ZERO_IN_DATE\'');
+			$this->_pdo->exec('SET NAMES utf8');
+			break;
+		case 'odbc':
+		case 'sqlsrv':
+		case 'mssql':
+		case 'sybase':
+		case 'dblib':
+			$this->_pdo->exec('SET ARITHABORT ON');
+			break;
+		}
 	}
 
 	/**
