@@ -681,7 +681,7 @@ abstract class JsonBaseMethod extends BaseMethod {
 	/** Encodes the response into JSON */
 	protected function _output(& $res) {
 		$opt = 0;
-		foreach( $this->_jsonOpts as $o );
+		foreach( $this->_jsonOpts as $o )
 			$opt |= $o;
 		if(PHP_VERSION_ID < 50303)
 			$opt ^= JSON_PRETTY_PRINT;
