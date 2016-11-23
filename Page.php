@@ -180,6 +180,23 @@ abstract class PageBase {
 
 		return $str;
 	}
+
+	/**
+	 * Utility function: returns a json encoded version of data, just like
+	 * json_encode but failsafe
+	 *
+	 * @see json_encode
+	 * @param $res mixed: The data to be encoded
+	 * @param $opts int: Json options
+	 * @return The json encoded data
+	 * @throws RuntimeError en json_encode error
+	 */
+	protected function _jsonEncode(&$res, $opts=0) {
+		$encoded = json_encode($res, $opts);
+		if( $encoded === false )
+			throw new RuntimeError(json_last_error_msg());
+		return $encoded;
+	}
 }
 
 /**
@@ -482,7 +499,7 @@ trait CrudFunctionalities {
 		$this->_headers['Content-type'] = 'application/json';
 
 		$this->_template = $this->_templateName('crud/ajax.tpl');
-		$this->_smarty->assign('data', json_encode($data));
+		$this->_smarty->assign('data', $this->_jsonEncode($data));
 	}
 
 	/**
@@ -668,7 +685,7 @@ abstract class JsonBaseMethod extends BaseMethod {
 			$opt |= $o;
 		if(PHP_VERSION_ID < 50303)
 			$opt ^= JSON_PRETTY_PRINT;
-		return $this->_compress(json_encode($res, $opt));
+		return $this->_compress($this->_jsonEncode($res, $opt));
 	}
 
 }
