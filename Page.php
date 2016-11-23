@@ -194,7 +194,7 @@ abstract class PageBase {
 	protected function _jsonEncode(&$res, $opts=0) {
 		$encoded = json_encode($res, $opts);
 		if( $encoded === false )
-			throw new RuntimeError(json_last_error_msg());
+			throw new \Exception(json_last_error_msg(), json_last_error());
 		return $encoded;
 	}
 }
