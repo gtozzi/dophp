@@ -18,6 +18,14 @@ class Db {
 	/** If true, enables debug functions */
 	public $debug = false;
 
+	/**
+	 * If true, enables FreeTDS/ODBC/MSSQL fix
+	 * Forces casting of all binded parameters to VARCHAR in run()
+	 *
+	 * @see http://stackoverflow.com/a/3853811/4210714
+	 */
+	public $vcharfix = false;
+
 	/** PDO instance */
 	protected $_pdo;
 
@@ -30,10 +38,12 @@ class Db {
 	* Starts a PDO connection to DB
 	*
 	* @param $dsn  string: DSN, PDO valid
-	* @param $user string: Username to access DBMS
-	* @param $pass string: Password to access DBMS
+	* @param $user string: Username to access DBMS (if not included in DSN)
+	* @param $pass string: Password to access DBMS (if not included in DSN)
+	* @param $vcharfix bool: See Db::vcharfix docs
 	*/
-	public function __construct($dsn, $user, $pass) {
+	public function __construct($dsn, $user=null, $pass=null, $vcharfix=false) {
+		$this->vcharfix = $vcharfix;
 		$this->_pdo = new \PDO($dsn, $user, $pass);
 		$this->_pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
 		$this->_pdo->setAttribute(\PDO::ATTR_DEFAULT_FETCH_MODE, \PDO::FETCH_ASSOC);
@@ -80,13 +90,21 @@ class Db {
 	*
 	* @param $query string: The query to be executed
 	* @param $params mixed: Array containing the parameters or single parameter
+	* @param $vcharfix boolean: like $this->vcharfix, ovverides it when used
 	*/
-	public function run($query, $params=array()) {
+	public function run($query, $params=array(), $vcharfix=null) {
 		if( ! is_array($params) )
 			$params = array($params);
+		if( $vcharfix === null )
+			$vcharfix = $this->vcharfix;
+
+		// Modify the query to cast all params to varchar
+		if( $vcharfix )
+			$query = preg_replace('/(\?|:[a-z]+)/', 'CAST($0 AS VARCHAR)', $query);
 
 		foreach($params as & $p)
-			if( gettype($p) == 'boolean' ) { // PDO would convert false into null otherwise
+			if( gettype($p) == 'boolean' ) {
+				// PDO would convert false into null otherwise
 				if( $p === true )
 					$p = 1;
 				elseif( $p === false )
@@ -105,6 +123,30 @@ class Db {
 		}
 
 		$st = $this->_pdo->prepare($query);
+		/* Experimental, switch to this in future?
+		foreach( $params as $k => $v ) {
+			switch( gettype($v) ) {
+			case 'NULL':
+				$p = \PDO::PARAM_NULL;
+				break;
+			case 'boolean':
+				$t = \PDO::PARAM_BOOL;
+				break;
+			case 'integer':
+				$t = \PDO::PARAM_INT;
+				break;
+			default:
+				$t = \PDO::PARAM_STR;
+				break;
+			}
+
+			// Parameters are 1-based while array indexes are 0-based
+			if( gettype($k) == 'integer' )
+				$k++;
+
+			$st->bindParam($k, $v, $t);
+		}
+		*/
 		$st->execute($params);
 
 		return $st;

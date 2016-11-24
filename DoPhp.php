@@ -158,7 +158,12 @@ class DoPhp {
 
 		// Creates database connection, if needed
 		if( array_key_exists('db', $this->__conf) )
-			$this->__db = new $db($this->__conf['db']['dsn'], $this->__conf['db']['user'], $this->__conf['db']['pass']);
+			$this->__db = new $db(
+				$this->__conf['db']['dsn'],
+				isset($this->__conf['db']['user']) ? $this->__conf['db']['user'] : null,
+				isset($this->__conf['db']['pass']) ? $this->__conf['db']['pass'] : null,
+				isset($this->__conf['db']['vcharfix']) ? $this->__conf['db']['vcharfix'] : false
+			);
 		if( $this->__conf['debug'] )
 			if( $this->__db )
 				$this->__db->debug = true;
