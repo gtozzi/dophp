@@ -87,6 +87,15 @@ class DoPhp {
 	*                                 - idx: the table containing the text indexes
 	*                                 - txt: the table containing the texts itself
 	*                 )
+	*                 'cors' => array( // Handles CORS (Cross Origin Resource Sharing) support
+	*                     'origins' => array list of origins to allow or string '*' for any.
+	*                                  Null disables CORS (default).
+	*                     'headers' => array list of accepted headers or string '*' to accept all.
+	*                                  Default: empty
+	*                     'credentials' => boolean, allow credentials? Default: false
+	*                     'maxage' => int: indication of max preflight cached age, in seconds
+	*                                 Default: 86400
+	*                 )
 	*                 'dophp' => array( // Internal DoPhp configurations
 	*                     'url'  => relative path for accessing DoPhp folder from webserver.
 	*                               Default: try to guess it
@@ -141,6 +150,16 @@ class DoPhp {
 			$this->__conf['dophp']['url'] = preg_replace('/^'.preg_quote($_SERVER['DOCUMENT_ROOT'],'/').'/', '', __DIR__, 1);
 		if( ! array_key_exists('path', $this->__conf['dophp']) )
 			$this->__conf['dophp']['path'] = __DIR__;
+		if( ! array_key_exists('cors', $this->__conf) )
+			$this->__conf['cors'] = array();
+		if( ! array_key_exists('origins', $this->__conf['cors']) )
+			$this->__conf['cors']['origins'] = null;
+		if( ! array_key_exists('headers', $this->__conf['cors']) )
+			$this->__conf['cors']['headers'] = array();
+		if( ! array_key_exists('credentials', $this->__conf['cors']) )
+			$this->__conf['cors']['credentials'] = false;
+		if( ! array_key_exists('maxage', $this->__conf['cors']) )
+			$this->__conf['cors']['maxage'] = 86400;
 		if( ! array_key_exists('debug', $this->__conf) )
 			$this->__conf['debug'] = false;
 
@@ -200,6 +219,68 @@ class DoPhp {
 		} else {
 			header("HTTP/1.1 404 Not Found");
 			echo('Unknown Page');
+			return;
+		}
+
+		// List of allowed methods, used later in CORS preflight and OPTIONS
+		// TODO: Do not hardcode it, handle it nicely
+		$allowMethods = 'OPTIONS, GET, HEAD, POST';
+
+		// Handle CORS
+		// (https://www.html5rocks.com/static/images/cors_server_flowchart.png)
+		// (https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods/OPTIONS)
+		$reqHeads = dophp\Utils::headers();
+		if( isset($reqHeads['Origin']) && $this->__conf['cors']['origins'] ) {
+			// The client is requesting CORS and dophp is configured to handle it
+			$origin = $reqHeads['Origin'];
+			$preflight = $_SERVER['REQUEST_METHOD'] == 'OPTIONS';
+
+			// Set the Access-Control-Allow-Origin header
+			$oh = null;
+			if( $this->__conf['cors']['origins'] == '*' )
+				$oh = $origin;
+			else {
+				header('Vary: Origin');
+				foreach( $this->__conf['cors']['origins'] as $o )
+					if( $o == $origin ) {
+						$oh = $o;
+						break;
+					}
+			}
+			if( $oh )
+				header("Access-Control-Allow-Origin: $oh");
+
+			// Set the Access-Control-Request-Headers header
+			$hh = null;
+			if( $preflight && isset($reqHeads['Access-Control-Request-Headers']) ) {
+				if( $this->__conf['cors']['headers'] == '*' )
+					$hh = $reqHeads['Access-Control-Request-Headers'];
+				else {
+					$rhs = array_map('trim', explode(',', $reqHeads['Access-Control-Request-Headers']));
+					$hh = '';
+					foreach( $rhs as $h )
+						if( in_array($h, $this->__conf['cors']['headers']) )
+							$hh .= ( strlen($hh) ? ', ' : '' ) . $h;
+				}
+			}
+			if( $hh )
+				header("Access-Control-Allow-Headers: $hh");
+
+			// Set the other headers
+			if( $oh || $hh ) {
+				if( $preflight ) {
+					header("Access-Control-Allow-Methods: $allowMethods");
+					header("Access-Control-Max-Age: {$this->__conf['cors']['maxage']}");
+				}
+				if( $this->__conf['cors']['credentials'] )
+					header("Access-Control-Allow-Credentials: true");
+			}
+		}
+
+		// When an OPTIONS request is received, must not serve a body,
+		// so no need to go futher
+		if( $_SERVER['REQUEST_METHOD'] == 'OPTIONS' ) {
+			header("Allow: $allowMethods");
 			return;
 		}
 
