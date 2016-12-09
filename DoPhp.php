@@ -301,9 +301,13 @@ class DoPhp {
 		$fromCache = false;
 		try {
 			require $inc_file;
-			$classname = dophp\Utils::findClass(self::className($page));
+			$findName = self::className($page);
+			$classname = dophp\Utils::findClass($findName);
 			if( ! $classname )
-				throw new Exception('Page class not found');
+				if( $this->__conf['debug'] )
+					throw new Exception("Page class \"$findName\" not found in file \"$inc_file\"");
+				else
+					throw new Exception('Page class not found');
 			$pobj = new $classname($this->__conf, $this->__db, $this->__auth, $page );
 			if( ! $pobj instanceof dophp\PageInterface )
 				throw new Exception('Wrong page type');
