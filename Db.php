@@ -15,6 +15,11 @@ namespace dophp;
 */
 class Db {
 
+	/** MySQL DB Type */
+	const TYPE_MYSQL = 'mysql';
+	/** Microsoft SQL Server DB TYPE */
+	const TYPE_MSSQL = 'mssql';
+
 	/** If true, enables debug functions */
 	public $debug = false;
 
@@ -28,6 +33,13 @@ class Db {
 
 	/** PDO instance */
 	protected $_pdo;
+
+	/** Database type, one of:
+	 * - null: Uninited/unknown
+	 * - mysql: MySQL server
+	 * - mssql: Microsoft SQL Server
+	 */
+	protected $_type = null;
 
 	/** Wiritten in debug mode, do not use for different purposes */
 	public $lastQuery = null;
@@ -49,6 +61,7 @@ class Db {
 		$this->_pdo->setAttribute(\PDO::ATTR_DEFAULT_FETCH_MODE, \PDO::FETCH_ASSOC);
 		switch( $this->_pdo->getAttribute(\PDO::ATTR_DRIVER_NAME) ) {
 		case 'mysql':
+			$this->_type = self::TYPE_MYSQL;
 			$this->_pdo->exec('SET sql_mode = \'TRADITIONAL,STRICT_ALL_TABLES,NO_AUTO_VALUE_ON_ZERO,NO_ZERO_DATE,NO_ZERO_IN_DATE\'');
 			$this->_pdo->exec('SET NAMES utf8');
 			break;
@@ -57,6 +70,7 @@ class Db {
 		case 'mssql':
 		case 'sybase':
 		case 'dblib':
+			$this->_type = self::TYPE_MSSQL;
 			$this->_pdo->exec('SET ARITHABORT ON');
 			break;
 		}
@@ -83,6 +97,13 @@ class Db {
 		if( ! $curDb )
 			return;
 		$this->_pdo = $curDb->_pdo;
+	}
+
+	/**
+	 * Returns database type
+	 */
+	public function type() {
+		return $this->_type;
 	}
 
 	/**
@@ -190,8 +211,8 @@ class Db {
 	*/
 	public function delete($table, $where) {
 		list($w,$p) = self::buildParams($where, ' AND ');
-		$q = "DELETE FROM `$table` WHERE $w";
-		
+		$q = 'DELETE FROM '.$this->quoteObj($table).' WHERE $w';
+
 		return $this->run($q, $p)->rowCount();
 	}
 
@@ -213,7 +234,7 @@ class Db {
 	* @return int: Number of found rows
 	*/
 	public function foundRows() {
-		$q = "SELECT FOUND_ROWS() AS `fr`";
+		$q = 'SELECT FOUND_ROWS() AS '.$this->quoteObj('fr');
 
 		$res = $this->run($q)->fetch();
 		return $res['fr'] !== null ? (int)$res['fr'] : null;
@@ -254,6 +275,58 @@ class Db {
 	*/
 	public function lastInsertId() {
 		return $this->_pdo->lastInsertId();
+	}
+
+	/**
+	 * Quotes a schema object (table, column, ...)
+	 *
+	 * @param $name string: The unquoted object name
+	 * @return string: The quoted object name
+	 */
+	public function quoteObj($name) {
+		return self::quoteObjFor($name, $this->_type);
+	}
+
+	/**
+	 * Quotes a schema object (table, column, ...)
+	 *
+	 * @param $name string: The unquoted object name
+	 * @param $type string: The DBMS type (ansi, mysql, mssql)
+	 * @return string: The quoted object name
+	 */
+	public static function quoteObjFor($name, $type) {
+		switch( $type ) {
+		case self::TYPE_MYSQL:
+			$name = str_replace('`', '``', $name);
+			return "`$name`";
+		case self::TYPE_MSSQL:
+			return "[$name]";
+		case 'ansi':
+			return "\"$name\"";
+		default:
+			throw new \Exception("Type \"$type\" not implemented");
+		}
+	}
+
+	/**
+	 * Converts a string using SQL-99 "\"" quoting into a string using
+	 * DBMS' native quoting
+	 */
+	public function quoteConv($query) {
+		$spat = '/"([^"\\\\]*(?:\\\\.[^"\\\\]*)*)"/';
+
+		switch( $this->_type ) {
+		case self::TYPE_MYSQL:
+			$reppat = '`$1`';
+			break;
+		case self::TYPE_MSSQL:
+			$reppat = '[$1]';
+			break;
+		default:
+			throw new \Exception('Not Implemented');
+		}
+
+		return preg_replace($spat, $reppat, $query);
 	}
 
 	/**
@@ -299,15 +372,16 @@ class Db {
 	*                       will be bound to the custom sql function, By example:
 	*                       'password' => [['12345', '45678'], 'AES_ENCRYPT(?,?)'],
 	* @param $glue string: The string to join the arguments, usually ', ' or ' AND '
+	* @params $type string: The DBMS type, used for quoting (see Db::QuoteObjFor())
 	* @return array [query string, params array]
 	*/
-	public static function buildParams($params, $glue=', ') {
+	public static function buildParams($params, $glue=', ', $type=self::TYPE_MYSQL) {
 		if( ! $params )
 			return array('', []);
 		$cols = array();
 		$vals = array();
 		foreach( $params as $k => $v ) {
-			$c = "`$k` = ";
+			$c = self::quoteObjFor($k, $type) . ' = ';
 			if( is_array($v) ) {
 				if( count($v) != 2 || ! array_key_exists(0,$v) || ! array_key_exists(1,$v) )
 					throw new \Exception('Invalid number of array components');
@@ -411,60 +485,125 @@ class Table {
 		if( ! $this->_name || gettype($this->_name) !== 'string' )
 			throw new \Exception('Invalid table name');
 
+		// Determine the object to use to refer to "self" db
+		switch( $this->_db->type() ) {
+		case Db::TYPE_MYSQL:
+			$sqlSelfDb = 'DATABASE()';
+			$colKey = true;
+			$hasReferences = true;
+			break;
+		case Db::TYPE_MSSQL:
+			$sqlSelfDb = '\'dbo\'';
+			$colKey = false;
+			$hasReferences = false;
+			break;
+		default:
+			throw new \Exception('Not Implemented');
+		}
+
 		// Makes sure that table exists
-		$q = "
+		$q = '
 			SELECT
-				`TABLE_TYPE`
-			FROM `information_schema`.`TABLES`
-			WHERE `TABLE_SCHEMA` = DATABASE() AND `TABLE_NAME` = ?
-		";
-		if( ! $this->_db->run($q, array($this->_name))->fetch() )
+				"TABLE_TYPE"
+			FROM "information_schema"."TABLES"
+			WHERE "TABLE_SCHEMA" = '.$sqlSelfDb.'
+				AND "TABLE_NAME" = ?
+		';
+		if( ! $this->_db->run($this->_db->quoteConv($q), array($this->_name))->fetch() )
 			throw new \Exception("Table {$this->_name} not found");
 
 		// Read and cache table structure
-		$q = "
+		$q = '
 			SELECT
-				`COLUMN_NAME`,
-				`COLUMN_DEFAULT`,
-				`IS_NULLABLE`,
-				`DATA_TYPE`,
-				`COLUMN_TYPE`,
-				`CHARACTER_MAXIMUM_LENGTH`,
-				`NUMERIC_PRECISION`,
-				`NUMERIC_SCALE`,
-				`COLUMN_KEY`,
-				`EXTRA`
-			FROM `information_schema`.`COLUMNS`
-			WHERE `TABLE_SCHEMA` = DATABASE() AND `TABLE_NAME` = ?
-			ORDER BY `ORDINAL_POSITION`
-		";
-		foreach( $this->_db->run($q, array($this->_name))->fetchAll() as $c ) {
+				"COLUMN_NAME",
+				"COLUMN_DEFAULT",
+				"IS_NULLABLE",
+				"DATA_TYPE",
+				"CHARACTER_MAXIMUM_LENGTH",
+				"NUMERIC_PRECISION",
+				"NUMERIC_SCALE"';
+		if( $colKey )
+			$q .= ",\n\t\t\t\t\"COLUMN_KEY\"";
+		$q .= '
+			FROM "information_schema"."COLUMNS"
+			WHERE "TABLE_SCHEMA" = '.$sqlSelfDb.'
+				AND "TABLE_NAME" = ?
+			ORDER BY "ORDINAL_POSITION"
+		';
+		foreach( $this->_db->run($this->_db->quoteConv($q), array($this->_name))->fetchAll() as $c ) {
 			if( isset($this->_cols['COLUMN_NAME']) )
 				throw new \Exception("Duplicate definition found for column {$c['COLUMN_NAME']}");
+
 			$this->_cols[$c['COLUMN_NAME']] = $c;
-			if( $c['COLUMN_KEY'] == 'PRI' )
+
+			if( $colKey && $c['COLUMN_KEY'] == 'PRI' )
+				$this->_pk[] = $c['COLUMN_NAME'];
+		}
+
+		// Read primary keys (if not done earlier)
+		if( ! $colKey ) {
+			$q = '
+				SELECT
+					"COLUMN_NAME"
+				FROM
+					"information_schema"."TABLE_CONSTRAINTS" AS "tab",
+					"information_schema"."CONSTRAINT_COLUMN_USAGE" AS "col"
+				WHERE
+					"col"."CONSTRAINT_NAME" = "tab"."CONSTRAINT_NAME"
+					AND "col"."TABLE_NAME" = "tab"."TABLE_NAME"
+					AND "CONSTRAINT_TYPE" = \'PRIMARY KEY\'
+					AND "col"."TABLE_SCHEMA" = '.$sqlSelfDb.'
+					AND "col"."TABLE_NAME" = ?
+			';
+			foreach( $this->_db->run($this->_db->quoteConv($q), array($this->_name))->fetchAll() as $c )
 				$this->_pk[] = $c['COLUMN_NAME'];
 		}
 
 		// Read and cache references structure
-		$q = "
-			SELECT
-				`CONSTRAINT_NAME`,
-				`COLUMN_NAME`,
-				`REFERENCED_TABLE_NAME`,
-				`REFERENCED_COLUMN_NAME`
-			FROM `information_schema`.`KEY_COLUMN_USAGE`
-			WHERE `CONSTRAINT_SCHEMA` = DATABASE()
-				AND `TABLE_SCHEMA` = DATABASE()
-				AND `REFERENCED_TABLE_SCHEMA` = DATABASE()
-				AND `TABLE_NAME` = ?
-			ORDER BY `ORDINAL_POSITION`, `POSITION_IN_UNIQUE_CONSTRAINT`
-		";
-		foreach( $this->_db->run($q, array($this->_name))->fetchAll() as $c ) {
+		if( $hasReferences )
+			$q = '
+				SELECT
+					"CONSTRAINT_NAME",
+					"COLUMN_NAME",
+					"REFERENCED_TABLE_NAME",
+					"REFERENCED_COLUMN_NAME"
+				FROM "information_schema"."KEY_COLUMN_USAGE"
+				WHERE "CONSTRAINT_SCHEMA" = '.$sqlSelfDb.'
+					AND "TABLE_SCHEMA" = '.$sqlSelfDb.'
+					AND "REFERENCED_TABLE_SCHEMA" = '.$sqlSelfDb.'
+					AND "TABLE_NAME" = ?
+				ORDER BY "ORDINAL_POSITION",
+					"POSITION_IN_UNIQUE_CONSTRAINT"
+			';
+		else
+			$q = '
+				SELECT
+					"kcu1"."CONSTRAINT_NAME",
+					"kcu1"."COLUMN_NAME",
+					"kcu2"."TABLE_NAME" AS "REFERENCED_TABLE_NAME",
+					"kcu2"."COLUMN_NAME" AS "REFERENCED_COLUMN_NAME"
+				FROM "information_schema"."REFERENTIAL_CONSTRAINTS" AS "rc"
+				INNER JOIN "information_schema"."KEY_COLUMN_USAGE" AS "kcu1"
+					ON "kcu1"."CONSTRAINT_CATALOG" = "rc"."CONSTRAINT_CATALOG"
+					AND "kcu1"."CONSTRAINT_SCHEMA" = "rc"."CONSTRAINT_SCHEMA"
+					AND "kcu1"."CONSTRAINT_NAME" = "rc"."CONSTRAINT_NAME"
+				INNER JOIN "information_schema"."KEY_COLUMN_USAGE" AS "kcu2"
+					ON "kcu2"."CONSTRAINT_CATALOG" = "rc"."UNIQUE_CONSTRAINT_CATALOG"
+					AND "kcu2"."CONSTRAINT_SCHEMA" = "rc"."UNIQUE_CONSTRAINT_SCHEMA"
+					AND "kcu2"."CONSTRAINT_NAME" = "rc"."UNIQUE_CONSTRAINT_NAME"
+					AND "kcu2"."ORDINAL_POSITION" = "kcu1"."ORDINAL_POSITION"
+				WHERE "kcu1"."CONSTRAINT_SCHEMA" = '.$sqlSelfDb.'
+					AND "kcu1"."TABLE_SCHEMA" = '.$sqlSelfDb.'
+					AND "kcu2"."TABLE_SCHEMA" = '.$sqlSelfDb.'
+					AND "kcu1"."TABLE_NAME" = ?
+				ORDER BY "kcu1"."ORDINAL_POSITION",
+					"kcu2"."ORDINAL_POSITION"
+			';
+		foreach( $this->_db->run($this->_db->quoteConv($q), array($this->_name))->fetchAll() as $c ) {
 			if( isset($this->_refs['COLUMN_NAME']) )
 				throw new \Exception("More than one reference detected for column {$c['COLUMN_NAME']}");
- 			$this->_refs[$c['COLUMN_NAME']] = $c;
- 		}
+			$this->_refs[$c['COLUMN_NAME']] = $c;
+		}
 
 	}
 
@@ -522,17 +661,17 @@ class Table {
 
 		$q .= $this->_buildColumList($cols, 't', $joins);
 
-		$q .= "FROM `{$this->_name}` AS `t`\n";
+		$q .= 'FROM '.$this->_db->quoteObj($this->_name).' AS '.$this->_db->quoteObj('t')."\n";
 
 		if( $joins )
 			foreach( $joins as $j )
-				$q .= $j->getJoin($this, 't');
+				$q .= $this->_db->quoteConv($j->getJoin($this, 't'));
 
 		if( ! $params instanceof Where )
 			$params = new Where($params);
 		$params->setAlias('t');
 
-		if( $w = $params->getCondition() ) {
+		if( $w = $this->_db->quoteConv($params->getCondition()) ) {
 			$q .= "WHERE $w\n";
 			$p = array_merge($p, $params->getParams());
 		}
@@ -587,8 +726,8 @@ class Table {
 	*/
 	public function getColumnType($col) {
 		$dtype = strtoupper($this->_cols[$col]['DATA_TYPE']);
-		$ctype = strtoupper($this->_cols[$col]['COLUMN_TYPE']);
-			
+		$nprec = (int)$this->_cols[$col]['NUMERIC_PRECISION'];
+
 		switch($dtype) {
 		case 'SMALLINT':
 		case 'MEDIUMINT':
@@ -597,10 +736,11 @@ class Table {
 		case 'BIGINT':
 			return 'integer';
 		case 'BIT':
-		case 'TINYINT':
 		case 'BOOL':
 		case 'BOOLEAN':
-			if( $ctype == 'TINYINT(1)' )
+			return 'boolean';
+		case 'TINYINT':
+			if( $nprec == 1 )
 				return 'boolean';
 			return 'integer';
 		case 'FLOAT':
@@ -808,12 +948,12 @@ class Table {
 				$str .= ",\n\t";
 
 			if( $alias )
-				$str .= "`$alias`.";
+				$str .= $this->_db->quoteObj($alias) . '.';
 
-			$str .= "`$name`";
+			$str .= $this->_db->quoteObj($name);
 
 			if( $as )
-				$str .= " AS `$as`";
+				$str .= ' AS ' . $this->_db->quoteObj($as);
 
 			return $str;
 		};
@@ -855,7 +995,7 @@ class Where {
 	*/
 	public function __construct($params=null, $condition='AND') {
 		if( $condition == 'AND' || $condition == 'OR' ) {
-			list($this->_cond, $this->_params) = Db::buildParams($params, " $condition ");
+			list($this->_cond, $this->_params) = Db::buildParams($params, " $condition ", 'ansi');
 			return;
 		}
 
@@ -936,13 +1076,15 @@ class Where {
 	}
 
 	/**
-	* Return the condition, adding specified alias if needed
+	* Return the condition with SQL99 quoting, adding specified alias if needed
+	*
+	* @see Db::quoteConv()
 	*/
 	public function getCondition() {
 		if( ! $this->_alias )
 			return $this->_cond;
 
-		return preg_replace('/`[^`]+`/', '`'.$this->_alias.'`.$0', $this->_cond);
+		return preg_replace('/"[^"]+"/', '"'.$this->_alias.'".$0', $this->_cond);
 	}
 
 	public function getParams() {
@@ -960,7 +1102,7 @@ class Where {
 
 
 /**
-* Represents a join ina query
+* Represents a join in a query
 */
 class Join {
 
@@ -983,14 +1125,15 @@ class Join {
 	}
 
 	/**
-	* Returns join SQL for joining with a given table
+	* Returns join SQL for joining with a given table (with SQL99 quoting)
 	*
+	* @see Db::quoteConv()
 	* @param $table Table: the table to join with
 	* @param $alias string: the alias assigned to the table
 	* @return string: The SQL code
 	*/
 	public function getJoin(Table $table, $alias) {
-		$sql = "LEFT JOIN `" . $this->_table->getName() . "` AS `" . $this->getAlias() . "`\n";
+		$sql = 'LEFT JOIN "' . $this->_table->getName() . '" AS "' . $this->getAlias() . "\"\n";
 		$refs = 0;
 
 		foreach( $table->getRefs() as $col => $ref )
@@ -1003,7 +1146,7 @@ class Join {
 				else
 					$sql .= "AND ";
 
-				$sql .= "`$alias`.`$col` = `" . $this->getAlias() . "`.`$ref[1]`\n";
+				$sql .= "\"$alias\".\"$col\" = \"" . $this->getAlias() . "\".\"$ref[1]\"\n";
 			}
 
 		if( ! $refs )
