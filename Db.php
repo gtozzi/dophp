@@ -112,6 +112,8 @@ class Db {
 	* @param $query string: The query to be executed
 	* @param $params mixed: Array containing the parameters or single parameter
 	* @param $vcharfix boolean: like $this->vcharfix, ovverides it when used
+	* @return PDOStatement
+	* @throws StatementExecuteError
 	*/
 	public function run($query, $params=array(), $vcharfix=null) {
 		if( ! is_array($params) )
@@ -168,7 +170,8 @@ class Db {
 			$st->bindParam($k, $v, $t);
 		}
 		*/
-		$st->execute($params);
+		if( ! $st->execute($params) )
+			throw new StatementExecuteError($st);
 
 		return $st;
 	}
@@ -447,6 +450,33 @@ class Db {
 		$ord .= implode(', ', $order);
 
 		return $ord;
+	}
+
+}
+
+
+/**
+ * Exception thrown when statement execution fails
+ */
+class StatementExecuteError extends \Exception {
+
+	/** The PDOStatement::errorCode() result */
+	public $errorCode;
+	/** The PDOStatement::errorInfo() result */
+	public $errorInfo;
+	/** The PDOStatement */
+	public $statement;
+	/** The Query */
+	public $query;
+	/** The params */
+	public $params;
+
+	public function __construct( $statement ) {
+		$this->statement = $statement;
+		$this->errorCode = $this->statement->errorCode();
+		$this->errorInfo = $this->statement->errorInfo();
+
+		parent::__construct("{$this->errorInfo[0]} [{$this->errorInfo[1]}]: {$this->errorInfo[2]}");
 	}
 
 }

@@ -378,7 +378,7 @@ class DoPhp {
 				'<li><b>Trace:</b> ' . nl2br($e->getTraceAsString()) . "</li>";
 			if( $this->__conf['debug'] ) {
 				// Add extra useful information
-				if( $e instanceof PDOException )
+				if( $e instanceof PDOException || $e instanceof dophp\StatementExecuteError )
 					$err .= "\n<li><b>Last Query:</b> " . $this->__db->lastQuery . "</li>\n" .
 						'<li><b>Last Params:</b> ' . nl2br(print_r($this->__db->lastParams,true)) . "</li>\n";
 			}
