@@ -458,7 +458,9 @@ class file_validator extends base_validator {
 *
 * Custom validation rules: 'rules': array list of array elements to check for,
 *                                   like on main rules
-*                          'required': if true, an array must be present
+*                          'required': boolean|lambda($field_values, $all_values)
+*                                      if true (or when lambda returns true),
+*                                      an array must be present
 */
 class array_validator implements field_validator {
 
@@ -468,7 +470,8 @@ class array_validator implements field_validator {
 	public function __construct($value, $options, & $values) {
 		if( ! $value ) {
 			if( array_key_exists('required',$options) && $options['required'] )
-				$this->__error = _("Field can't be empty") . '.';
+				if( ! is_callable($options['required']) || $options['required']($value, $values) )
+					$this->__error = _("Field can't be empty") . '.';
 
 		}elseif( ! is_array($value) ) {
 			$this->__error = _("Must be an array") . '.';
