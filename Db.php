@@ -197,8 +197,8 @@ class Db {
 	* @return int: Number of affected rows
 	*/
 	public function update($table, $params, $where) {
-		list($s,$ps) = self::buildInsUpdQuery('upd', $table, $params);
-		list($w,$pw) = self::buildParams($where, ' AND ');
+		list($s,$ps) = $this->buildInsUpdQuery('upd', $table, $params);
+		list($w,$pw) = self::buildParams($where, ' AND ', $this->_type);
 
 		$q = "$s WHERE $w";
 		$p = array_merge($ps, $pw);
@@ -343,7 +343,7 @@ class Db {
 	* @see buildParams
 	* @return array [query string, params]
 	*/
-	public static function buildInsUpdQuery($type, $table, $params) {
+	public function buildInsUpdQuery($type, $table, $params) {
 		switch( $type ) {
 		case 'ins':
 		case 'insupd':
@@ -356,8 +356,8 @@ class Db {
 			throw new \Exception("Unknown type $type");
 		}
 
-		list($cols, $p) = self::buildParams($params);
-		$q .= " `$table` SET $cols" ;
+		list($cols, $p) = self::buildParams($params, ', ', $this->_type);
+		$q .= ' ' . $this->quoteObj($table) . " SET $cols" ;
 		if( $type == 'insupd' )
 			$q .= " ON DUPLICATE KEY UPDATE $cols";
 		return array($q, $p);
