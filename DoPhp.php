@@ -110,10 +110,10 @@ class DoPhp {
 	* @param $sess   boolean: If true, starts the session and uses it
 	* @param $def    string: Default page name, used when received missing or unvalid page
 	* @param $key    string: the key containing the page name
-	* @param $url    string: base relative URL for accessing dophp folder in webserver
+	* @param $strict string: if true, return a 500 status on ANY error
 	*/
 	public function __construct($conf=null, $db='dophp\\Db', $auth=null, $lang='dophp\\Lang',
-			$sess=true, $def='home', $key=self::BASE_KEY) {
+			$sess=true, $def='home', $key=self::BASE_KEY, $strict=false) {
 
 		// Don't allow multiple instances of this class
 		if( self::$__instance )
@@ -124,6 +124,12 @@ class DoPhp {
 		// Start the session
 		if( $sess )
 			session_start();
+
+		// Sets the error handler and register a shutdown function to catch fatal errors
+		if( $strict ) {
+			set_error_handler(array('DoPhp', 'error_handler'));
+			register_shutdown_function(array('DoPhp', 'shutdown_handler'));
+		}
 
 		// Build default config
 		$this->__conf = $conf;
@@ -499,6 +505,23 @@ class DoPhp {
 			throw new Exception('Must instatiate DoPhp first');
 
 		return microtime(true) - self::$__instance->__start;
+	}
+
+	/**
+	 * DoPhp's error handler, just takes care of setting a 500 header
+	 * and leaves the rest to the default handler
+	 */
+	public static function error_handler( $errno, $errstr ) {
+		header("HTTP/1.1 500 Internal Server Error");
+		return false;
+	}
+
+	/**
+	 * Called at shutdown, trick to catch fatal errors, sets a 500 header
+	 */
+	public static function shutdown_handler() {
+		if( error_get_last() )
+			header("HTTP/1.1 500 Internal Server Error");
 	}
 
 }
