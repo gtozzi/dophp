@@ -461,13 +461,19 @@ class file_validator extends base_validator {
 *                          'required': boolean|lambda($field_values, $all_values)
 *                                      if true (or when lambda returns true),
 *                                      an array must be present
+*                          'errarray': boolean
+*                                      if true, returns errors as array instead of string
+*                                      (this may become default behavior in future)
 */
 class array_validator implements field_validator {
 
 	private $__value = null;
 	private $__error = null;
+	private $__options;
 
 	public function __construct($value, $options, & $values) {
+		$this->__options = $options;
+
 		if( ! $value ) {
 			if( array_key_exists('required',$options) && $options['required'] )
 				if( ! is_callable($options['required']) || $options['required']($value, $values) )
@@ -490,6 +496,9 @@ class array_validator implements field_validator {
 	}
 
 	public function validate() {
+		if( isset($this->__options['errarray']) && $this->__options['errarray'] )
+			return $this->__error;
+
 		return $this->__error ? print_r($this->__error, true) : $this->__error;
 	}
 }
