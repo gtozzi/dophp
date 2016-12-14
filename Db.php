@@ -767,6 +767,9 @@ class Table {
 	*                 DateTime, Time (see COL_TYPE_* constants)
 	*/
 	public function getColumnType($col) {
+		if( ! array_key_exists($col, $this->_cols) )
+			throw new \Exception("Column $col does not exist");
+
 		$dtype = strtoupper($this->_cols[$col]['DATA_TYPE']);
 		$nprec = (int)$this->_cols[$col]['NUMERIC_PRECISION'];
 
@@ -814,6 +817,26 @@ class Table {
 			return self::COL_TYPE_TIME;
 		default:
 			throw new \Exception("Unsupported column type $dtype");
+		}
+	}
+
+	/**
+	 * Tells whether a column can be null or not
+	 *
+	 * @param $col string: the column name
+	 * @return boolean
+	 */
+	public function isColumnNullable($col) {
+		if( ! array_key_exists($col, $this->_cols) )
+			throw new \Exception("Column $col does not exist");
+
+		switch( strtoupper($this->_cols[$col]['IS_NULLABLE']) ) {
+		case 'YES':
+			return true;
+		case 'NO':
+			return false;
+		default:
+			throw new \Exception("Unsupported nullable value {$this->_cols[$col]['IS_NULLABLE']}");
 		}
 	}
 
