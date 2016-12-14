@@ -457,6 +457,16 @@ class Db {
 */
 class Table {
 
+	// Column types
+	const COL_TYPE_INTEGER  = 'integer';
+	const COL_TYPE_BOOLEAN  = 'boolean';
+	const COL_TYPE_DOUBLE   = 'double';
+	const COL_TYPE_DECIMAL  = 'Decimal';
+	const COL_TYPE_STRING   = 'string';
+	const COL_TYPE_DATE     = 'Date';
+	const COL_TYPE_DATETIME = 'DateTime';
+	const COL_TYPE_TIME     = 'Time';
+
 	/** Database table name, may be overridden in sub-class or passed by constructor */
 	protected $_name = null;
 	/** Database object instance, passed by constructor */
@@ -722,7 +732,7 @@ class Table {
 	*
 	* @param $col string: the column name
 	* @return string: One of integer, boolean, double, Decimal, string, Date,
-	*                 DateTime, Time
+	*                 DateTime, Time (see COL_TYPE_* constants)
 	*/
 	public function getColumnType($col) {
 		$dtype = strtoupper($this->_cols[$col]['DATA_TYPE']);
@@ -734,21 +744,21 @@ class Table {
 		case 'INT':
 		case 'INTEGER':
 		case 'BIGINT':
-			return 'integer';
+			return self::COL_TYPE_INTEGER;
 		case 'BIT':
 		case 'BOOL':
 		case 'BOOLEAN':
-			return 'boolean';
+			return self::COL_TYPE_BOOLEAN;
 		case 'TINYINT':
 			if( $nprec == 1 )
-				return 'boolean';
-			return 'integer';
+				return self::COL_TYPE_BOOLEAN;
+			return self::COL_TYPE_INTEGER;
 		case 'FLOAT':
 		case 'DOUBLE':
-			return 'double';
+			return self::COL_TYPE_DOUBLE;
 		case 'DECIMAL':
 		case 'DEC':
-			return 'Decimal';
+			return self::COL_TYPE_DECIMAL;
 		case 'CHAR':
 		case 'VARCHAR':
 		case 'BINARY':
@@ -762,14 +772,14 @@ class Table {
 		case 'MEDIUMTEXT':
 		case 'LONGTEXT':
 		case 'ENUM':
-			return 'string';
+			return self::COL_TYPE_STRING;
 		case 'DATE':
-			return 'Date';
+			return self::COL_TYPE_DATE;
 		case 'DATETIME':
 		case 'TIMESTAMP':
-			return 'DateTime';
+			return self::COL_TYPE_DATETIME;
 		case 'TIME':
-			return 'Time';
+			return self::COL_TYPE_TIME;
 		default:
 			throw new \Exception("Unsupported column type $dtype");
 		}
