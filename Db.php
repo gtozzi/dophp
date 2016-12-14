@@ -703,9 +703,10 @@ class Table {
 	*
 	* @param $pk   mixed: The primary key, array if composite (associative or numeric)
 	* @param $data array: Associative array of <column>=><data> to update
+	* @return int: Number of affected rows
 	*/
 	public function update($pk, $data) {
-		$this->_db->update($this->_name, $data, $this->parsePkArgs($pk));
+		return $this->_db->update($this->_name, $data, $this->parsePkArgs($pk));
 	}
 
 	/**
@@ -722,9 +723,10 @@ class Table {
 	* Runs a delete query for a single record
 	*
 	* @param $pk mixed: The primary key, array if composite (associative or numeric)
+	* @return int: Number of affected rows
 	*/
 	public function delete($pk) {
-		$this->_db->delete($this->_name, $this->parsePkArgs($pk));
+		return $this->_db->delete($this->_name, $this->parsePkArgs($pk));
 	}
 
 	/**
