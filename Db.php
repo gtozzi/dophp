@@ -41,6 +41,9 @@ class Db {
 	 */
 	protected $_type = null;
 
+	/** Tells lastInsertId() PDO's driver support */
+	protected $_hasLid = true;
+
 	/** Wiritten in debug mode, do not use for different purposes */
 	public $lastQuery = null;
 	/** Wiritten in debug mode, do not use for different purposes */
@@ -66,6 +69,7 @@ class Db {
 			$this->_pdo->exec('SET NAMES utf8');
 			break;
 		case 'odbc':
+			$this->_hasLid = false;
 		case 'sqlsrv':
 		case 'mssql':
 		case 'sybase':
@@ -186,7 +190,9 @@ class Db {
 		list($q,$p) = $this->buildInsUpdQuery('ins', $table, $params);
 
 		$this->run($q, $p);
-		return $this->lastInsertId();
+		// TODO: retrieve last insert ID anyway
+		if( $this->_hasLid )
+			return $this->lastInsertId();
 	}
 
 	/**
