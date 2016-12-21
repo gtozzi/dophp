@@ -348,24 +348,34 @@ class Db {
 		case 'ins':
 		case 'insupd':
 			$q = 'INSERT INTO';
+			$ins = true;
 			break;
 		case 'upd':
 			$q = 'UPDATE';
+			$ins = false;
 			break;
 		default:
 			throw new \Exception("Unknown type $type");
 		}
 
-		list($cols, $p) = self::buildParams($params, ', ', $this->_type);
-		$q .= ' ' . $this->quoteObj($table) . " SET $cols" ;
+		$q .= ' ' . $this->quoteObj($table);
+
+		if( $ins ) {
+			list($cols, $p) = self::processParams($params, $this->_type);
+			$q .= '(' . implode(',', array_keys($cols)) . ')';
+			$q .= ' VALUES (' . implode(',', array_values($cols)) . ')';
+		} else {
+			list($sql, $p) = self::buildParams($params, ', ', $this->_type);
+			$q .= " SET $sql";
+		}
 		if( $type == 'insupd' )
 			$q .= " ON DUPLICATE KEY UPDATE $cols";
 		return array($q, $p);
 	}
 
 	/**
-	* Formats an associative array of parameters into a query string and an
-	* associative array ready to be passed to pdo
+	* Processes an associative array of parameters into an array of SQL-ready
+	* elements
 	*
 	* @param $params array: Associative array with parameters. Key is the name
 	*                       of the column. If the data is an array, 2nd key is
@@ -374,17 +384,18 @@ class Db {
 	*                       If also 1st key is an array, then multiple arguments
 	*                       will be bound to the custom sql function, By example:
 	*                       'password' => [['12345', '45678'], 'AES_ENCRYPT(?,?)'],
-	* @param $glue string: The string to join the arguments, usually ', ' or ' AND '
 	* @params $type string: The DBMS type, used for quoting (see Db::QuoteObjFor())
-	* @return array [query string, params array]
+	* @return array [ sql array, params array ]
+	*         sql array format: [ column (quoted) => parameter placeholder ]
+	*         params array format: [ parameter placeholder => value ]
 	*/
-	public static function buildParams($params, $glue=', ', $type=self::TYPE_MYSQL) {
+	public static function processParams($params, $type=self::TYPE_MYSQL) {
 		if( ! $params )
-			return array('', []);
+			return array([], []);
 		$cols = array();
 		$vals = array();
 		foreach( $params as $k => $v ) {
-			$c = self::quoteObjFor($k, $type) . ' = ';
+			$sqlCol = self::quoteObjFor($k, $type);
 			if( is_array($v) ) {
 				if( count($v) != 2 || ! array_key_exists(0,$v) || ! array_key_exists(1,$v) )
 					throw new \Exception('Invalid number of array components');
@@ -396,19 +407,37 @@ class Db {
 						if( $vv !== null )
 							$vals[$kk] = $vv;
 					}
-					$c .= $f;
+					$sqlPar = $f;
 				} else {
-					$c .= str_replace('?', ":$k", $v[1]);
+					$sqlPar .= str_replace('?', ":$k", $v[1]);
 					if( $v[0] !== null )
 						$vals[$k] = $v[0];
 				}
 			} else {
-				$c .= ":$k";
+				$sqlPar = ":$k";
 				$vals[$k] = $v;
 			}
-			$cols[] = $c;
+			$cols[$sqlCol] = $sqlPar;
 		}
-		return array(implode($glue, $cols), $vals);
+		return array($cols, $vals);
+	}
+
+	/**
+	* Formats an associative array of parameters into a query string and an
+	* associative array ready to be passed to pdo
+	*
+	* @deprecated
+	* @see processParams
+	* @param $glue string: The string to join the arguments, usually ', ' or ' AND '
+	* @return array [query string, params array]
+	*/
+	public static function buildParams($params, $glue=', ', $type=self::TYPE_MYSQL) {
+		list($cols, $vals) = self::processParams($params, $type);
+		$sql = '';
+		foreach( $cols as $c => $p )
+			$sql .= (strlen($sql) ? $glue : '') . "$c = $p";
+
+		return array($sql, $vals);
 	}
 
 	/**
