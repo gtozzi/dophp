@@ -803,7 +803,7 @@ class Table {
 	*/
 	public function getColumnType($col) {
 		if( ! array_key_exists($col, $this->_cols) )
-			throw new \Exception("Column $col does not exist");
+			throw new \Exception("Column $col does not exist in table {$this->_name}");
 
 		$dtype = strtoupper($this->_cols[$col]['DATA_TYPE']);
 		$nprec = (int)$this->_cols[$col]['NUMERIC_PRECISION'];
