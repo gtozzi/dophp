@@ -219,8 +219,8 @@ class Db {
 	* @return int: Number of affected rows
 	*/
 	public function delete($table, $where) {
-		list($w,$p) = self::buildParams($where, ' AND ');
-		$q = 'DELETE FROM '.$this->quoteObj($table).' WHERE $w';
+		list($w,$p) = self::buildParams($where, ' AND ', $this->_type);
+		$q = 'DELETE FROM '.$this->quoteObj($table)." WHERE $w";
 
 		return $this->run($q, $p)->rowCount();
 	}
