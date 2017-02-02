@@ -189,10 +189,20 @@ class Db {
 	public function insert($table, $params) {
 		list($q,$p) = $this->buildInsUpdQuery('ins', $table, $params);
 
-		$this->run($q, $p);
-		// TODO: retrieve last insert ID anyway
+		// Retrieve the ID by running a scope_identity query
+		if( ! $this->_hasLid )
+			$q .= '; SELECT SCOPE_IDENTITY() AS ' . $this->quoteObj('id');
+
+		$st = $this->run($q, $p);
+
 		if( $this->_hasLid )
 			return $this->lastInsertId();
+		else {
+			$r = $st->fetch();
+			if( ! $r )
+				throw new \Exception('Failed to retrieve id');
+			return $r['id'];
+		}
 	}
 
 	/**
