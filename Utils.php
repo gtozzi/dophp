@@ -242,7 +242,7 @@ class Utils {
 		if( ! array_key_exists('path', $url) ) {
 			$uri = self::parseUrl($_SERVER['REQUEST_URI']);
 			$url['path'] = $uri['path'];
-		} elseif( $url['path'][0] !== '/' ) {
+		} elseif( ! strlen($url['path']) || $url['path'][0] !== '/' ) {
 			// Relative path, add folder if available
 			$uri = self::parseUrl($_SERVER['REQUEST_URI']);
 			$pathi = explode('/', $uri['path']);
