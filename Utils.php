@@ -151,6 +151,48 @@ class Utils {
 	}
 
 	/**
+	 * Returns a formatted version of given Exception
+	 *
+	 * Also tries to add useful extra data, like th4e last executed query for an
+	 * SQL exception.
+	 *
+	 * @warning The output may contain sensitive data!
+	 * @param $exception Exception: The exception
+	 * @param $html bool: If true, will format as HTML
+	 * @return a string, text or html
+	 */
+	public static function formatException($exception, $html=false) {
+		if( $exception === null )
+			return self::NULL_FMT;
+
+		$err =
+			'<p>&quot;' . $exception->getCode() . '.' . $exception->getMessage() . "&quot;</p>\n" .
+			'<ul>' .
+			'<li><b>File:</b> ' . $exception->getFile() . "</li>\n" .
+			'<li><b>Line:</b> ' . $exception->getLine() . "</li>\n" .
+			'<li><b>Trace:</b> ' . nl2br($exception->getTraceAsString()) . "</li>";
+
+		// Add extra useful information
+		try {
+			$db = \DoPhp::db();
+		} catch( \Exception $e ) {
+			$db = null;
+		}
+
+		if( $exception instanceof \PDOException && $db ) {
+			$err .= "\n<li><b>Last Query:</b> " . $db->lastQuery . "</li>\n" .
+				'<li><b>Last Params:</b> ' . nl2br(print_r($db->lastParams,true)) . "</li>\n";
+		}
+
+		$err .= '</ul>';
+
+		if( $html )
+			return $err;
+
+		return strip_tags(html_entity_decode($err));
+	}
+
+	/**
 	* Format a value in a nice human-readable form based on value type or class
 	*
 	* @return string: The formatted value

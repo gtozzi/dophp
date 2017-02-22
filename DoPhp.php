@@ -265,30 +265,23 @@ class DoPhp {
 		} catch( dophp\NotAcceptable $e ) {
 			header("HTTP/1.1 406 Not Acceptable");
 			echo $e->getMessage();
-			error_log($e->getMessage());
+			error_log('Not Acceptable: ' . $e->getMessage());
 			return;
 		} catch( dophp\PageError $e ) {
 			header("HTTP/1.1 400 Bad Request");
 			echo $e->getMessage();
-			error_log($e->getMessage());
+			error_log('Bad Request: ' . $e->getMessage());
 			return;
 		} catch( Exception $e ) {
 			header("HTTP/1.1 500 Internal Server Error");
-			$err = "<html><h1>DoPhp Catched Exception</h1>\n" .
-				'<p>&#8220;' . $e->getCode() . '.' . $e->getMessage() . "&#8220;</p>\n" .
-				'<ul>' .
-				'<li><b>File:</b> ' . $e->getFile() . "</li>\n" .
-				'<li><b>Line:</b> ' . $e->getLine() . "</li>\n" .
-				'<li><b>Trace:</b> ' . nl2br($e->getTraceAsString()) . "</li>";
 			if( $this->__conf['debug'] ) {
-				// Add extra useful information
-				if( $e instanceof PDOException )
-					$err .= "\n<li><b>Last Query:</b> " . $this->__db->lastQuery . "</li>\n" .
-						'<li><b>Last Params:</b> ' . nl2br(print_r($this->__db->lastParams,true)) . "</li>\n";
-			}
-			$err .= '</ul></html>';
-			echo($err);
-			error_log(strip_tags($err));
+				$html = "<html><h1>DoPhp Catched Exception</h1>\n"
+					. dophp\Utils::formatException($e, true)
+					. "\n</html>";
+				echo $html;
+			} else
+				echo _('Internal Server Error, please contact support or try again later') . '.';
+			error_log('DoPhp Catched Exception: ' . dophp\Utils::formatException($e, false));
 			return;
 		}
 
