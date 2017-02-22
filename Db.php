@@ -425,7 +425,7 @@ class Db {
 					}
 					$sqlPar = $f;
 				} else {
-					$sqlPar .= str_replace('?', ":$k", $v[1]);
+					$sqlPar = str_replace('?', ":$k", $v[1]);
 					if( $v[0] !== null )
 						$vals[$k] = $v[0];
 				}
