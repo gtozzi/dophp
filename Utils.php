@@ -179,7 +179,7 @@ class Utils {
 			$db = null;
 		}
 
-		if( $exception instanceof \PDOException && $db ) {
+		if( $db && ( $e instanceof \PDOException || $e instanceof dophp\StatementExecuteError ) ) {
 			$err .= "\n<li><b>Last Query:</b> " . $db->lastQuery . "</li>\n" .
 				'<li><b>Last Params:</b> ' . nl2br(print_r($db->lastParams,true)) . "</li>\n";
 		}
@@ -284,7 +284,7 @@ class Utils {
 		if( ! array_key_exists('path', $url) ) {
 			$uri = self::parseUrl($_SERVER['REQUEST_URI']);
 			$url['path'] = $uri['path'];
-		} elseif( $url['path'][0] !== '/' ) {
+		} elseif( ! strlen($url['path']) || $url['path'][0] !== '/' ) {
 			// Relative path, add folder if available
 			$uri = self::parseUrl($_SERVER['REQUEST_URI']);
 			$pathi = explode('/', $uri['path']);

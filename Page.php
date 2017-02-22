@@ -566,6 +566,8 @@ abstract class BaseMethod extends PageBase implements PageInterface {
 	* @see PageInterface::run
 	*/
 	public function run() {
+		$this->_init();
+
 		$req = $this->_getInput();
 		$val = new Validator($req, $_FILES, $this->_params);
 		list($pars, $errors) = $val->validate();
@@ -575,6 +577,13 @@ abstract class BaseMethod extends PageBase implements PageInterface {
 			$res = $this->_build($pars);
 
 		return $this->_output($res);
+	}
+
+	/**
+	 * Called before processing, useful for initing $this->_params at runtime
+	 * in subclass when overridden
+	 */
+	protected function _init() {
 	}
 
 	/**
@@ -589,7 +598,7 @@ abstract class BaseMethod extends PageBase implements PageInterface {
 	protected function _invalid(& $pars, & $errors) {
 		$mex = "Invalid arguments:<br/>\n";
 		foreach( $errors as $n=>$e ) {
-			$mex .= "- <b>$n</b>: $e<br/>\n";
+			$mex .= "- <b>$n</b>: " . (is_array($e)?print_r($e,true):$e) . "<br/>\n";
 			if( $this->_config['debug'] )
 				$mex .= '  (received: "' . print_r($pars[$n],true) . "\")<br/>\n";
 		}

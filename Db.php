@@ -15,11 +15,34 @@ namespace dophp;
 */
 class Db {
 
+	/** MySQL DB Type */
+	const TYPE_MYSQL = 'mysql';
+	/** Microsoft SQL Server DB TYPE */
+	const TYPE_MSSQL = 'mssql';
+
 	/** If true, enables debug functions */
 	public $debug = false;
 
+	/**
+	 * If true, enables FreeTDS/ODBC/MSSQL fix
+	 * Forces casting of all binded parameters to VARCHAR in run()
+	 *
+	 * @see http://stackoverflow.com/a/3853811/4210714
+	 */
+	public $vcharfix = false;
+
 	/** PDO instance */
 	protected $_pdo;
+
+	/** Database type, one of:
+	 * - null: Uninited/unknown
+	 * - mysql: MySQL server
+	 * - mssql: Microsoft SQL Server
+	 */
+	protected $_type = null;
+
+	/** Tells lastInsertId() PDO's driver support */
+	protected $_hasLid = true;
 
 	/** Wiritten in debug mode, do not use for different purposes */
 	public $lastQuery = null;
@@ -30,23 +53,28 @@ class Db {
 	* Starts a PDO connection to DB
 	*
 	* @param $dsn  string: DSN, PDO valid
-	* @param $user string: Username to access DBMS
-	* @param $pass string: Password to access DBMS
+	* @param $user string: Username to access DBMS (if not included in DSN)
+	* @param $pass string: Password to access DBMS (if not included in DSN)
+	* @param $vcharfix bool: See Db::vcharfix docs
 	*/
-	public function __construct($dsn, $user, $pass) {
+	public function __construct($dsn, $user=null, $pass=null, $vcharfix=false) {
+		$this->vcharfix = $vcharfix;
 		$this->_pdo = new \PDO($dsn, $user, $pass);
 		$this->_pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
 		$this->_pdo->setAttribute(\PDO::ATTR_DEFAULT_FETCH_MODE, \PDO::FETCH_ASSOC);
 		switch( $this->_pdo->getAttribute(\PDO::ATTR_DRIVER_NAME) ) {
 		case 'mysql':
+			$this->_type = self::TYPE_MYSQL;
 			$this->_pdo->exec('SET sql_mode = \'TRADITIONAL,STRICT_ALL_TABLES,NO_AUTO_VALUE_ON_ZERO,NO_ZERO_DATE,NO_ZERO_IN_DATE\'');
 			$this->_pdo->exec('SET NAMES utf8');
 			break;
 		case 'odbc':
+			$this->_hasLid = false;
 		case 'sqlsrv':
 		case 'mssql':
 		case 'sybase':
 		case 'dblib':
+			$this->_type = self::TYPE_MSSQL;
 			$this->_pdo->exec('SET ARITHABORT ON');
 			break;
 		}
@@ -76,17 +104,34 @@ class Db {
 	}
 
 	/**
+	 * Returns database type
+	 */
+	public function type() {
+		return $this->_type;
+	}
+
+	/**
 	* Prepares a statement, executes it with given parameters and returns it
 	*
 	* @param $query string: The query to be executed
 	* @param $params mixed: Array containing the parameters or single parameter
+	* @param $vcharfix boolean: like $this->vcharfix, ovverides it when used
+	* @return PDOStatement
+	* @throws StatementExecuteError
 	*/
-	public function run($query, $params=array()) {
+	public function run($query, $params=array(), $vcharfix=null) {
 		if( ! is_array($params) )
 			$params = array($params);
+		if( $vcharfix === null )
+			$vcharfix = $this->vcharfix;
+
+		// Modify the query to cast all params to varchar
+		if( $vcharfix )
+			$query = preg_replace('/(\?|:[a-z]+)/', 'CAST($0 AS VARCHAR)', $query);
 
 		foreach($params as & $p)
-			if( gettype($p) == 'boolean' ) { // PDO would convert false into null otherwise
+			if( gettype($p) == 'boolean' ) {
+				// PDO would convert false into null otherwise
 				if( $p === true )
 					$p = 1;
 				elseif( $p === false )
@@ -105,7 +150,32 @@ class Db {
 		}
 
 		$st = $this->_pdo->prepare($query);
-		$st->execute($params);
+		/* Experimental, switch to this in future?
+		foreach( $params as $k => $v ) {
+			switch( gettype($v) ) {
+			case 'NULL':
+				$p = \PDO::PARAM_NULL;
+				break;
+			case 'boolean':
+				$t = \PDO::PARAM_BOOL;
+				break;
+			case 'integer':
+				$t = \PDO::PARAM_INT;
+				break;
+			default:
+				$t = \PDO::PARAM_STR;
+				break;
+			}
+
+			// Parameters are 1-based while array indexes are 0-based
+			if( gettype($k) == 'integer' )
+				$k++;
+
+			$st->bindParam($k, $v, $t);
+		}
+		*/
+		if( ! $st->execute($params) )
+			throw new StatementExecuteError($st);
 
 		return $st;
 	}
@@ -119,8 +189,20 @@ class Db {
 	public function insert($table, $params) {
 		list($q,$p) = $this->buildInsUpdQuery('ins', $table, $params);
 
-		$this->run($q, $p);
-		return $this->lastInsertId();
+		// Retrieve the ID by running a scope_identity query
+		if( ! $this->_hasLid )
+			$q .= '; SELECT SCOPE_IDENTITY() AS ' . $this->quoteObj('id');
+
+		$st = $this->run($q, $p);
+
+		if( $this->_hasLid )
+			return $this->lastInsertId();
+		else {
+			$r = $st->fetch();
+			if( ! $r )
+				throw new \Exception('Failed to retrieve id');
+			return $r['id'];
+		}
 	}
 
 	/**
@@ -131,8 +213,8 @@ class Db {
 	* @return int: Number of affected rows
 	*/
 	public function update($table, $params, $where) {
-		list($s,$ps) = self::buildInsUpdQuery('upd', $table, $params);
-		list($w,$pw) = self::buildParams($where, ' AND ');
+		list($s,$ps) = $this->buildInsUpdQuery('upd', $table, $params);
+		list($w,$pw) = self::buildParams($where, ' AND ', $this->_type);
 
 		$q = "$s WHERE $w";
 		$p = array_merge($ps, $pw);
@@ -147,9 +229,9 @@ class Db {
 	* @return int: Number of affected rows
 	*/
 	public function delete($table, $where) {
-		list($w,$p) = self::buildParams($where, ' AND ');
-		$q = "DELETE FROM `$table` WHERE $w";
-		
+		list($w,$p) = self::buildParams($where, ' AND ', $this->_type);
+		$q = 'DELETE FROM '.$this->quoteObj($table)." WHERE $w";
+
 		return $this->run($q, $p)->rowCount();
 	}
 
@@ -171,7 +253,7 @@ class Db {
 	* @return int: Number of found rows
 	*/
 	public function foundRows() {
-		$q = "SELECT FOUND_ROWS() AS `fr`";
+		$q = 'SELECT FOUND_ROWS() AS '.$this->quoteObj('fr');
 
 		$res = $this->run($q)->fetch();
 		return $res['fr'] !== null ? (int)$res['fr'] : null;
@@ -215,6 +297,58 @@ class Db {
 	}
 
 	/**
+	 * Quotes a schema object (table, column, ...)
+	 *
+	 * @param $name string: The unquoted object name
+	 * @return string: The quoted object name
+	 */
+	public function quoteObj($name) {
+		return self::quoteObjFor($name, $this->_type);
+	}
+
+	/**
+	 * Quotes a schema object (table, column, ...)
+	 *
+	 * @param $name string: The unquoted object name
+	 * @param $type string: The DBMS type (ansi, mysql, mssql)
+	 * @return string: The quoted object name
+	 */
+	public static function quoteObjFor($name, $type) {
+		switch( $type ) {
+		case self::TYPE_MYSQL:
+			$name = str_replace('`', '``', $name);
+			return "`$name`";
+		case self::TYPE_MSSQL:
+			return "[$name]";
+		case 'ansi':
+			return "\"$name\"";
+		default:
+			throw new \Exception("Type \"$type\" not implemented");
+		}
+	}
+
+	/**
+	 * Converts a string using SQL-99 "\"" quoting into a string using
+	 * DBMS' native quoting
+	 */
+	public function quoteConv($query) {
+		$spat = '/"([^"\\\\]*(?:\\\\.[^"\\\\]*)*)"/';
+
+		switch( $this->_type ) {
+		case self::TYPE_MYSQL:
+			$reppat = '`$1`';
+			break;
+		case self::TYPE_MSSQL:
+			$reppat = '[$1]';
+			break;
+		default:
+			throw new \Exception('Not Implemented');
+		}
+
+		return preg_replace($spat, $reppat, $query);
+	}
+
+	/**
 	* Builds a partial query suitable for insert or update in the format
 	* "SET col1 = val1, col2 = val2, ..."
 	* The "insupd" type builds and INSERT query with an
@@ -225,29 +359,39 @@ class Db {
 	* @see buildParams
 	* @return array [query string, params]
 	*/
-	public static function buildInsUpdQuery($type, $table, $params) {
+	public function buildInsUpdQuery($type, $table, $params) {
 		switch( $type ) {
 		case 'ins':
 		case 'insupd':
 			$q = 'INSERT INTO';
+			$ins = true;
 			break;
 		case 'upd':
 			$q = 'UPDATE';
+			$ins = false;
 			break;
 		default:
 			throw new \Exception("Unknown type $type");
 		}
 
-		list($cols, $p) = self::buildParams($params);
-		$q .= " `$table` SET $cols" ;
+		$q .= ' ' . $this->quoteObj($table);
+
+		if( $ins ) {
+			list($cols, $p) = self::processParams($params, $this->_type);
+			$q .= '(' . implode(',', array_keys($cols)) . ')';
+			$q .= ' VALUES (' . implode(',', array_values($cols)) . ')';
+		} else {
+			list($sql, $p) = self::buildParams($params, ', ', $this->_type);
+			$q .= " SET $sql";
+		}
 		if( $type == 'insupd' )
 			$q .= " ON DUPLICATE KEY UPDATE $cols";
 		return array($q, $p);
 	}
 
 	/**
-	* Formats an associative array of parameters into a query string and an
-	* associative array ready to be passed to pdo
+	* Processes an associative array of parameters into an array of SQL-ready
+	* elements
 	*
 	* @param $params array: Associative array with parameters. Key is the name
 	*                       of the column. If the data is an array, 2nd key is
@@ -256,16 +400,18 @@ class Db {
 	*                       If also 1st key is an array, then multiple arguments
 	*                       will be bound to the custom sql function, By example:
 	*                       'password' => [['12345', '45678'], 'AES_ENCRYPT(?,?)'],
-	* @param $glue string: The string to join the arguments, usually ', ' or ' AND '
-	* @return array [query string, params array]
+	* @params $type string: The DBMS type, used for quoting (see Db::QuoteObjFor())
+	* @return array [ sql array, params array ]
+	*         sql array format: [ column (quoted) => parameter placeholder ]
+	*         params array format: [ parameter placeholder => value ]
 	*/
-	public static function buildParams($params, $glue=', ') {
+	public static function processParams($params, $type=self::TYPE_MYSQL) {
 		if( ! $params )
-			return array('', []);
+			return array([], []);
 		$cols = array();
 		$vals = array();
 		foreach( $params as $k => $v ) {
-			$c = "`$k` = ";
+			$sqlCol = self::quoteObjFor($k, $type);
 			if( is_array($v) ) {
 				if( count($v) != 2 || ! array_key_exists(0,$v) || ! array_key_exists(1,$v) )
 					throw new \Exception('Invalid number of array components');
@@ -277,19 +423,37 @@ class Db {
 						if( $vv !== null )
 							$vals[$kk] = $vv;
 					}
-					$c .= $f;
+					$sqlPar = $f;
 				} else {
-					$c .= str_replace('?', ":$k", $v[1]);
+					$sqlPar .= str_replace('?', ":$k", $v[1]);
 					if( $v[0] !== null )
 						$vals[$k] = $v[0];
 				}
 			} else {
-				$c .= ":$k";
+				$sqlPar = ":$k";
 				$vals[$k] = $v;
 			}
-			$cols[] = $c;
+			$cols[$sqlCol] = $sqlPar;
 		}
-		return array(implode($glue, $cols), $vals);
+		return array($cols, $vals);
+	}
+
+	/**
+	* Formats an associative array of parameters into a query string and an
+	* associative array ready to be passed to pdo
+	*
+	* @deprecated
+	* @see processParams
+	* @param $glue string: The string to join the arguments, usually ', ' or ' AND '
+	* @return array [query string, params array]
+	*/
+	public static function buildParams($params, $glue=', ', $type=self::TYPE_MYSQL) {
+		list($cols, $vals) = self::processParams($params, $type);
+		$sql = '';
+		foreach( $cols as $c => $p )
+			$sql .= (strlen($sql) ? $glue : '') . "$c = $p";
+
+		return array($sql, $vals);
 	}
 
 	/**
@@ -337,9 +501,46 @@ class Db {
 
 
 /**
+ * Exception thrown when statement execution fails
+ */
+class StatementExecuteError extends \Exception {
+
+	/** The PDOStatement::errorCode() result */
+	public $errorCode;
+	/** The PDOStatement::errorInfo() result */
+	public $errorInfo;
+	/** The PDOStatement */
+	public $statement;
+	/** The Query */
+	public $query;
+	/** The params */
+	public $params;
+
+	public function __construct( $statement ) {
+		$this->statement = $statement;
+		$this->errorCode = $this->statement->errorCode();
+		$this->errorInfo = $this->statement->errorInfo();
+
+		parent::__construct("{$this->errorInfo[0]} [{$this->errorInfo[1]}]: {$this->errorInfo[2]}");
+	}
+
+}
+
+
+/**
 * Represents a table on the database for easy automated access
 */
 class Table {
+
+	// Column types
+	const COL_TYPE_INTEGER  = 'integer';
+	const COL_TYPE_BOOLEAN  = 'boolean';
+	const COL_TYPE_DOUBLE   = 'double';
+	const COL_TYPE_DECIMAL  = 'Decimal';
+	const COL_TYPE_STRING   = 'string';
+	const COL_TYPE_DATE     = 'Date';
+	const COL_TYPE_DATETIME = 'DateTime';
+	const COL_TYPE_TIME     = 'Time';
 
 	/** Database table name, may be overridden in sub-class or passed by constructor */
 	protected $_name = null;
@@ -369,60 +570,125 @@ class Table {
 		if( ! $this->_name || gettype($this->_name) !== 'string' )
 			throw new \Exception('Invalid table name');
 
+		// Determine the object to use to refer to "self" db
+		switch( $this->_db->type() ) {
+		case Db::TYPE_MYSQL:
+			$sqlSelfDb = 'DATABASE()';
+			$colKey = true;
+			$hasReferences = true;
+			break;
+		case Db::TYPE_MSSQL:
+			$sqlSelfDb = '\'dbo\'';
+			$colKey = false;
+			$hasReferences = false;
+			break;
+		default:
+			throw new \Exception('Not Implemented');
+		}
+
 		// Makes sure that table exists
-		$q = "
+		$q = '
 			SELECT
-				`TABLE_TYPE`
-			FROM `information_schema`.`TABLES`
-			WHERE `TABLE_SCHEMA` = DATABASE() AND `TABLE_NAME` = ?
-		";
-		if( ! $this->_db->run($q, array($this->_name))->fetch() )
+				"TABLE_TYPE"
+			FROM "information_schema"."TABLES"
+			WHERE "TABLE_SCHEMA" = '.$sqlSelfDb.'
+				AND "TABLE_NAME" = ?
+		';
+		if( ! $this->_db->run($this->_db->quoteConv($q), array($this->_name))->fetch() )
 			throw new \Exception("Table {$this->_name} not found");
 
 		// Read and cache table structure
-		$q = "
+		$q = '
 			SELECT
-				`COLUMN_NAME`,
-				`COLUMN_DEFAULT`,
-				`IS_NULLABLE`,
-				`DATA_TYPE`,
-				`COLUMN_TYPE`,
-				`CHARACTER_MAXIMUM_LENGTH`,
-				`NUMERIC_PRECISION`,
-				`NUMERIC_SCALE`,
-				`COLUMN_KEY`,
-				`EXTRA`
-			FROM `information_schema`.`COLUMNS`
-			WHERE `TABLE_SCHEMA` = DATABASE() AND `TABLE_NAME` = ?
-			ORDER BY `ORDINAL_POSITION`
-		";
-		foreach( $this->_db->run($q, array($this->_name))->fetchAll() as $c ) {
+				"COLUMN_NAME",
+				"COLUMN_DEFAULT",
+				"IS_NULLABLE",
+				"DATA_TYPE",
+				"CHARACTER_MAXIMUM_LENGTH",
+				"NUMERIC_PRECISION",
+				"NUMERIC_SCALE"';
+		if( $colKey )
+			$q .= ",\n\t\t\t\t\"COLUMN_KEY\"";
+		$q .= '
+			FROM "information_schema"."COLUMNS"
+			WHERE "TABLE_SCHEMA" = '.$sqlSelfDb.'
+				AND "TABLE_NAME" = ?
+			ORDER BY "ORDINAL_POSITION"
+		';
+		foreach( $this->_db->run($this->_db->quoteConv($q), array($this->_name))->fetchAll() as $c ) {
 			if( isset($this->_cols['COLUMN_NAME']) )
 				throw new \Exception("Duplicate definition found for column {$c['COLUMN_NAME']}");
+
 			$this->_cols[$c['COLUMN_NAME']] = $c;
-			if( $c['COLUMN_KEY'] == 'PRI' )
+
+			if( $colKey && $c['COLUMN_KEY'] == 'PRI' )
+				$this->_pk[] = $c['COLUMN_NAME'];
+		}
+
+		// Read primary keys (if not done earlier)
+		if( ! $colKey ) {
+			$q = '
+				SELECT
+					"COLUMN_NAME"
+				FROM
+					"information_schema"."TABLE_CONSTRAINTS" AS "tab",
+					"information_schema"."CONSTRAINT_COLUMN_USAGE" AS "col"
+				WHERE
+					"col"."CONSTRAINT_NAME" = "tab"."CONSTRAINT_NAME"
+					AND "col"."TABLE_NAME" = "tab"."TABLE_NAME"
+					AND "CONSTRAINT_TYPE" = \'PRIMARY KEY\'
+					AND "col"."TABLE_SCHEMA" = '.$sqlSelfDb.'
+					AND "col"."TABLE_NAME" = ?
+			';
+			foreach( $this->_db->run($this->_db->quoteConv($q), array($this->_name))->fetchAll() as $c )
 				$this->_pk[] = $c['COLUMN_NAME'];
 		}
 
 		// Read and cache references structure
-		$q = "
-			SELECT
-				`CONSTRAINT_NAME`,
-				`COLUMN_NAME`,
-				`REFERENCED_TABLE_NAME`,
-				`REFERENCED_COLUMN_NAME`
-			FROM `information_schema`.`KEY_COLUMN_USAGE`
-			WHERE `CONSTRAINT_SCHEMA` = DATABASE()
-				AND `TABLE_SCHEMA` = DATABASE()
-				AND `REFERENCED_TABLE_SCHEMA` = DATABASE()
-				AND `TABLE_NAME` = ?
-			ORDER BY `ORDINAL_POSITION`, `POSITION_IN_UNIQUE_CONSTRAINT`
-		";
-		foreach( $this->_db->run($q, array($this->_name))->fetchAll() as $c ) {
+		if( $hasReferences )
+			$q = '
+				SELECT
+					"CONSTRAINT_NAME",
+					"COLUMN_NAME",
+					"REFERENCED_TABLE_NAME",
+					"REFERENCED_COLUMN_NAME"
+				FROM "information_schema"."KEY_COLUMN_USAGE"
+				WHERE "CONSTRAINT_SCHEMA" = '.$sqlSelfDb.'
+					AND "TABLE_SCHEMA" = '.$sqlSelfDb.'
+					AND "REFERENCED_TABLE_SCHEMA" = '.$sqlSelfDb.'
+					AND "TABLE_NAME" = ?
+				ORDER BY "ORDINAL_POSITION",
+					"POSITION_IN_UNIQUE_CONSTRAINT"
+			';
+		else
+			$q = '
+				SELECT
+					"kcu1"."CONSTRAINT_NAME",
+					"kcu1"."COLUMN_NAME",
+					"kcu2"."TABLE_NAME" AS "REFERENCED_TABLE_NAME",
+					"kcu2"."COLUMN_NAME" AS "REFERENCED_COLUMN_NAME"
+				FROM "information_schema"."REFERENTIAL_CONSTRAINTS" AS "rc"
+				INNER JOIN "information_schema"."KEY_COLUMN_USAGE" AS "kcu1"
+					ON "kcu1"."CONSTRAINT_CATALOG" = "rc"."CONSTRAINT_CATALOG"
+					AND "kcu1"."CONSTRAINT_SCHEMA" = "rc"."CONSTRAINT_SCHEMA"
+					AND "kcu1"."CONSTRAINT_NAME" = "rc"."CONSTRAINT_NAME"
+				INNER JOIN "information_schema"."KEY_COLUMN_USAGE" AS "kcu2"
+					ON "kcu2"."CONSTRAINT_CATALOG" = "rc"."UNIQUE_CONSTRAINT_CATALOG"
+					AND "kcu2"."CONSTRAINT_SCHEMA" = "rc"."UNIQUE_CONSTRAINT_SCHEMA"
+					AND "kcu2"."CONSTRAINT_NAME" = "rc"."UNIQUE_CONSTRAINT_NAME"
+					AND "kcu2"."ORDINAL_POSITION" = "kcu1"."ORDINAL_POSITION"
+				WHERE "kcu1"."CONSTRAINT_SCHEMA" = '.$sqlSelfDb.'
+					AND "kcu1"."TABLE_SCHEMA" = '.$sqlSelfDb.'
+					AND "kcu2"."TABLE_SCHEMA" = '.$sqlSelfDb.'
+					AND "kcu1"."TABLE_NAME" = ?
+				ORDER BY "kcu1"."ORDINAL_POSITION",
+					"kcu2"."ORDINAL_POSITION"
+			';
+		foreach( $this->_db->run($this->_db->quoteConv($q), array($this->_name))->fetchAll() as $c ) {
 			if( isset($this->_refs['COLUMN_NAME']) )
 				throw new \Exception("More than one reference detected for column {$c['COLUMN_NAME']}");
- 			$this->_refs[$c['COLUMN_NAME']] = $c;
- 		}
+			$this->_refs[$c['COLUMN_NAME']] = $c;
+		}
 
 	}
 
@@ -480,17 +746,17 @@ class Table {
 
 		$q .= $this->_buildColumList($cols, 't', $joins);
 
-		$q .= "FROM `{$this->_name}` AS `t`\n";
+		$q .= 'FROM '.$this->_db->quoteObj($this->_name).' AS '.$this->_db->quoteObj('t')."\n";
 
 		if( $joins )
 			foreach( $joins as $j )
-				$q .= $j->getJoin($this, 't');
+				$q .= $this->_db->quoteConv($j->getJoin($this, 't'));
 
 		if( ! $params instanceof Where )
 			$params = new Where($params);
 		$params->setAlias('t');
 
-		if( $w = $params->getCondition() ) {
+		if( $w = $this->_db->quoteConv($params->getCondition()) ) {
 			$q .= "WHERE $w\n";
 			$p = array_merge($p, $params->getParams());
 		}
@@ -512,9 +778,10 @@ class Table {
 	*
 	* @param $pk   mixed: The primary key, array if composite (associative or numeric)
 	* @param $data array: Associative array of <column>=><data> to update
+	* @return int: Number of affected rows
 	*/
 	public function update($pk, $data) {
-		$this->_db->update($this->_name, $data, $this->parsePkArgs($pk));
+		return $this->_db->update($this->_name, $data, $this->parsePkArgs($pk));
 	}
 
 	/**
@@ -531,9 +798,10 @@ class Table {
 	* Runs a delete query for a single record
 	*
 	* @param $pk mixed: The primary key, array if composite (associative or numeric)
+	* @return int: Number of affected rows
 	*/
 	public function delete($pk) {
-		$this->_db->delete($this->_name, $this->parsePkArgs($pk));
+		return $this->_db->delete($this->_name, $this->parsePkArgs($pk));
 	}
 
 	/**
@@ -541,32 +809,36 @@ class Table {
 	*
 	* @param $col string: the column name
 	* @return string: One of integer, boolean, double, Decimal, string, Date,
-	*                 DateTime, Time
+	*                 DateTime, Time (see COL_TYPE_* constants)
 	*/
 	public function getColumnType($col) {
+		if( ! array_key_exists($col, $this->_cols) )
+			throw new \Exception("Column $col does not exist in table {$this->_name}");
+
 		$dtype = strtoupper($this->_cols[$col]['DATA_TYPE']);
-		$ctype = strtoupper($this->_cols[$col]['COLUMN_TYPE']);
-			
+		$nprec = (int)$this->_cols[$col]['NUMERIC_PRECISION'];
+
 		switch($dtype) {
 		case 'SMALLINT':
 		case 'MEDIUMINT':
 		case 'INT':
 		case 'INTEGER':
 		case 'BIGINT':
-			return 'integer';
+			return self::COL_TYPE_INTEGER;
 		case 'BIT':
-		case 'TINYINT':
 		case 'BOOL':
 		case 'BOOLEAN':
-			if( $ctype == 'TINYINT(1)' )
-				return 'boolean';
-			return 'integer';
+			return self::COL_TYPE_BOOLEAN;
+		case 'TINYINT':
+			if( $nprec == 1 )
+				return self::COL_TYPE_BOOLEAN;
+			return self::COL_TYPE_INTEGER;
 		case 'FLOAT':
 		case 'DOUBLE':
-			return 'double';
+			return self::COL_TYPE_DOUBLE;
 		case 'DECIMAL':
 		case 'DEC':
-			return 'Decimal';
+			return self::COL_TYPE_DECIMAL;
 		case 'CHAR':
 		case 'VARCHAR':
 		case 'BINARY':
@@ -580,16 +852,36 @@ class Table {
 		case 'MEDIUMTEXT':
 		case 'LONGTEXT':
 		case 'ENUM':
-			return 'string';
+			return self::COL_TYPE_STRING;
 		case 'DATE':
-			return 'Date';
+			return self::COL_TYPE_DATE;
 		case 'DATETIME':
 		case 'TIMESTAMP':
-			return 'DateTime';
+			return self::COL_TYPE_DATETIME;
 		case 'TIME':
-			return 'Time';
+			return self::COL_TYPE_TIME;
 		default:
 			throw new \Exception("Unsupported column type $dtype");
+		}
+	}
+
+	/**
+	 * Tells whether a column can be null or not
+	 *
+	 * @param $col string: the column name
+	 * @return boolean
+	 */
+	public function isColumnNullable($col) {
+		if( ! array_key_exists($col, $this->_cols) )
+			throw new \Exception("Column $col does not exist");
+
+		switch( strtoupper($this->_cols[$col]['IS_NULLABLE']) ) {
+		case 'YES':
+			return true;
+		case 'NO':
+			return false;
+		default:
+			throw new \Exception("Unsupported nullable value {$this->_cols[$col]['IS_NULLABLE']}");
 		}
 	}
 
@@ -766,12 +1058,12 @@ class Table {
 				$str .= ",\n\t";
 
 			if( $alias )
-				$str .= "`$alias`.";
+				$str .= $this->_db->quoteObj($alias) . '.';
 
-			$str .= "`$name`";
+			$str .= $this->_db->quoteObj($name);
 
 			if( $as )
-				$str .= " AS `$as`";
+				$str .= ' AS ' . $this->_db->quoteObj($as);
 
 			return $str;
 		};
@@ -813,7 +1105,7 @@ class Where {
 	*/
 	public function __construct($params=null, $condition='AND') {
 		if( $condition == 'AND' || $condition == 'OR' ) {
-			list($this->_cond, $this->_params) = Db::buildParams($params, " $condition ");
+			list($this->_cond, $this->_params) = Db::buildParams($params, " $condition ", 'ansi');
 			return;
 		}
 
@@ -894,13 +1186,15 @@ class Where {
 	}
 
 	/**
-	* Return the condition, adding specified alias if needed
+	* Return the condition with SQL99 quoting, adding specified alias if needed
+	*
+	* @see Db::quoteConv()
 	*/
 	public function getCondition() {
 		if( ! $this->_alias )
 			return $this->_cond;
 
-		return preg_replace('/`[^`]+`/', '`'.$this->_alias.'`.$0', $this->_cond);
+		return preg_replace('/"[^"]+"/', '"'.$this->_alias.'".$0', $this->_cond);
 	}
 
 	public function getParams() {
@@ -918,7 +1212,7 @@ class Where {
 
 
 /**
-* Represents a join ina query
+* Represents a join in a query
 */
 class Join {
 
@@ -941,14 +1235,15 @@ class Join {
 	}
 
 	/**
-	* Returns join SQL for joining with a given table
+	* Returns join SQL for joining with a given table (with SQL99 quoting)
 	*
+	* @see Db::quoteConv()
 	* @param $table Table: the table to join with
 	* @param $alias string: the alias assigned to the table
 	* @return string: The SQL code
 	*/
 	public function getJoin(Table $table, $alias) {
-		$sql = "LEFT JOIN `" . $this->_table->getName() . "` AS `" . $this->getAlias() . "`\n";
+		$sql = 'LEFT JOIN "' . $this->_table->getName() . '" AS "' . $this->getAlias() . "\"\n";
 		$refs = 0;
 
 		foreach( $table->getRefs() as $col => $ref )
@@ -961,7 +1256,7 @@ class Join {
 				else
 					$sql .= "AND ";
 
-				$sql .= "`$alias`.`$col` = `" . $this->getAlias() . "`.`$ref[1]`\n";
+				$sql .= "\"$alias\".\"$col\" = \"" . $this->getAlias() . "\".\"$ref[1]\"\n";
 			}
 
 		if( ! $refs )
