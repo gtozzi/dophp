@@ -380,12 +380,16 @@ class Db {
 			list($cols, $p) = self::processParams($params, $this->_type);
 			$q .= '(' . implode(',', array_keys($cols)) . ')';
 			$q .= ' VALUES (' . implode(',', array_values($cols)) . ')';
+			if( $type == 'insupd' ) {
+				$updates = array();
+				foreach( $cols as $k => $v )
+					$updates[] = "$k=VALUES($k)";
+				$q .= ' ON DUPLICATE KEY UPDATE ' . implode(', ', $updates);;
+			}
 		} else {
 			list($sql, $p) = self::buildParams($params, ', ', $this->_type);
 			$q .= " SET $sql";
 		}
-		if( $type == 'insupd' )
-			$q .= " ON DUPLICATE KEY UPDATE $cols";
 		return array($q, $p);
 	}
 
