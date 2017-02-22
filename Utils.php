@@ -179,7 +179,8 @@ class Utils {
 			$db = null;
 		}
 
-		if( $db && ( $e instanceof \PDOException || $e instanceof dophp\StatementExecuteError ) ) {
+		if( $db && ( $exception instanceof \PDOException
+				|| $exception instanceof dophp\StatementExecuteError ) ) {
 			$err .= "\n<li><b>Last Query:</b> " . $db->lastQuery . "</li>\n" .
 				'<li><b>Last Params:</b> ' . nl2br(print_r($db->lastParams,true)) . "</li>\n";
 		}
