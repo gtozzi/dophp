@@ -200,16 +200,14 @@ abstract class PageBase {
 }
 
 /**
-* Implements a page using Smarty template engine
-*
-* @see CrudFunctionalities
-*/
-abstract class PageSmarty extends PageBase implements PageInterface {
+ * Trait for adding Smarty functionalities to a Page
+ */
+trait SmartyFunctionalities {
 
 	/** Using a custom delimiter for improved readability */
-	const TAG_START = '{{';
+	public static $TAG_START = '{{';
 	/** Using a custom delimiter for improved readability */
-	const TAG_END = '}}';
+	public static $TAG_END = '}}';
 
 	/** Smarty instance */
 	protected $_smarty;
@@ -228,8 +226,8 @@ abstract class PageSmarty extends PageBase implements PageInterface {
 	public static function newSmarty(& $config) {
 		$smarty = new \Smarty();
 
-		$smarty->left_delimiter = self::TAG_START;
-		$smarty->right_delimiter = self::TAG_END;
+		$smarty->left_delimiter = self::$TAG_START;
+		$smarty->right_delimiter = self::$TAG_END;
 		$smarty->setTemplateDir(array(
 			"{$config['paths']['tpl']}/",
 			'dophp' => "{$config['dophp']['path']}/tpl/"
@@ -247,11 +245,9 @@ abstract class PageSmarty extends PageBase implements PageInterface {
 	}
 
 	/**
-	* Prepares the template system and passes execution to _build()
-	*
-	* @see PageInterface::run
+	* Prepares the template system
 	*/
-	public function run() {
+	protected function _initSmarty() {
 		// Init smarty
 		$this->_smarty = self::newSmarty($this->_config);
 
@@ -266,6 +262,27 @@ abstract class PageSmarty extends PageBase implements PageInterface {
 		// Init default template name
 		$base_file = basename($_SERVER['PHP_SELF'], '.php');
 		$this->_template = "$base_file.{$this->_name}.tpl";
+	}
+
+}
+
+
+/**
+* Implements a page using Smarty template engine
+*
+* @see CrudFunctionalities
+*/
+abstract class PageSmarty extends PageBase implements PageInterface {
+
+	use SmartyFunctionalities;
+
+	/**
+	* Prepares the template system and passes execution to _build()
+	*
+	* @see PageInterface::run
+	*/
+	public function run() {
+		$this->_initSmarty();
 
 		// Call subclass build
 		$this->_build();
@@ -279,6 +296,7 @@ abstract class PageSmarty extends PageBase implements PageInterface {
 	*/
 	abstract protected function _build();
 }
+
 
 /**
 * Simple template for implementing a CRUD-based backend page by using the base
