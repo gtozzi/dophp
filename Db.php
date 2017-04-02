@@ -62,6 +62,9 @@ class Db {
 		$this->_pdo = new \PDO($dsn, $user, $pass);
 		$this->_pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
 		$this->_pdo->setAttribute(\PDO::ATTR_DEFAULT_FETCH_MODE, \PDO::FETCH_ASSOC);
+		// When set, will cause MySQL to return INTEGER ans PHP int, but will
+		// cause some concurrency problems
+		//$this->_pdo->setAttribute(\PDO::ATTR_EMULATE_PREPARES, false);
 		switch( $this->_pdo->getAttribute(\PDO::ATTR_DRIVER_NAME) ) {
 		case 'mysql':
 			$this->_type = self::TYPE_MYSQL;
@@ -116,7 +119,7 @@ class Db {
 	* @param $query string: The query to be executed
 	* @param $params mixed: Array containing the parameters or single parameter
 	* @param $vcharfix boolean: like $this->vcharfix, ovverides it when used
-	* @return PDOStatement
+	* @return \PDOStatement
 	* @throws StatementExecuteError
 	*/
 	public function run($query, $params=array(), $vcharfix=null) {
@@ -178,6 +181,17 @@ class Db {
 			throw new StatementExecuteError($st);
 
 		return $st;
+	}
+
+	/**
+	 * Like Db::run(), but returns a Result instead
+	 *
+	 * @see run()
+	 * @return Result
+	 */
+	public function xrun($query, $params=[], $vcharfix=null) {
+		$st = $this->run($query, $params, $vcharfix);
+		return new Result($st, $query, $params);
 	}
 
 	/**
@@ -532,19 +546,174 @@ class StatementExecuteError extends \Exception {
 
 
 /**
+ * Small utility class to hold a Result's column info
+ */
+class ResultCol {
+	/** The column name */
+	public $name;
+	/** The column data type, one of Table::DATA_TYPE_* constants */
+	public $type;
+
+	/**
+	 * Set the properties
+	 */
+	public function __construct($name, $type) {
+		$this->name = $name;
+		$this->type = $type;
+	}
+
+	/**
+	 * Disallow modifying attributes
+	 *
+	 * @throws \Exception
+	 */
+	public function __set($name, $value) {
+		throw new \Exception('Readonly class');
+	}
+}
+
+
+/**
+ * Represents a query result, it can be iterated, but onlyce once
+ */
+class Result implements \Iterator {
+
+	/** The initial key value */
+	const INIT_KEY = -1;
+
+	/** The PDO statement used to run the query */
+	protected $_st;
+	/** The query SQL */
+	protected $_query;
+	/** The query params */
+	protected $_params;
+	/** The column info cache, array of ResultCol objects */
+	protected $_cols = [];
+	/** Next result to be returned */
+	protected $_current = null;
+	/** Next key to be returned (-1 = to be started) */
+	protected $_key = self::INIT_KEY;
+
+	/**
+	 * Creates the result object from the given PDO statament
+	 *
+	 * @param $st \PDOStatement: The executed PDO statement
+	 * @param $query string: The query string for the statement
+	 * @param $params array: The used query parameters
+	 */
+	public function __construct( \PDOStatement $st, &$query, &$params ) {
+		$this->_st = $st;
+		$this->_query = &$query;
+		$this->_params = &$params;
+	}
+
+	/**
+	 * Returns the column type, with caching
+	 *
+	 * @see Table::getType()
+	 * @param $idx int: The column index
+	 * @return ResultCol
+	 */
+	public function getColumnInfo( $idx ) {
+		if( ! array_key_exists($idx, $this->_cols) ) {
+			$meta = $this->_st->getColumnMeta( $idx );
+			if( ! $meta )
+				throw new \Exception("No meta for column $idx");
+			$this->_cols[$idx] = new ResultCol(
+				$meta['name'],
+				Table::getType($meta['native_type'], $meta['precision'])
+			);
+		}
+		return $this->_cols[$idx];
+	}
+
+	/**
+	 * Returns next result
+	 *
+	 * @return array: The associative result, with properyl typed data
+	 */
+	public function fetch() {
+		$this->_key++;
+
+		$raw = $this->_st->fetch( \PDO::FETCH_NUM );
+		if( $raw === false )
+			return false;
+
+		$res = [];
+		foreach( $raw as $idx => $val ) {
+			$col = $this->getColumnInfo($idx);
+			$res[$col->name] = Table::castVal($val, $col->type);
+		}
+
+		return $res;
+	}
+
+	/**
+	 * Returns all the results as array
+	 *
+	 * @raturn array: Array of arrays, see fetch()
+	 */
+	public function fetchAll() {
+		$ret = [];
+		foreach( $this as $k => $v )
+			$ret[$k] = $v;
+		return $ret;
+	}
+
+	/**
+	 * @see \Iterator::revind()
+	 */
+	public function rewind() {
+		if( $this->_key != self::INIT_KEY )
+			throw new \Exception('The result has already been fetched');
+		$this->next();
+	}
+
+	/**
+	 * @see \Iterator::valid()
+	 */
+	public function valid() {
+		return $this->_current ? true : false;
+	}
+
+	/**
+	 * @see \Iterator::current()
+	 */
+	public function current() {
+		return $this->_current;
+	}
+
+	/**
+	 * @see \Iterator::key()
+	 */
+	public function key() {
+		return $this->_key;
+	}
+
+	/**
+	 * @see \Iterator::next()
+	 */
+	public function next() {
+		$this->_current = $this->fetch();
+	}
+
+}
+
+
+/**
 * Represents a table on the database for easy automated access
 */
 class Table {
 
 	// Column types
-	const COL_TYPE_INTEGER  = 'integer';
-	const COL_TYPE_BOOLEAN  = 'boolean';
-	const COL_TYPE_DOUBLE   = 'double';
-	const COL_TYPE_DECIMAL  = 'Decimal';
-	const COL_TYPE_STRING   = 'string';
-	const COL_TYPE_DATE     = 'Date';
-	const COL_TYPE_DATETIME = 'DateTime';
-	const COL_TYPE_TIME     = 'Time';
+	const DATA_TYPE_INTEGER  = 'integer';
+	const DATA_TYPE_BOOLEAN  = 'boolean';
+	const DATA_TYPE_DOUBLE   = 'double';
+	const DATA_TYPE_DECIMAL  = 'Decimal';
+	const DATA_TYPE_STRING   = 'string';
+	const DATA_TYPE_DATE     = 'Date';
+	const DATA_TYPE_DATETIME = 'DateTime';
+	const DATA_TYPE_TIME     = 'Time';
 
 	/** Database table name, may be overridden in sub-class or passed by constructor */
 	protected $_name = null;
@@ -809,11 +978,11 @@ class Table {
 	}
 
 	/**
-	* Returns column type for a given column
+	* Returns data type for a given column
 	*
 	* @param $col string: the column name
-	* @return string: One of integer, boolean, double, Decimal, string, Date,
-	*                 DateTime, Time (see COL_TYPE_* constants)
+	* @see Table::getType()
+	* @return Same as Table::getType()
 	*/
 	public function getColumnType($col) {
 		if( ! array_key_exists($col, $this->_cols) )
@@ -822,27 +991,40 @@ class Table {
 		$dtype = strtoupper($this->_cols[$col]['DATA_TYPE']);
 		$nprec = (int)$this->_cols[$col]['NUMERIC_PRECISION'];
 
+		return self::getType($dtype, $nprec);
+	}
+
+	/**
+	 * Returns the data type given column type and numeric precision
+	 *
+	 * @param $dtype string: The SQL data type (VARCHAR, INT, etc…)
+	 * @param $nprec int: The numeric precison (0 when not applicable)
+	 * @return string: One of integer, boolean, double, Decimal, string, Date,
+	 *                 DateTime, Time (see DATA_TYPE_* constants)
+	 */
+	public static function getType($dtype, $nprec) {
 		switch($dtype) {
 		case 'SMALLINT':
 		case 'MEDIUMINT':
 		case 'INT':
 		case 'INTEGER':
 		case 'BIGINT':
-			return self::COL_TYPE_INTEGER;
+		case 'LONG':
+			return self::DATA_TYPE_INTEGER;
 		case 'BIT':
 		case 'BOOL':
 		case 'BOOLEAN':
-			return self::COL_TYPE_BOOLEAN;
+			return self::DATA_TYPE_BOOLEAN;
 		case 'TINYINT':
 			if( $nprec == 1 )
-				return self::COL_TYPE_BOOLEAN;
-			return self::COL_TYPE_INTEGER;
+				return self::DATA_TYPE_BOOLEAN;
+			return self::DATA_TYPE_INTEGER;
 		case 'FLOAT':
 		case 'DOUBLE':
-			return self::COL_TYPE_DOUBLE;
+			return self::DATA_TYPE_DOUBLE;
 		case 'DECIMAL':
 		case 'DEC':
-			return self::COL_TYPE_DECIMAL;
+			return self::DATA_TYPE_DECIMAL;
 		case 'CHAR':
 		case 'VARCHAR':
 		case 'BINARY':
@@ -856,17 +1038,18 @@ class Table {
 		case 'MEDIUMTEXT':
 		case 'LONGTEXT':
 		case 'ENUM':
-			return self::COL_TYPE_STRING;
+		case 'VAR_STRING':
+			return self::DATA_TYPE_STRING;
 		case 'DATE':
-			return self::COL_TYPE_DATE;
+			return self::DATA_TYPE_DATE;
 		case 'DATETIME':
 		case 'TIMESTAMP':
-			return self::COL_TYPE_DATETIME;
+			return self::DATA_TYPE_DATETIME;
 		case 'TIME':
-			return self::COL_TYPE_TIME;
-		default:
-			throw new \Exception("Unsupported column type $dtype");
+			return self::DATA_TYPE_TIME;
 		}
+
+		throw new \Exception("Unsupported column type $dtype");
 	}
 
 	/**
@@ -921,40 +1104,43 @@ class Table {
 			} else
 				throw new \Exception("Unknown column $k");
 
-			if( $v !== null )
-				switch($type) {
-				case 'integer':
-					$v = (int)$v;
-					break;
-				case 'boolean':
-					$v = $v && $v != -1 ? true : false;
-					break;
-				case 'double':
-					$v = (double)$v;
-					break;
-				case 'Decimal':
-					$v = new Decimal($v);
-					break;
-				case 'string':
-					$v = (string)$v;
-					break;
-				case 'Date':
-					$v = new Date($v);
-					break;
-				case 'DateTime':
-					$v = new \DateTime($v);
-					break;
-				case 'Time':
-					$v = new Time($v);
-					break;
-				default:
-					throw new \Exception("Unsupported column type $type");
-				}
-
-			$ret[$k] = $v;
+			$ret[$k] = self::castVal($v, $type);
 		}
 
 		return $ret;
+	}
+
+	/**
+	 * Given a value and a data type, cast it into the given data type
+	 *
+	 * @param $val mixed: The input value, usually a string
+	 * @param $type string: The desired data type, see DATA_TYPE_* constants
+	 * @return mixed: The casted value
+	 */
+	public static function castVal($val, $type) {
+		if( $val === null )
+			return null;
+
+		switch($type) {
+		case self::DATA_TYPE_INTEGER:
+			return (int)$val;
+		case self::DATA_TYPE_BOOLEAN:
+			return $val && $val != -1 ? true : false;
+		case self::DATA_TYPE_DOUBLE:
+			return (double)$val;
+		case self::DATA_TYPE_DECIMAL:
+			return new Decimal($val);
+		case self::DATA_TYPE_STRING:
+			return (string)$val;
+		case self::DATA_TYPE_DATE:
+			return new Date($val);
+		case self::DATA_TYPE_DATETIME:
+			return new \DateTime($val);
+		case self::DATA_TYPE_TIME:
+			return new Time($val);
+		}
+
+		throw new \Exception("Unsupported data type $type");
 	}
 
 	/**
