@@ -621,7 +621,7 @@ class Result implements \Iterator {
 				throw new \Exception("No meta for column $idx");
 			$this->_cols[$idx] = new ResultCol(
 				$meta['name'],
-				Table::getType($meta['native_type'], $meta['precision'])
+				Table::getType($meta['native_type'], $meta['len'])
 			);
 		}
 		return $this->_cols[$idx];
@@ -649,14 +649,54 @@ class Result implements \Iterator {
 	}
 
 	/**
-	 * Returns all the results as array
+	 * Returns all the results as array or arrays
 	 *
-	 * @raturn array: Array of arrays, see fetch()
+	 * @return array: Array of arrays, see fetch()
 	 */
 	public function fetchAll() {
 		$ret = [];
 		foreach( $this as $k => $v )
 			$ret[$k] = $v;
+		return $ret;
+	}
+
+	/**
+	 * Returns all the results as array or arrays, using the given col as key
+	 *
+	 * @param $col string: Name of the column to use as key
+	 * @return array: Like fetchAll(), but using given col as key
+	 */
+	public function fetchAllBy($col) {
+		$ret = [];
+		foreach( $this as $v )
+			$ret[$v[$col]] = $v;
+		return $ret;
+	}
+
+	/**
+	 * Returns all the results as array, with only values.
+	 * Available only when the query has a single column
+	 *
+	 * @return array: List of col's values
+	 */
+	public function fetchAllVals() {
+		$ret = [];
+		$first = true;
+		foreach( $this as $k => $v ) {
+			if( $first ) {
+				$first = false;
+
+				// Get column info on first loop
+				if( count($v) < 1 )
+					throw new \Exception('Columns not found');
+				elseif( count($v) > 1 )
+					throw new \Exception('The query returned multiple columns');
+
+				$cname = $this->getColumnInfo(0)->name;
+			}
+
+			$ret[$k] = $v[$cname];
+		}
 		return $ret;
 	}
 
@@ -998,11 +1038,11 @@ class Table {
 	 * Returns the data type given column type and numeric precision
 	 *
 	 * @param $dtype string: The SQL data type (VARCHAR, INT, etc…)
-	 * @param $nprec int: The numeric precison (0 when not applicable)
+	 * @param $len int: The field length (0 when not applicable)
 	 * @return string: One of integer, boolean, double, Decimal, string, Date,
 	 *                 DateTime, Time (see DATA_TYPE_* constants)
 	 */
-	public static function getType($dtype, $nprec) {
+	public static function getType($dtype, $len) {
 		switch($dtype) {
 		case 'SMALLINT':
 		case 'MEDIUMINT':
@@ -1010,13 +1050,15 @@ class Table {
 		case 'INTEGER':
 		case 'BIGINT':
 		case 'LONG':
+		case 'LONGLONG':
 			return self::DATA_TYPE_INTEGER;
 		case 'BIT':
 		case 'BOOL':
 		case 'BOOLEAN':
 			return self::DATA_TYPE_BOOLEAN;
 		case 'TINYINT':
-			if( $nprec == 1 )
+		case 'TINY':
+			if( $len == 1 )
 				return self::DATA_TYPE_BOOLEAN;
 			return self::DATA_TYPE_INTEGER;
 		case 'FLOAT':
