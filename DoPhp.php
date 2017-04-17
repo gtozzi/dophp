@@ -407,7 +407,7 @@ class DoPhp {
 	* @return string: The class name
 	*/
 	public static function className($page) {
-		return self::BASE_KEY . ucfirst($page);
+		return str_replace('.','_', self::BASE_KEY . ucfirst($page));
 	}
 
 	/**
