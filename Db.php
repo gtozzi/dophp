@@ -1051,6 +1051,7 @@ class Table {
 		case 'BIGINT':
 		case 'LONG':
 		case 'LONGLONG':
+		case 'SHORT':
 			return self::DATA_TYPE_INTEGER;
 		case 'BIT':
 		case 'BOOL':
