@@ -205,9 +205,7 @@ class DoPhp {
 		}
 
 		// Calculates the name of the page to be loaded
-		$inc_file = dophp\Utils::pagePath($this->__conf, isset($_REQUEST[$key])?$_REQUEST[$key]:null);
-
-		if(array_key_exists($key, $_REQUEST) && $_REQUEST[$key] && !strpos($_REQUEST[$key], '/') && file_exists($inc_file))
+		if(array_key_exists($key, $_REQUEST) && $_REQUEST[$key] && !strpos($_REQUEST[$key], '/'))
 			$page = $_REQUEST[$key];
 		elseif( $def ) {
 			if( isset($_REQUEST[$key]) && $def == $_REQUEST[$key] ) {
@@ -223,8 +221,16 @@ class DoPhp {
 			echo $to;
 			return;
 		} else {
+			header("HTTP/1.1 400 Bad Request");
+			echo('Missing "' . $key . '" argument');
+			return;
+		}
+
+		// Check for existing include page file
+		$inc_file = dophp\Utils::pagePath($this->__conf, $page);
+		if( ! file_exists($inc_file) ) {
 			header("HTTP/1.1 404 Not Found");
-			echo('Unknown Page');
+			echo('Page Not Found');
 			return;
 		}
 
