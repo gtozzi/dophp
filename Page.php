@@ -284,8 +284,10 @@ abstract class PageSmarty extends PageBase implements PageInterface {
 	public function run() {
 		$this->_initSmarty();
 
-		// Call subclass build
-		$this->_build();
+		// Call subclass build, return its custom data if given
+		$custom = $this->_build();
+		if( $custom !== null )
+			return $custom;
 
 		// Run smarty
 		return $this->_compress($this->_smarty->fetch($this->_template));
@@ -293,6 +295,8 @@ abstract class PageSmarty extends PageBase implements PageInterface {
 
 	/**
 	* Build method to be overridden
+	*
+	* @return null too keep using smarty or custom data to be returned
 	*/
 	abstract protected function _build();
 }
