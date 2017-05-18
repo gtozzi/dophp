@@ -46,6 +46,8 @@ class DoPhp {
 	private $__start = null;
 	/** Models instances cache */
 	private $__models = [];
+	/** Memcache instance, if used */
+	private $__cache = null;
 
 	/**
 	* Handles page rendering and everything
@@ -297,12 +299,11 @@ class DoPhp {
 		}
 
 		// Init memcached if in use
-		$cache = null;
 		if( isset($conf['memcache']) && isset($conf['memcache']['host']) && isset($conf['memcache']['port']) ) {
 			if( class_exists('Memcache') ) {
-				$cache = new Memcache;
-				if( ! $cache->connect($conf['memcache']['host'], $conf['memcache']['port']) ) {
-					$cache = null;
+				$this->__cache = new Memcache;
+				if( ! $this->__cache->connect($conf['memcache']['host'], $conf['memcache']['port']) ) {
+					$this->__cache = null;
 					error_log("Couldn't connect to memcached at {$conf['memcache']['host']}:{$conf['memcache']['port']}");
 				}
 			} else
@@ -321,20 +322,8 @@ class DoPhp {
 				else
 					throw new Exception('Page class not found');
 			$pobj = new $classname($this->__conf, $this->__db, $this->__auth, $page );
-			if( ! $pobj instanceof dophp\PageInterface )
-				throw new Exception('Wrong page type');
-			if( $cache !== null ) {
-				$cacheKey = $pobj->cacheKey();
-				if( $cacheKey !== null ) {
-					// Try to retrieve data from the cache
-					$headers = $cache->get("$page::$cacheKey::headers");
-					$out = $cache->get("$page::$cacheKey::output");
-					if( $headers !== false && $out !== false )
-						$fromCache = true;
-				}
-			}
-			if( ! $fromCache )
-				$out = $pobj->run();
+
+			list($out, $headers) = $this->__runPage($pobj);
 		} catch( dophp\PageDenied $e ) {
 			if( $def ) {
 				if( $def == $page ) {
@@ -387,23 +376,56 @@ class DoPhp {
 			return;
 		}
 
-		//Get the headers
-		if( ! $fromCache )
-			$headers = $pobj->headers();
-
-		// Write cache if needed
-		if( $cache && $cacheKey !== null && ! $fromCache ) {
-			$expire = $pobj->cacheExpire();
-			if( $expire !== null ) {
-				$cache->set("$page::$cacheKey::headers", $headers, 0, $expire);
-				$cache->set("$page::$cacheKey::output", $out, 0, $expire);
-			}
-		}
-
 		//Output headers and content
 		foreach( $headers as $k=>$v )
 			header("$k: $v");
 		echo $out;
+	}
+
+	/**
+	 * Internal function. Runs a page, handles internal redirect, returns data
+	 *
+	 * @param $page PageInterface: The Page instance
+	 * @param $depth int: The current redirect depth
+	 * @param $maxDepth int: The maximum redirect depth
+	 * @return array [ output string, headers associative array ]
+	 */
+	private function __runPage($page, $depth = 1, $maxDepth = 10) {
+		if( ! $page instanceof dophp\PageInterface )
+			throw new Exception('Wrong page type');
+
+		// First attempt to retrieve data from the cache
+		if( $this->__cache !== null ) {
+			$cacheKey = $pobj->cacheKey();
+			if( $cacheKey !== null ) {
+				$cacheBase = $page->name() . '::' . $cacheKey;
+				$headers = $cache->get("$cacheBase::headers");
+				$out = $cache->get("$cacheBase::output");
+				if( $headers !== false && $out !== false )
+					return [ $out, $headers ];
+			}
+		}
+
+		// Then run the page instead
+		try {
+			$out = $page->run();
+			$headers = $page->headers();
+		} catch( dophp\PageRedirect $e ) {
+			if( $depth >= $maxDepth )
+				throw new \Exception("Maximum internal redirect depth of $maxDepth reached");
+			return $this->__runPage($e->getPage(), $depth + 1);
+		}
+
+		// Write cache if needed
+		if( $this->__cache !== null && $cacheKey !== null ) {
+			$expire = $pobj->cacheExpire();
+			if( $expire !== null ) {
+				$cache->set("$cacheBase::headers", $headers, 0, $expire);
+				$cache->set("$cacheBase::output", $out, 0, $expire);
+			}
+		}
+
+		return [ $out, $headers ];
 	}
 
 	/**

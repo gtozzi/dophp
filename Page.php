@@ -55,6 +55,26 @@ interface PageInterface {
 	* Must return associative array
 	*/
 	public function headers();
+
+	/**
+	 * Returns current page's name
+	 */
+	public function name();
+
+	/**
+	 * Returns current DoPhp's config
+	 */
+	public function &config();
+
+	/**
+	 * Returns current DoPhp's Db instance
+	 */
+	public function db();
+
+	/**
+	 * Returns current DoPhp's user
+	 */
+	public function user();
 }
 
 /**
@@ -124,13 +144,24 @@ abstract class PageBase {
 		return $this->_cacheExpire;
 	}
 
-	/**
-	* Returns headers
-	*
-	* @see PageInterface::headers
-	*/
 	public function headers() {
 		return $this->_headers;
+	}
+
+	public function name() {
+		return $this->_name;
+	}
+
+	public function &config() {
+		return $this->_config;
+	}
+
+	public function db() {
+		return $this->_db;
+	}
+
+	public function user() {
+		return $this->_user;
 	}
 
 	/**
@@ -771,4 +802,30 @@ class PageDenied extends PageError {
 * Exception raised when user is providing invalid credentials
 */
 class InvalidCredentials extends PageDenied {
+}
+
+/**
+ * Exception raised to create an internal transparent redirect
+ */
+class PageRedirect extends \Exception {
+
+	protected $_to;
+
+	/**
+	 * Construct the redirect
+	 *
+	 * @param $to New page to redirect to, already instantiated
+	 */
+	public function __construct(PageInterface $to) {
+		parent::__construct();
+		$this->_to = $to;
+	}
+
+	/**
+	 * Returns the redirect destination
+	 */
+	public function getPage() {
+		return $this->_to;
+	}
+
 }
