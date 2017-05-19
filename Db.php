@@ -1067,6 +1067,7 @@ class Table {
 			return self::DATA_TYPE_DOUBLE;
 		case 'DECIMAL':
 		case 'DEC':
+		case 'NEWDECIMAL':
 			return self::DATA_TYPE_DECIMAL;
 		case 'CHAR':
 		case 'VARCHAR':
@@ -1567,8 +1568,11 @@ class Decimal {
 	}
 
 	public function __toString() {
-		if( $this->__int === null && $this->__dec === null )
-			return null;
+		if( $this->__dec === null ) {
+			if( $this->__int === null )
+				return null;
+			return $this->__int;
+		}
 		return $this->__int . '.' . $this->__dec;
 	}
 
