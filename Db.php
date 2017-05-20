@@ -1083,6 +1083,7 @@ class Table {
 		case 'LONGTEXT':
 		case 'ENUM':
 		case 'VAR_STRING':
+		case 'STRING':
 			return self::DATA_TYPE_STRING;
 		case 'DATE':
 			return self::DATA_TYPE_DATE;
