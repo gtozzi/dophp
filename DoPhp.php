@@ -457,8 +457,6 @@ class DoPhp {
 	public static function db() {
 		if( ! self::$__instance )
 			throw new Exception('Must instatiate DoPhp first');
-		if( ! self::$__instance->__db )
-			throw new Exception('Database is not available');
 		return self::$__instance->__db;
 	}
 
@@ -470,8 +468,6 @@ class DoPhp {
 	public static function auth() {
 		if( ! self::$__instance )
 			throw new Exception('Must instatiate DoPhp first');
-		if( ! self::$__instance->__auth )
-			throw new Exception('Authentication is not available');
 		return self::$__instance->__auth;
 	}
 
@@ -483,8 +479,6 @@ class DoPhp {
 	public static function lang() {
 		if( ! self::$__instance )
 			throw new Exception('Must instatiate DoPhp first');
-		if( ! self::$__instance->__lang )
-			throw new Exception('Language support is not available');
 		return self::$__instance->__lang;
 	}
 
