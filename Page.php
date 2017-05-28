@@ -659,26 +659,9 @@ abstract class BaseMethod extends PageBase implements PageInterface {
 	}
 
 	/**
-	* Returns the raw input data, after decoding
-	* This is not used directly, but it may be useful when called inside _getInput()
-	*
-	* @return The raw decoded input
-	*/
-	protected function _decodeInput() {
-		if( isset($_SERVER['HTTP_CONTENT_ENCODING']) && $_SERVER['HTTP_CONTENT_ENCODING'] == 'gzip' ) {
-			$input = gzdecode(file_get_contents("php://input"));
-			if( $input === false )
-				throw new PageError('Couldn\'t decode gzip input');
-		} else
-			$input = file_get_contents("php://input");
-
-		return $input;
-	}
-
-	/**
 	* Returns input parameters
 	*
-	* @see _decodeInput()
+	* @see Utils::decodeInput()
 	* @return array Input data
 	*/
 	abstract protected function _getInput();
@@ -761,7 +744,7 @@ abstract class JsonRpcMethod extends JsonBaseMethod {
 	* Parses input JSON
 	*/
 	public function _getInput() {
-		return json_decode($this->_decodeInput(), true);
+		return json_decode(Utils::decodeInput(), true);
 	}
 
 }

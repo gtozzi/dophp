@@ -504,4 +504,19 @@ class Utils {
 		return $dist;
 	}
 
+	/**
+	* Returns the raw input data, after decoding it
+	*
+	* @return The raw decoded input
+	*/
+	public static function decodeInput() {
+		if( isset($_SERVER['HTTP_CONTENT_ENCODING']) && $_SERVER['HTTP_CONTENT_ENCODING'] == 'gzip' ) {
+			$input = gzdecode(file_get_contents("php://input"));
+			if( $input === false )
+				throw new PageError('Couldn\'t decode gzip input');
+		} else
+			$input = file_get_contents("php://input");
+
+		return $input;
+	}
 }
