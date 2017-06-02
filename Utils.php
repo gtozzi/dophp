@@ -519,4 +519,58 @@ class Utils {
 
 		return $input;
 	}
+
+	/**
+	 * Returns list of accepted HTTP encodings based on the Accept header
+	 *
+	 * @yields string: Accepted HTTP encodings, sorted by preference
+	 */
+	public static function listHttpAccept() {
+		if( ! isset($_SERVER['HTTP_ACCEPT']) )
+		 	return [];
+
+		$encodings = [];
+		// first iterate encodings
+		foreach( explode(',', $_SERVER['HTTP_ACCEPT']) as $astr ) {
+			// then seperate params
+			$aspl = explode(';', $astr, 2);
+			$encoding = trim($aspl[0]);
+
+			if( isset($aspl[1]) ) {
+				$matches = [];
+				$m = preg_match('/^\s*q=([0-9.]+)\s*$/', $aspl[1], $matches);
+				if( ! $m )
+					throw new \Exception("Could not decode Accept params: \"$aspl[1]\"");
+				$pri = (double)$matches[1];
+			} else
+				$pri = 1;
+
+			$encodings[$encoding] = $pri;
+		}
+
+		asort($encodings);
+
+		foreach( $encodings as $encoding => $pri )
+			yield $encoding;
+	}
+
+	/**
+	 * Tells whether a given encoding is accepted
+	 *
+	 * @param $encoding string: The encoding to check for
+	 * @return bool
+	 */
+	public static function isAcceptedEncoding($encoding) {
+		foreach( self::listHttpAccept() as $enc ) {
+			if( $enc == $encoding )
+				return true;
+			if( substr($enc, -1) == '*' ) {
+				$base = substr($enc, 0, -1);
+				if( substr($encoding, 0, strlen($base)) == $base )
+					return true;
+			}
+		}
+		return false;
+	}
+
 }
