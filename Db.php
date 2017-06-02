@@ -311,6 +311,21 @@ class Db {
 	}
 
 	/**
+	 * Quotes a parameter
+	 *
+	 * @see PDO::quote
+	 * @param $param string: The string to be quoted
+	 * @param $ptype int: The parameter type, as PDO constant
+	 * @return string: The quoted string
+	 */
+	public function quote($param, $ptype = \PDO::PARAM_STR) {
+		$quoted = $this->_pdo->quote($param, $ptype);
+		if( $quoted === false )
+			throw new \Exception('Error during quoting');
+		return $quoted;
+	}
+
+	/**
 	 * Quotes a schema object (table, column, ...)
 	 *
 	 * @param $name string: The unquoted object name
