@@ -170,11 +170,12 @@ class Utils {
 			return self::NULL_FMT;
 
 		$err =
-			'<p>&quot;' . $exception->getCode() . '.' . $exception->getMessage() . "&quot;</p>\n" .
+			'<h3>' . htmlentities(get_class($exception)) . "</h3>\n" .
+			'<p>&quot;' . htmlentities($exception->getCode()) . '.' . htmlentities($exception->getMessage()) . "&quot;</p>\n" .
 			'<ul>' .
-			'<li><b>File:</b> ' . $exception->getFile() . "</li>\n" .
-			'<li><b>Line:</b> ' . $exception->getLine() . "</li>\n" .
-			'<li><b>Trace:</b> ' . nl2br($exception->getTraceAsString()) . "</li>";
+			'<li><b>File:</b> ' . htmlentities($exception->getFile()) . "</li>\n" .
+			'<li><b>Line:</b> ' . htmlentities($exception->getLine()) . "</li>\n" .
+			'<li><b>Trace:</b> ' . nl2br(htmlentities($exception->getTraceAsString())) . "</li>";
 
 		// Add extra useful information
 		try {
