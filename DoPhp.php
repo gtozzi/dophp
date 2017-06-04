@@ -207,9 +207,13 @@ class DoPhp {
 		}
 
 		// Calculates the name of the page to be loaded
-		if(array_key_exists($key, $_REQUEST) && $_REQUEST[$key] && !strpos($_REQUEST[$key], '/'))
-			$page = $_REQUEST[$key];
-		elseif( $def ) {
+		if( array_key_exists($key, $_REQUEST) && $_REQUEST[$key] ) {
+			// Page specified, use it and also explode the sub-path
+			$parts = explode('/', $_REQUEST[$key], 2);
+			$page = $parts[0];
+			$path = isset($parts[1]) ? $parts[1] : null;
+		} elseif( $def ) {
+			// Page not specified, redirect to default page (if configured)
 			if( isset($_REQUEST[$key]) && $def == $_REQUEST[$key] ) {
 				// Prevent loop redirection
 				header("HTTP/1.1 500 Internal Server Error");
@@ -223,6 +227,7 @@ class DoPhp {
 			echo $to;
 			return;
 		} else {
+			// Page not specified and no default, give a 404
 			header("HTTP/1.1 400 Bad Request");
 			echo('Missing "' . $key . '" argument');
 			return;
@@ -311,7 +316,6 @@ class DoPhp {
 		}
 
 		// Init return var and execute page
-		$fromCache = false;
 		try {
 			require $inc_file;
 			$findName = self::className($page);
@@ -321,9 +325,9 @@ class DoPhp {
 					throw new Exception("Page class \"$findName\" not found in file \"$inc_file\"");
 				else
 					throw new Exception('Page class not found');
-			$pobj = new $classname($this->__conf, $this->__db, $this->__auth, $page );
+			$pobj = new $classname($this->__conf, $this->__db, $this->__auth, $page, $path );
 
-			list($out, $headers) = $this->__runPage($pobj);
+			list($out, $headers) = $this->__runPage($pobj, $path);
 		} catch( dophp\PageDenied $e ) {
 			if( $def ) {
 				if( $def == $page ) {

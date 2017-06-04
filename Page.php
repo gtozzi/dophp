@@ -21,8 +21,9 @@ interface PageInterface {
 	* @param $db     object: Database instance
 	* @param $user   object: Current user object instance
 	* @param $name   string: Name of this page
+	* @param $path   string: The relative path inside this page
 	*/
-	public function __construct(& $config, $db, $user, $name);
+	public function __construct(& $config, $db, $user, $name, $path);
 
 	/**
 	* Method called prior of page execution to determine if the page can be
@@ -62,6 +63,11 @@ interface PageInterface {
 	public function name();
 
 	/**
+	 * Returns current page's relative path
+	 */
+	public function path();
+
+	/**
 	 * Returns current DoPhp's config
 	 */
 	public function &config();
@@ -90,6 +96,8 @@ abstract class PageBase {
 	protected $_user;
 	/** Name of this page */
 	protected $_name;
+	/** Relative path inside this page */
+	protected $_path;
 	/** Headers to be output */
 	protected $_headers = array();
 	/**
@@ -118,11 +126,12 @@ abstract class PageBase {
 	*
 	* @see PageInterface::__construct
 	*/
-	public function __construct(& $config, $db, $user, $name) {
+	public function __construct(& $config, $db, $user, $name, $path) {
 		$this->_config = $config;
 		$this->_db = $db;
 		$this->_user = $user;
 		$this->_name = $name;
+		$this->_path = $path;
 
 		if( isset($_SESSION[\DoPhp::SESS_LOGIN_ERROR]) ) {
 			$this->_loginError = $_SESSION[\DoPhp::SESS_LOGIN_ERROR];
@@ -150,6 +159,10 @@ abstract class PageBase {
 
 	public function name() {
 		return $this->_name;
+	}
+
+	public function path() {
+		return $this->_path;
 	}
 
 	public function &config() {
