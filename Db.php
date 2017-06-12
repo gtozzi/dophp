@@ -974,7 +974,7 @@ class Table {
 
 		$q .= $this->_buildColumList($cols, 't', $joins);
 
-		$q .= 'FROM '.$this->_db->quoteObj($this->_name).' AS '.$this->_db->quoteObj('t')."\n";
+		$q .= ' FROM '.$this->_db->quoteObj($this->_name).' AS '.$this->_db->quoteObj('t')."\n";
 
 		if( $joins )
 			foreach( $joins as $j )
@@ -1181,15 +1181,18 @@ class Table {
 		if( $val === null )
 			return null;
 
+		// Using self::normNumber() because it looks like PDO may return
+		// numbers in localized format
+
 		switch($type) {
 		case self::DATA_TYPE_INTEGER:
-			return (int)$val;
+			return (int)self::normNumber($val);
 		case self::DATA_TYPE_BOOLEAN:
 			return $val && $val != -1 ? true : false;
 		case self::DATA_TYPE_DOUBLE:
-			return (double)$val;
+			return (double)self::normNumber($val);
 		case self::DATA_TYPE_DECIMAL:
-			return new Decimal($val);
+			return new Decimal(self::normNumber($val));
 		case self::DATA_TYPE_STRING:
 			return (string)$val;
 		case self::DATA_TYPE_DATE:
@@ -1201,6 +1204,18 @@ class Table {
 		}
 
 		throw new \Exception("Unsupported data type $type");
+	}
+
+	/**
+	 * De-localize a number, takes a number in locale format and converts it
+	 * into a standard xx.xxx number
+	 *
+	 * @param $num string: The number as string
+	 * @return The number as string
+	 */
+	public static function normNumber($num) {
+		$locInfo = localeconv();
+		return str_replace($locInfo['decimal_point'], '.', $num);
 	}
 
 	/**
