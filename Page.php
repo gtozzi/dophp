@@ -297,11 +297,15 @@ trait SmartyFunctionalities {
 
 		// Assign utility variables
 		$this->_smarty->assign('this', $this);
-		$this->_smarty->assign('page', $this->_name);
+		if( property_exists($this, '_name') )
+			$this->_smarty->assign('page', $this->_name);
 		foreach( $this->_config['paths'] as $k => $v )
 			$this->_smarty->assign($k, $v);
-		$this->_smarty->assignByRef('user', $this->_user);
-		$this->_smarty->assignByRef('loginError', $this->_loginError);
+		if( property_exists($this, '_user') )
+			$this->_smarty->assignByRef('user', $this->_user);
+
+		if( property_exists($this, '_loginError') )
+			$this->_smarty->assignByRef('loginError', $this->_loginError);
 
 		// Init default template name
 		$base_file = basename($_SERVER['PHP_SELF'], '.php');
