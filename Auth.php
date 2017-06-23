@@ -174,11 +174,6 @@ class AuthPlain extends AuthBase {
 		list( $user, $pwd, $source ) = $detected;
 
 		$uid = $this->_login($user, $pwd, $source);
-		if( ! $uid ) {
-			$_SESSION[\DoPhp::SESS_LOGIN_ERROR] = _('Invalid credentials');
-			return null;
-		}
-		$_SESSION[\DoPhp::SESS_LOGIN_ERROR] = null;
 
 		$this->saveSession($user, $pwd);
 		return $uid;

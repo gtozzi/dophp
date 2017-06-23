@@ -118,6 +118,8 @@ abstract class PageBase {
 	/** After how many seconds cache will expire (cache is not enabled by default) */
 	protected $_cacheExpire = 300;
 
+	/** Will get and store the alerts here, if any */
+	protected $_alerts;
 	/** Will store the last login error occurred, if any */
 	protected $_loginError = null;
 
@@ -133,10 +135,10 @@ abstract class PageBase {
 		$this->_name = $name;
 		$this->_path = $path;
 
-		if( isset($_SESSION[\DoPhp::SESS_LOGIN_ERROR]) ) {
-			$this->_loginError = $_SESSION[\DoPhp::SESS_LOGIN_ERROR];
-			unset($_SESSION[\DoPhp::SESS_LOGIN_ERROR]);
-		}
+		$this->_alerts = \DoPhp::getAlerts();
+		foreach( $this->_alerts as $alert )
+			if( $alert instanceof LoginErrorAlert )
+				$this->_loginError = $alert;
 	}
 
 	/**
@@ -304,6 +306,8 @@ trait SmartyFunctionalities {
 		if( property_exists($this, '_user') )
 			$this->_smarty->assignByRef('user', $this->_user);
 
+		if( property_exists($this, '_alerts') )
+			$this->_smarty->assignByRef('alerts', $this->_alerts);
 		if( property_exists($this, '_loginError') )
 			$this->_smarty->assignByRef('loginError', $this->_loginError);
 

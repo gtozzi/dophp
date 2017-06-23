@@ -11,6 +11,7 @@ require_once(__DIR__ . '/Lang.php');
 require_once(__DIR__ . '/Db.php');
 require_once(__DIR__ . '/Auth.php');
 require_once(__DIR__ . '/Menu.php');
+require_once(__DIR__ . '/Alert.php');
 require_once(__DIR__ . '/Page.php');
 require_once(__DIR__ . '/Validator.php');
 require_once(__DIR__ . '/Utils.php');
@@ -28,8 +29,11 @@ class DoPhp {
 	const TEXT_DOMAIN = 'dophp';
 	/** This is the prefix used for model classes */
 	const MODEL_PREFIX = 'm';
-	/** The is the key used for the login failed info in $_SESSION */
-	const SESS_LOGIN_ERROR = 'DoPhp::LoginError';
+	/** The is the key used to store alerts in $_SESSION */
+	const SESS_ALERTS = 'DoPhp::Alerts';
+
+	/** The exception message when usign a static method without instance */
+	const INSTANCE_ERROR = 'Must instatiate DoPhp first';
 
 	/** Stores the current instance */
 	private static $__instance = null;
@@ -337,8 +341,7 @@ class DoPhp {
 					return;
 				}
 
-				if( $sess )
-					$_SESSION[self::SESS_LOGIN_ERROR] = $e;
+				self::addAlert(new dophp\LoginErrorAlert($e));
 
 				$to = dophp\Utils::fullPageUrl($def, $key);
 				header("HTTP/1.1 303 Login Required");
@@ -449,7 +452,7 @@ class DoPhp {
 	*/
 	public static function conf() {
 		if( ! self::$__instance )
-			throw new Exception('Must instatiate DoPhp first');
+			throw new Exception(self::INSTANCE_ERROR);
 		return self::$__instance->__conf;
 	}
 
@@ -460,7 +463,7 @@ class DoPhp {
 	*/
 	public static function db() {
 		if( ! self::$__instance )
-			throw new Exception('Must instatiate DoPhp first');
+			throw new Exception(self::INSTANCE_ERROR);
 		return self::$__instance->__db;
 	}
 
@@ -471,7 +474,7 @@ class DoPhp {
 	*/
 	public static function auth() {
 		if( ! self::$__instance )
-			throw new Exception('Must instatiate DoPhp first');
+			throw new Exception(self::INSTANCE_ERROR);
 		return self::$__instance->__auth;
 	}
 
@@ -482,7 +485,7 @@ class DoPhp {
 	*/
 	public static function lang() {
 		if( ! self::$__instance )
-			throw new Exception('Must instatiate DoPhp first');
+			throw new Exception(self::INSTANCE_ERROR);
 		return self::$__instance->__lang;
 	}
 
@@ -494,7 +497,7 @@ class DoPhp {
 	*/
 	public static function model($name) {
 		if( ! self::$__instance )
-			throw new Exception('Must instatiate DoPhp first');
+			throw new Exception(self::INSTANCE_ERROR);
 		if( ! $name )
 			throw new Exception('Must give a model name');
 
@@ -521,9 +524,60 @@ class DoPhp {
 	*/
 	public static function duration() {
 		if( ! self::$__instance )
-			throw new Exception('Must instatiate DoPhp first');
+			throw new Exception(self::INSTANCE_ERROR);
 
 		return microtime(true) - self::$__instance->__start;
+	}
+
+	/**
+	 * Adds an alert to the current alerts
+	 * If session is not enabled does nothing
+	 *
+	 * @param $alert Alert object to append to list
+	 */
+	public static function addAlert(dophp\Alert $alert) {
+		if( ! self::$__instance )
+			throw new Exception(self::INSTANCE_ERROR);
+		if( session_status() !== PHP_SESSION_ACTIVE )
+			return;
+
+		if( ! isset($_SESSION[self::SESS_ALERTS]) )
+			$_SESSION[self::SESS_ALERTS] = [];
+		$_SESSION[self::SESS_ALERTS][] = $alert;
+	}
+
+	/**
+	 * Returns all alerts and clears the list
+	 *
+	 * @return array List of Alert objects (always empty if session disabled)
+	 */
+	public static function getAlerts() {
+		if( ! self::$__instance )
+			throw new Exception(self::INSTANCE_ERROR);
+		if( session_status() !== PHP_SESSION_ACTIVE )
+			return [];
+		if( ! isset($_SESSION[self::SESS_ALERTS]) )
+			return [];
+
+		$alerts = $_SESSION[self::SESS_ALERTS];
+		$_SESSION[self::SESS_ALERTS] = [];
+		return $alerts;
+	}
+
+	/**
+	 * Returns all alerts and without clearing the list
+	 *
+	 * @return array List of Alert objects (always empty if session disabled)
+	 */
+	public static function peekAlerts() {
+		if( ! self::$__instance )
+			throw new Exception(self::INSTANCE_ERROR);
+		if( session_status() !== PHP_SESSION_ACTIVE )
+			return [];
+		if( ! isset($_SESSION[self::SESS_ALERTS]) )
+			return [];
+
+		return $_SESSION[self::SESS_ALERTS];
 	}
 
 	/**
