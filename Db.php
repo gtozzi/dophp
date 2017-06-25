@@ -153,30 +153,7 @@ class Db {
 		}
 
 		$st = $this->_pdo->prepare($query);
-		/* Experimental, switch to this in future?
-		foreach( $params as $k => $v ) {
-			switch( gettype($v) ) {
-			case 'NULL':
-				$p = \PDO::PARAM_NULL;
-				break;
-			case 'boolean':
-				$t = \PDO::PARAM_BOOL;
-				break;
-			case 'integer':
-				$t = \PDO::PARAM_INT;
-				break;
-			default:
-				$t = \PDO::PARAM_STR;
-				break;
-			}
 
-			// Parameters are 1-based while array indexes are 0-based
-			if( gettype($k) == 'integer' )
-				$k++;
-
-			$st->bindParam($k, $v, $t);
-		}
-		*/
 		if( ! $st->execute($params) )
 			throw new StatementExecuteError($st);
 
@@ -187,11 +164,16 @@ class Db {
 	 * Like Db::run(), but returns a Result instead
 	 *
 	 * @see run()
+	 * @param $query string: The Query string
+	 * @param $params array: Associative array of params
+	 * @param $types array: Associative array name => type of requested return
+	 *                      types. Omitted ones will be guessed from PDO data.
+	 *                      Each type must be on of Table::DATA_TYPE_* constants
 	 * @return Result
 	 */
-	public function xrun($query, $params=[], $vcharfix=null) {
-		$st = $this->run($query, $params, $vcharfix);
-		return new Result($st, $query, $params);
+	public function xrun($query, $params=[], $types=[]) {
+		$st = $this->run($query, $params);
+		return new Result($st, $query, $params, $types);
 	}
 
 	/**
@@ -602,6 +584,8 @@ class Result implements \Iterator {
 	protected $_query;
 	/** The query params */
 	protected $_params;
+	/** The explicit column types */
+	protected $_types;
 	/** The column info cache, array of ResultCol objects */
 	protected $_cols = [];
 	/** Next result to be returned */
@@ -615,11 +599,13 @@ class Result implements \Iterator {
 	 * @param $st \PDOStatement: The executed PDO statement
 	 * @param $query string: The query string for the statement
 	 * @param $params array: The used query parameters
+	 * @param $types array: The requested explicit return types
 	 */
-	public function __construct( \PDOStatement $st, &$query, &$params ) {
+	public function __construct( \PDOStatement $st, $query, $params, $types ) {
 		$this->_st = $st;
-		$this->_query = &$query;
-		$this->_params = &$params;
+		$this->_query = $query;
+		$this->_params = $params;
+		$this->_types = $types;
 	}
 
 	/**
@@ -631,14 +617,20 @@ class Result implements \Iterator {
 	 */
 	public function getColumnInfo( $idx ) {
 		if( ! array_key_exists($idx, $this->_cols) ) {
+			// Cached value not found, generate it
 			$meta = $this->_st->getColumnMeta( $idx );
 			if( ! $meta )
 				throw new \Exception("No meta for column $idx");
-			$this->_cols[$idx] = new ResultCol(
-				$meta['name'],
-				Table::getType($meta['native_type'], $meta['len'])
-			);
+
+			if( isset($types[$meta['name']]) )
+				$type = $types[$meta['name']];
+			else
+				$type = Table::getType($meta['native_type'], $meta['len']);
+
+			$this->_cols[$idx] = new ResultCol($meta['name'], $type);
 		}
+
+		// Return from cache
 		return $this->_cols[$idx];
 	}
 
