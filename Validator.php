@@ -437,10 +437,16 @@ class file_validator extends base_validator {
 		if( ! $val )
 			return _("Field can't be empty") . '.';
 		if( ! (int)$val['size'] )
-			return _("Unvalid file size") . " ({$val['size']}).";
+			return _("Invalid file size") . " ({$val['size']}).";
+		if( ! isset($val['tmp_name']) || ! file_exists($val['tmp_name']) )
+			return _("Could not read local copy of file");
+		if( filesize($val['tmp_name']) != $val['size'] )
+			return _("File size mismatch");
 		return false;
 	}
 	protected function do_validate( &$v, &$o ) {
+		if( isset($v['error']) && $v['error'] )
+			return _("Error") . " {$v['error']} ";
 		if( isset($o['type']) && $v['size'] ) {
 			$err = $this->check_type($v['type'], $o['type']);
 			if( $err )
