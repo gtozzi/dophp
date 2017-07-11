@@ -259,9 +259,27 @@ class Db {
 	* Begins a transaction
 	*
 	* @see PDO::beginTransaction()
+	* @param $useExisting bool: If true, will not try to open a new transaction
+	*                     when there is already an active transaction
+	* @return true when transaction has been started, false instead
 	*/
-	public function beginTransaction() {
-		$this->_pdo->beginTransaction();
+	public function beginTransaction($useExisting = false) {
+		if( $useExisting && $this->inTransaction() )
+			return false;
+
+		if( ! $this->_pdo->beginTransaction() )
+			throw new \Exception('Error opening transaction');
+
+		return true;
+	}
+
+	/**
+	* Checks if a transaction is currently active within the driver
+	*
+	* @see PDO::inTransaction()
+	*/
+	public function inTransaction() {
+		return $this->_pdo->inTransaction();
 	}
 
 	/**
@@ -270,7 +288,8 @@ class Db {
 	* @see PDO::commit()
 	*/
 	public function commit() {
-		$this->_pdo->commit();
+		if( ! $this->_pdo->commit() )
+			throw new \Exception('Commit error');
 	}
 
 	/**
@@ -279,7 +298,8 @@ class Db {
 	* @see PDO::rollBack()
 	*/
 	public function rollBack() {
-		$this->_pdo->rollBack();
+		if( ! $this->_pdo->rollBack() )
+			throw new \Exception('Rollback error');
 	}
 
 	/**
