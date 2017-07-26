@@ -1619,6 +1619,10 @@ class Decimal {
 		return $this->__int . '.' . $this->__dec;
 	}
 
+	public function toDouble() {
+		return (double)($this->__int . '.' . $this->__dec);
+	}
+
 	/**
 	* Returns a formatted version of this decimal
 	*
