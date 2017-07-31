@@ -833,3 +833,44 @@ class PageRedirect extends \Exception {
 	}
 
 }
+
+
+namespace dophp\debug;
+
+/**
+ * Page class for showing debug info
+ */
+class Viewer extends \dophp\PageBase implements \dophp\PageInterface {
+
+	public function run() {
+		$style = '
+		<style>
+			div {
+				background-color: #ffe;
+				padding: 5px;
+				margin: 5px;
+				border: 1px black dotted;
+			}
+			div.action {
+				background-color: white;
+			}
+		</style>
+		';
+
+		$htmls = [];
+
+		foreach( Debug::getRequests() as $req )
+			$htmls[] = $req->asHtml();
+
+		$out = '<!DOCTYPE html>';
+		$out .= "<html lang=\"en\">\n<head>\n";
+		$out .= "<title>DoPhp Debug Info</title>\n";
+		$out .= $style;
+		$out .= "\n</head>\n<body>\n";
+		$out .= implode($htmls);
+		$out .= "\n</body>\n</html>";
+
+		return $out;
+	}
+
+}

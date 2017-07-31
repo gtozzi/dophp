@@ -7,6 +7,7 @@
 * @brief Main DoPhp framework class
 */
 
+require_once(__DIR__ . '/Debug.php');
 require_once(__DIR__ . '/Lang.php');
 require_once(__DIR__ . '/Db.php');
 require_once(__DIR__ . '/Auth.php');
@@ -52,6 +53,8 @@ class DoPhp {
 	private $__models = [];
 	/** Memcache instance, if used */
 	private $__cache = null;
+	/** The debugger object */
+	private $__debug;
 
 	/**
 	* Handles page rendering and everything
@@ -187,6 +190,9 @@ class DoPhp {
 			$def_domain = self::TEXT_DOMAIN;
 		textdomain($def_domain);
 
+		// Creates the debug object
+		$this->__debug = new dophp\debug\Request($this->__conf['debug']);
+
 		// Creates database connection, if needed
 		if( array_key_exists('db', $this->__conf) )
 			$this->__db = new $db(
@@ -195,9 +201,7 @@ class DoPhp {
 				isset($this->__conf['db']['pass']) ? $this->__conf['db']['pass'] : null,
 				isset($this->__conf['db']['vcharfix']) ? $this->__conf['db']['vcharfix'] : false
 			);
-		if( $this->__conf['debug'] )
-			if( $this->__db )
-				$this->__db->debug = true;
+		$this->__db->debug = $this->__debug;
 
 		// Creates the locale object
 		$this->__lang = new $lang($this->__db, $this->__conf['lang']['supported'], $this->__conf['lang']['coding'], $this->__conf['lang']['tables']);

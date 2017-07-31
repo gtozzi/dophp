@@ -20,7 +20,7 @@ class Db {
 	/** Microsoft SQL Server DB TYPE */
 	const TYPE_MSSQL = 'mssql';
 
-	/** If true, enables debug functions */
+	/** Debug object (or true for backward compatibility) */
 	public $debug = false;
 
 	/**
@@ -123,6 +123,12 @@ class Db {
 	* @throws StatementExecuteError
 	*/
 	public function run($query, $params=array(), $vcharfix=null) {
+		if( $this->debug && $this->debug instanceof debug\Request && $this->debug->isEnabled() ) {
+			$dbgquery = new debug\DbQuery();
+			$this->debug->addQuery($dbgquery);
+		} else
+			$dbgquery = null;
+
 		if( ! is_array($params) )
 			$params = array($params);
 		if( $vcharfix === null )
@@ -147,6 +153,9 @@ class Db {
 			elseif( $p instanceof \DateTime )
 				$p = $p->format('Y-m-d H:i:s');
 
+		if( $dbgquery )
+			$dbgquery->built($query, $params);
+
 		if( $this->debug ) {
 			$this->lastQuery = $query;
 			$this->lastParams = $params;
@@ -154,8 +163,14 @@ class Db {
 
 		$st = $this->_pdo->prepare($query);
 
+		if( $dbgquery )
+			$dbgquery->prepared();
+
 		if( ! $st->execute($params) )
 			throw new StatementExecuteError($st);
+
+		if( $dbgquery )
+			$dbgquery->executed();
 
 		return $st;
 	}
