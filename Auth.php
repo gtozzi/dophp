@@ -24,7 +24,7 @@ interface AuthInterface {
 	public function __construct(& $config, $db, $sess);
 
 	/**
-	* Method called to log in an user
+	* Method called automatically by DoPhp to log in an user
 	*
 	* @return boolean: True on success or False on failure
 	*/
@@ -46,7 +46,7 @@ interface AuthInterface {
 /**
 * Base class for authenticator
 */
-abstract class AuthBase {
+abstract class AuthBase implements AuthInterface {
 
 	/** Name of the session variable */
 	const SESS_VAR = 'DoPhpAuth_';
@@ -75,10 +75,26 @@ abstract class AuthBase {
 	* @see AuthInterface::login
 	*/
 	public function login() {
+		$this->_beforeLogin();
+
+		return $this->_processLogin($this->_doLogin());
+	}
+
+	/**
+	 * Does pre-login checks
+	 */
+	protected function _beforeLogin() {
 		if( $this->_uid )
 			throw new \Exception('Must logout first');
+	}
 
-		$uid = $this->_doLogin();
+	/**
+	 * Process and apply login result
+	 *
+	 * @param $uid The user id, ad returned from _doLogin()
+	 * @return boolean: True on success or False on failure
+	 */
+	protected function _processLogin($uid) {
 		if( ! $uid )
 			return false;
 
@@ -124,7 +140,7 @@ abstract class AuthBase {
 * Database MUST implement a login($user, $password) method returning the user's
 * ID on succesfull login
 */
-class AuthPlain extends AuthBase implements AuthInterface {
+class AuthPlain extends AuthBase {
 
 	/** UserId header name ($_SERVER key name) */
 	const HEAD_USER = 'HTTP_X_AUTH_USER';
@@ -132,37 +148,56 @@ class AuthPlain extends AuthBase implements AuthInterface {
 	const HEAD_PASS = 'HTTP_X_AUTH_PASS';
 
 	/**
+	 * Method the may be called manually by a page script to login an user
+	 *
+	 * @return boolean: True on success or False on failure
+	 */
+	public function handLogin($username, $password) {
+		$this->_beforeLogin();
+
+		$uid = $this->_login($username, $password, 'hand');
+		if( $uid ) {
+			$this->saveSession($username, $password);
+		}
+
+		return $this->_processLogin($uid);
+	}
+
+	/**
 	* @see AuthBase::_doLogin
 	*/
 	protected function _doLogin() {
-		$user = null;
-		$pwd = null;
-		$source = null;
-
-		if( isset($_SERVER[self::HEAD_USER]) && isset($_SERVER[self::HEAD_PASS]) ) {
-			$source = 'headers';
-			$user = $_SERVER[self::HEAD_USER];
-			$pwd = $_SERVER[self::HEAD_PASS];
-		} elseif( isset($_REQUEST['login']) && $_REQUEST['login'] ) {
-			$source = 'user';
-			$user = isset($_REQUEST['username']) ? $_REQUEST['username'] : null;
-			$pwd = isset($_REQUEST['password']) ? $_REQUEST['password'] : null;
-		} elseif( $this->_sess ) {
-			$source = 'session';
-			$user = isset($_SESSION[self::SESS_VAR.'username']) ? $_SESSION[self::SESS_VAR.'username'] : null;
-			$pwd = isset($_SESSION[self::SESS_VAR.'password']) ? $_SESSION[self::SESS_VAR.'password'] : null;
-		}
-
-		if( ! $user || ! $pwd || ! $source )
+		$detected = $this->_detectLogin();
+		if( $detected === null )
 			return null;
+
+		list( $user, $pwd, $source ) = $detected;
 
 		$uid = $this->_login($user, $pwd, $source);
-		if( ! $uid )
-			return null;
 
 		$this->saveSession($user, $pwd);
-
 		return $uid;
+	}
+
+	/**
+	 * Detect login request
+	 *
+	 * @return [$username, $password, $source] or null
+	 */
+	protected function _detectLogin() {
+		if( isset($_SERVER[self::HEAD_USER]) && isset($_SERVER[self::HEAD_PASS]) )
+			return [ $_SERVER[self::HEAD_USER], $_SERVER[self::HEAD_PASS], 'headers' ];
+
+		if( isset($_REQUEST['login']) && $_REQUEST['login']
+				&& isset($_REQUEST['username']) && isset($_REQUEST['password']) )
+			return [ $_REQUEST['username'], $_REQUEST['password'], 'user' ];
+
+		$svaruser = self::SESS_VAR . 'username';
+		$svarpass = self::SESS_VAR . 'password';
+		if( $this->_sess && isset($_SESSION[$svaruser]) && isset($_SESSION[$svarpass]) )
+			return [ $_SESSION[$svaruser], $_SESSION[$svarpass], 'session' ];
+
+		return null;
 	}
 
 	/**
@@ -186,7 +221,7 @@ class AuthPlain extends AuthBase implements AuthInterface {
 	*
 	* @param $user string: The username
 	* @param $pwd string: The password
-	* @param $source string: The source for the credendials (headers|user|session)
+	* @param $source string: The source for the credendials (headers|user|session|hand)
 	* @return integer The user's ID on success
 	*/
 	protected function _login($user, $pwd, $source) {
@@ -205,7 +240,7 @@ class AuthPlain extends AuthBase implements AuthInterface {
 * Database MUST implement a getUserPwd($user) method returning the user's
 * password (maybe encrypted)
 */
-class AuthSign extends AuthBase implements AuthInterface {
+class AuthSign extends AuthBase {
 
 	/** Separator to use for hash concatenation */
 	const SEP = '~';

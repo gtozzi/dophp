@@ -11,6 +11,7 @@ require_once(__DIR__ . '/Lang.php');
 require_once(__DIR__ . '/Db.php');
 require_once(__DIR__ . '/Auth.php');
 require_once(__DIR__ . '/Menu.php');
+require_once(__DIR__ . '/Alert.php');
 require_once(__DIR__ . '/Page.php');
 require_once(__DIR__ . '/Validator.php');
 require_once(__DIR__ . '/Utils.php');
@@ -28,6 +29,11 @@ class DoPhp {
 	const TEXT_DOMAIN = 'dophp';
 	/** This is the prefix used for model classes */
 	const MODEL_PREFIX = 'm';
+	/** The is the key used to store alerts in $_SESSION */
+	const SESS_ALERTS = 'DoPhp::Alerts';
+
+	/** The exception message when usign a static method without instance */
+	const INSTANCE_ERROR = 'Must instatiate DoPhp first';
 
 	/** Stores the current instance */
 	private static $__instance = null;
@@ -44,6 +50,8 @@ class DoPhp {
 	private $__start = null;
 	/** Models instances cache */
 	private $__models = [];
+	/** Memcache instance, if used */
+	private $__cache = null;
 
 	/**
 	* Handles page rendering and everything
@@ -85,6 +93,15 @@ class DoPhp {
 	*                                 - idx: the table containing the text indexes
 	*                                 - txt: the table containing the texts itself
 	*                 )
+	*                 'cors' => array( // Handles CORS (Cross Origin Resource Sharing) support
+	*                     'origins' => array list of origins to allow or string '*' for any.
+	*                                  Null disables CORS (default).
+	*                     'headers' => array list of accepted headers or string '*' to accept all.
+	*                                  Default: empty
+	*                     'credentials' => boolean, allow credentials? Default: false
+	*                     'maxage' => int: indication of max preflight cached age, in seconds
+	*                                 Default: 86400
+	*                 )
 	*                 'dophp' => array( // Internal DoPhp configurations
 	*                     'url'  => relative path for accessing DoPhp folder from webserver.
 	*                               Default: try to guess it
@@ -99,10 +116,10 @@ class DoPhp {
 	* @param $sess   boolean: If true, starts the session and uses it
 	* @param $def    string: Default page name, used when received missing or unvalid page
 	* @param $key    string: the key containing the page name
-	* @param $url    string: base relative URL for accessing dophp folder in webserver
+	* @param $strict string: if true, return a 500 status on ANY error
 	*/
 	public function __construct($conf=null, $db='dophp\\Db', $auth=null, $lang='dophp\\Lang',
-			$sess=true, $def='home', $key=self::BASE_KEY) {
+			$sess=true, $def='home', $key=self::BASE_KEY, $strict=false) {
 
 		// Don't allow multiple instances of this class
 		if( self::$__instance )
@@ -113,6 +130,12 @@ class DoPhp {
 		// Start the session
 		if( $sess )
 			session_start();
+
+		// Sets the error handler and register a shutdown function to catch fatal errors
+		if( $strict ) {
+			set_error_handler(array('DoPhp', 'error_handler'));
+			register_shutdown_function(array('DoPhp', 'shutdown_handler'));
+		}
 
 		// Build default config
 		$this->__conf = $conf;
@@ -139,6 +162,16 @@ class DoPhp {
 			$this->__conf['dophp']['url'] = preg_replace('/^'.preg_quote($_SERVER['DOCUMENT_ROOT'],'/').'/', '', __DIR__, 1);
 		if( ! array_key_exists('path', $this->__conf['dophp']) )
 			$this->__conf['dophp']['path'] = __DIR__;
+		if( ! array_key_exists('cors', $this->__conf) )
+			$this->__conf['cors'] = array();
+		if( ! array_key_exists('origins', $this->__conf['cors']) )
+			$this->__conf['cors']['origins'] = null;
+		if( ! array_key_exists('headers', $this->__conf['cors']) )
+			$this->__conf['cors']['headers'] = array();
+		if( ! array_key_exists('credentials', $this->__conf['cors']) )
+			$this->__conf['cors']['credentials'] = false;
+		if( ! array_key_exists('maxage', $this->__conf['cors']) )
+			$this->__conf['cors']['maxage'] = 86400;
 		if( ! array_key_exists('debug', $this->__conf) )
 			$this->__conf['debug'] = false;
 
@@ -156,9 +189,15 @@ class DoPhp {
 
 		// Creates database connection, if needed
 		if( array_key_exists('db', $this->__conf) )
-			$this->__db = new $db($this->__conf['db']['dsn'], $this->__conf['db']['user'], $this->__conf['db']['pass']);
+			$this->__db = new $db(
+				$this->__conf['db']['dsn'],
+				isset($this->__conf['db']['user']) ? $this->__conf['db']['user'] : null,
+				isset($this->__conf['db']['pass']) ? $this->__conf['db']['pass'] : null,
+				isset($this->__conf['db']['vcharfix']) ? $this->__conf['db']['vcharfix'] : false
+			);
 		if( $this->__conf['debug'] )
-			$this->__db->debug = true;
+			if( $this->__db )
+				$this->__db->debug = true;
 
 		// Creates the locale object
 		$this->__lang = new $lang($this->__db, $this->__conf['lang']['supported'], $this->__conf['lang']['coding'], $this->__conf['lang']['tables']);
@@ -172,15 +211,17 @@ class DoPhp {
 		}
 
 		// Calculates the name of the page to be loaded
-		$inc_file = dophp\Utils::pagePath($this->__conf, isset($_REQUEST[$key])?$_REQUEST[$key]:null);
-
-		if(array_key_exists($key, $_REQUEST) && $_REQUEST[$key] && !strpos($_REQUEST[$key], '/') && file_exists($inc_file))
-			$page = $_REQUEST[$key];
-		elseif( $def ) {
+		if( array_key_exists($key, $_REQUEST) && $_REQUEST[$key] ) {
+			// Page specified, use it and also explode the sub-path
+			$parts = explode('/', $_REQUEST[$key], 2);
+			$page = $parts[0];
+			$path = isset($parts[1]) ? $parts[1] : null;
+		} elseif( $def ) {
+			// Page not specified, redirect to default page (if configured)
 			if( isset($_REQUEST[$key]) && $def == $_REQUEST[$key] ) {
 				// Prevent loop redirection
 				header("HTTP/1.1 500 Internal Server Error");
-				echo('SERVER ERROR: Invalid default page');
+				echo("SERVER ERROR: Invalid default page \"$def\"");
 				return;
 			}
 
@@ -190,18 +231,88 @@ class DoPhp {
 			echo $to;
 			return;
 		} else {
+			// Page not specified and no default, give a 404
+			header("HTTP/1.1 400 Bad Request");
+			echo('Missing "' . $key . '" argument');
+			return;
+		}
+
+		// Check for existing include page file
+		$inc_file = dophp\Utils::pagePath($this->__conf, $page);
+		if( ! file_exists($inc_file) ) {
 			header("HTTP/1.1 404 Not Found");
-			echo('Unknown Page');
+			echo('Page Not Found');
+			return;
+		}
+
+		// List of allowed methods, used later in CORS preflight and OPTIONS
+		// TODO: Do not hardcode it, handle it nicely
+		$allowMethods = 'OPTIONS, GET, HEAD, POST';
+
+		// Handle CORS
+		// (https://www.html5rocks.com/static/images/cors_server_flowchart.png)
+		// (https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods/OPTIONS)
+		$reqHeads = dophp\Utils::headers();
+		if( isset($reqHeads['Origin']) && $this->__conf['cors']['origins'] ) {
+			// The client is requesting CORS and dophp is configured to handle it
+			$origin = $reqHeads['Origin'];
+			$preflight = $_SERVER['REQUEST_METHOD'] == 'OPTIONS';
+
+			// Set the Access-Control-Allow-Origin header
+			$oh = null;
+			if( $this->__conf['cors']['origins'] == '*' )
+				$oh = $origin;
+			else {
+				header('Vary: Origin');
+				foreach( $this->__conf['cors']['origins'] as $o )
+					if( $o == $origin ) {
+						$oh = $o;
+						break;
+					}
+			}
+			if( $oh )
+				header("Access-Control-Allow-Origin: $oh");
+
+			// Set the Access-Control-Request-Headers header
+			$hh = null;
+			if( $preflight && isset($reqHeads['Access-Control-Request-Headers']) ) {
+				if( $this->__conf['cors']['headers'] == '*' )
+					$hh = $reqHeads['Access-Control-Request-Headers'];
+				else {
+					$rhs = array_map('trim', explode(',', $reqHeads['Access-Control-Request-Headers']));
+					$hh = '';
+					foreach( $rhs as $h )
+						if( in_array($h, $this->__conf['cors']['headers']) )
+							$hh .= ( strlen($hh) ? ', ' : '' ) . $h;
+				}
+			}
+			if( $hh )
+				header("Access-Control-Allow-Headers: $hh");
+
+			// Set the other headers
+			if( $oh || $hh ) {
+				if( $preflight ) {
+					header("Access-Control-Allow-Methods: $allowMethods");
+					header("Access-Control-Max-Age: {$this->__conf['cors']['maxage']}");
+				}
+				if( $this->__conf['cors']['credentials'] )
+					header("Access-Control-Allow-Credentials: true");
+			}
+		}
+
+		// When an OPTIONS request is received, must not serve a body,
+		// so no need to go futher
+		if( $_SERVER['REQUEST_METHOD'] == 'OPTIONS' ) {
+			header("Allow: $allowMethods");
 			return;
 		}
 
 		// Init memcached if in use
-		$cache = null;
 		if( isset($conf['memcache']) && isset($conf['memcache']['host']) && isset($conf['memcache']['port']) ) {
 			if( class_exists('Memcache') ) {
-				$cache = new Memcache;
-				if( ! $cache->connect($conf['memcache']['host'], $conf['memcache']['port']) ) {
-					$cache = null;
+				$this->__cache = new Memcache;
+				if( ! $this->__cache->connect($conf['memcache']['host'], $conf['memcache']['port']) ) {
+					$this->__cache = null;
 					error_log("Couldn't connect to memcached at {$conf['memcache']['host']}:{$conf['memcache']['port']}");
 				}
 			} else
@@ -209,33 +320,18 @@ class DoPhp {
 		}
 
 		// Init return var and execute page
-		$fromCache = false;
 		try {
 			require $inc_file;
-			$classname = dophp\Utils::findClass(self::className($page));
+			$findName = self::className($page);
+			$classname = dophp\Utils::findClass($findName);
 			if( ! $classname )
-				throw new Exception('Page class not found');
-			$pobj = new $classname($this->__conf, $this->__db, $this->__auth, $page );
-			if( ! $pobj instanceof dophp\PageInterface )
-				throw new Exception('Wrong page type');
-			if( $cache !== null ) {
-				$cacheKey = $pobj->cacheKey();
-				if( $cacheKey !== null ) {
-					// Try to retrieve data from the cache
-					$headers = $cache->get("$page::$cacheKey::headers");
-					$out = $cache->get("$page::$cacheKey::output");
-					if( $headers !== false && $out !== false )
-						$fromCache = true;
-				}
-			}
-			if( ! $fromCache )
-				$out = $pobj->run();
-		} catch( dophp\InvalidCredentials $e ) {
-			header("HTTP/1.1 401 Unhautorized");
-			// Required by RFC 7235
-			header("WWW-Authenticate: Custom");
-			echo $e->getMessage();
-			return;
+				if( $this->__conf['debug'] )
+					throw new Exception("Page class \"$findName\" not found in file \"$inc_file\"");
+				else
+					throw new Exception('Page class not found');
+			$pobj = new $classname($this->__conf, $this->__db, $this->__auth, $page, $path );
+
+			list($out, $headers) = $this->__runPage($pobj, $path);
 		} catch( dophp\PageDenied $e ) {
 			if( $def ) {
 				if( $def == $page ) {
@@ -245,11 +341,19 @@ class DoPhp {
 					return;
 				}
 
+				self::addAlert(new dophp\LoginErrorAlert($e));
+
 				$to = dophp\Utils::fullPageUrl($def, $key);
 				header("HTTP/1.1 303 Login Required");
 				header("Location: $to");
 				echo $e->getMessage();
 				echo "\nPlease login at: $to";
+				return;
+			} elseif( $e instanceof dophp\InvalidCredentials ) {
+				header("HTTP/1.1 401 Unhautorized");
+				// Required by RFC 7235
+				header("WWW-Authenticate: Custom");
+				echo $e->getMessage();
 				return;
 			} else {
 				header("HTTP/1.1 403 Forbidden");
@@ -259,44 +363,24 @@ class DoPhp {
 		} catch( dophp\NotAcceptable $e ) {
 			header("HTTP/1.1 406 Not Acceptable");
 			echo $e->getMessage();
-			error_log($e->getMessage());
+			error_log('Not Acceptable: ' . $e->getMessage());
 			return;
 		} catch( dophp\PageError $e ) {
 			header("HTTP/1.1 400 Bad Request");
 			echo $e->getMessage();
-			error_log($e->getMessage());
+			error_log('Bad Request: ' . $e->getMessage());
 			return;
 		} catch( Exception $e ) {
 			header("HTTP/1.1 500 Internal Server Error");
-			$err = "<html><h1>DoPhp Catched Exception</h1>\n" .
-				'<p>&#8220;' . $e->getCode() . '.' . $e->getMessage() . "&#8220;</p>\n" .
-				'<ul>' .
-				'<li><b>File:</b> ' . $e->getFile() . "</li>\n" .
-				'<li><b>Line:</b> ' . $e->getLine() . "</li>\n" .
-				'<li><b>Trace:</b> ' . nl2br($e->getTraceAsString()) . "</li>";
 			if( $this->__conf['debug'] ) {
-				// Add extra useful information
-				if( $e instanceof PDOException )
-					$err .= "\n<li><b>Last Query:</b> " . $this->__db->lastQuery . "</li>\n" .
-						'<li><b>Last Params:</b> ' . nl2br(print_r($this->__db->lastParams,true)) . "</li>\n";
-			}
-			$err .= '</ul></html>';
-			echo($err);
-			error_log(strip_tags($err));
+				$html = "<html><h1>DoPhp Catched Exception</h1>\n"
+					. dophp\Utils::formatException($e, true)
+					. "\n</html>";
+				echo $html;
+			} else
+				echo _('Internal Server Error, please contact support or try again later') . '.';
+			error_log('DoPhp Catched Exception: ' . dophp\Utils::formatException($e, false));
 			return;
-		}
-
-		//Get the headers
-		if( ! $fromCache )
-			$headers = $pobj->headers();
-
-		// Write cache if needed
-		if( $cache && $cacheKey !== null && ! $fromCache ) {
-			$expire = $pobj->cacheExpire();
-			if( $expire !== null ) {
-				$cache->set("$page::$cacheKey::headers", $headers, 0, $expire);
-				$cache->set("$page::$cacheKey::output", $out, 0, $expire);
-			}
 		}
 
 		//Output headers and content
@@ -306,13 +390,59 @@ class DoPhp {
 	}
 
 	/**
+	 * Internal function. Runs a page, handles internal redirect, returns data
+	 *
+	 * @param $page PageInterface: The Page instance
+	 * @param $depth int: The current redirect depth
+	 * @param $maxDepth int: The maximum redirect depth
+	 * @return array [ output string, headers associative array ]
+	 */
+	private function __runPage($page, $depth = 1, $maxDepth = 10) {
+		if( ! $page instanceof dophp\PageInterface )
+			throw new Exception('Wrong page type');
+
+		// First attempt to retrieve data from the cache
+		if( $this->__cache !== null ) {
+			$cacheKey = $pobj->cacheKey();
+			if( $cacheKey !== null ) {
+				$cacheBase = $page->name() . '::' . $cacheKey;
+				$headers = $cache->get("$cacheBase::headers");
+				$out = $cache->get("$cacheBase::output");
+				if( $headers !== false && $out !== false )
+					return [ $out, $headers ];
+			}
+		}
+
+		// Then run the page instead
+		try {
+			$out = $page->run();
+			$headers = $page->headers();
+		} catch( dophp\PageRedirect $e ) {
+			if( $depth >= $maxDepth )
+				throw new \Exception("Maximum internal redirect depth of $maxDepth reached");
+			return $this->__runPage($e->getPage(), $depth + 1);
+		}
+
+		// Write cache if needed
+		if( $this->__cache !== null && $cacheKey !== null ) {
+			$expire = $pobj->cacheExpire();
+			if( $expire !== null ) {
+				$cache->set("$cacheBase::headers", $headers, 0, $expire);
+				$cache->set("$cacheBase::output", $out, 0, $expire);
+			}
+		}
+
+		return [ $out, $headers ];
+	}
+
+	/**
 	* Returns class name for a given page
 	*
 	* @param $page string: The page name
 	* @return string: The class name
 	*/
 	public static function className($page) {
-		return self::BASE_KEY . ucfirst($page);
+		return str_replace('.','_', self::BASE_KEY . ucfirst($page));
 	}
 
 	/**
@@ -322,7 +452,7 @@ class DoPhp {
 	*/
 	public static function conf() {
 		if( ! self::$__instance )
-			throw new Exception('Must instatiate DoPhp first');
+			throw new Exception(self::INSTANCE_ERROR);
 		return self::$__instance->__conf;
 	}
 
@@ -333,9 +463,7 @@ class DoPhp {
 	*/
 	public static function db() {
 		if( ! self::$__instance )
-			throw new Exception('Must instatiate DoPhp first');
-		if( ! self::$__instance->__db )
-			throw new Exception('Database is not available');
+			throw new Exception(self::INSTANCE_ERROR);
 		return self::$__instance->__db;
 	}
 
@@ -346,9 +474,7 @@ class DoPhp {
 	*/
 	public static function auth() {
 		if( ! self::$__instance )
-			throw new Exception('Must instatiate DoPhp first');
-		if( ! self::$__instance->__auth )
-			throw new Exception('Authentication is not available');
+			throw new Exception(self::INSTANCE_ERROR);
 		return self::$__instance->__auth;
 	}
 
@@ -359,9 +485,7 @@ class DoPhp {
 	*/
 	public static function lang() {
 		if( ! self::$__instance )
-			throw new Exception('Must instatiate DoPhp first');
-		if( ! self::$__instance->__lang )
-			throw new Exception('Language support is not available');
+			throw new Exception(self::INSTANCE_ERROR);
 		return self::$__instance->__lang;
 	}
 
@@ -373,7 +497,7 @@ class DoPhp {
 	*/
 	public static function model($name) {
 		if( ! self::$__instance )
-			throw new Exception('Must instatiate DoPhp first');
+			throw new Exception(self::INSTANCE_ERROR);
 		if( ! $name )
 			throw new Exception('Must give a model name');
 
@@ -400,9 +524,77 @@ class DoPhp {
 	*/
 	public static function duration() {
 		if( ! self::$__instance )
-			throw new Exception('Must instatiate DoPhp first');
+			throw new Exception(self::INSTANCE_ERROR);
 
 		return microtime(true) - self::$__instance->__start;
+	}
+
+	/**
+	 * Adds an alert to the current alerts
+	 * If session is not enabled does nothing
+	 *
+	 * @param $alert Alert object to append to list
+	 */
+	public static function addAlert(dophp\Alert $alert) {
+		if( ! self::$__instance )
+			throw new Exception(self::INSTANCE_ERROR);
+		if( session_status() !== PHP_SESSION_ACTIVE )
+			return;
+
+		if( ! isset($_SESSION[self::SESS_ALERTS]) )
+			$_SESSION[self::SESS_ALERTS] = [];
+		$_SESSION[self::SESS_ALERTS][] = $alert;
+	}
+
+	/**
+	 * Returns all alerts and clears the list
+	 *
+	 * @return array List of Alert objects (always empty if session disabled)
+	 */
+	public static function getAlerts() {
+		if( ! self::$__instance )
+			throw new Exception(self::INSTANCE_ERROR);
+		if( session_status() !== PHP_SESSION_ACTIVE )
+			return [];
+		if( ! isset($_SESSION[self::SESS_ALERTS]) )
+			return [];
+
+		$alerts = $_SESSION[self::SESS_ALERTS];
+		$_SESSION[self::SESS_ALERTS] = [];
+		return $alerts;
+	}
+
+	/**
+	 * Returns all alerts and without clearing the list
+	 *
+	 * @return array List of Alert objects (always empty if session disabled)
+	 */
+	public static function peekAlerts() {
+		if( ! self::$__instance )
+			throw new Exception(self::INSTANCE_ERROR);
+		if( session_status() !== PHP_SESSION_ACTIVE )
+			return [];
+		if( ! isset($_SESSION[self::SESS_ALERTS]) )
+			return [];
+
+		return $_SESSION[self::SESS_ALERTS];
+	}
+
+	/**
+	 * DoPhp's error handler, just takes care of setting a 500 header
+	 * and leaves the rest to the default handler
+	 */
+	public static function error_handler( $errno, $errstr ) {
+		header("HTTP/1.1 500 Internal Server Error");
+		return false;
+	}
+
+	/**
+	 * Called at shutdown, trick to catch fatal errors, sets a 500 header
+	 */
+	public static function shutdown_handler() {
+		if( error_get_last() )
+			header("HTTP/1.1 500 Internal Server Error");
 	}
 
 }

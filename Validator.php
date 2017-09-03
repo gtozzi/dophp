@@ -199,7 +199,9 @@ abstract class base_validator implements field_validator {
 	* Cleans the value and converts it to right type before being validated
 	*/
 	protected function do_clean($val) {
-		return $this->nullify(trim($val));
+		if( is_string($val) )
+			$val = trim($val);
+		return $this->nullify($val);
 	}
 
 	protected function check_required($val) {
@@ -435,10 +437,16 @@ class file_validator extends base_validator {
 		if( ! $val )
 			return _("Field can't be empty") . '.';
 		if( ! (int)$val['size'] )
-			return _("Unvalid file size") . " ({$val['size']}).";
+			return _("Invalid file size") . " ({$val['size']}).";
+		if( ! isset($val['tmp_name']) || ! file_exists($val['tmp_name']) )
+			return _("Could not read local copy of file");
+		if( filesize($val['tmp_name']) != $val['size'] )
+			return _("File size mismatch");
 		return false;
 	}
 	protected function do_validate( &$v, &$o ) {
+		if( isset($v['error']) && $v['error'] )
+			return _("Error") . " {$v['error']} ";
 		if( isset($o['type']) && $v['size'] ) {
 			$err = $this->check_type($v['type'], $o['type']);
 			if( $err )
@@ -456,17 +464,26 @@ class file_validator extends base_validator {
 *
 * Custom validation rules: 'rules': array list of array elements to check for,
 *                                   like on main rules
-*                          'required': if true, an array must be present
+*                          'required': boolean|lambda($field_values, $all_values)
+*                                      if true (or when lambda returns true),
+*                                      an array must be present
+*                          'errarray': boolean
+*                                      if true, returns errors as array instead of string
+*                                      (this may become default behavior in future)
 */
 class array_validator implements field_validator {
 
 	private $__value = null;
 	private $__error = null;
+	private $__options;
 
 	public function __construct($value, $options, & $values) {
+		$this->__options = $options;
+
 		if( ! $value ) {
 			if( array_key_exists('required',$options) && $options['required'] )
-				$this->__error = _("Field can't be empty") . '.';
+				if( ! is_callable($options['required']) || $options['required']($value, $values) )
+					$this->__error = _("Field can't be empty") . '.';
 
 		}elseif( ! is_array($value) ) {
 			$this->__error = _("Must be an array") . '.';
@@ -485,6 +502,9 @@ class array_validator implements field_validator {
 	}
 
 	public function validate() {
+		if( isset($this->__options['errarray']) && $this->__options['errarray'] )
+			return $this->__error;
+
 		return $this->__error ? print_r($this->__error, true) : $this->__error;
 	}
 }

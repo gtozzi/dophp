@@ -1,0 +1,9 @@
+To generate docs in this folder, please run
+
+doxygen Doxyfile
+
+from the project root.
+
+See http://www.stack.nl/~dimitri/doxygen/manual/starting.html
+offiacial Doxygen documentation for details.
+

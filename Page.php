@@ -21,8 +21,9 @@ interface PageInterface {
 	* @param $db     object: Database instance
 	* @param $user   object: Current user object instance
 	* @param $name   string: Name of this page
+	* @param $path   string: The relative path inside this page
 	*/
-	public function __construct(& $config, $db, $user, $name);
+	public function __construct(& $config, $db, $user, $name, $path);
 
 	/**
 	* Method called prior of page execution to determine if the page can be
@@ -55,6 +56,31 @@ interface PageInterface {
 	* Must return associative array
 	*/
 	public function headers();
+
+	/**
+	 * Returns current page's name
+	 */
+	public function name();
+
+	/**
+	 * Returns current page's relative path
+	 */
+	public function path();
+
+	/**
+	 * Returns current DoPhp's config
+	 */
+	public function &config();
+
+	/**
+	 * Returns current DoPhp's Db instance
+	 */
+	public function db();
+
+	/**
+	 * Returns current DoPhp's user
+	 */
+	public function user();
 }
 
 /**
@@ -70,6 +96,8 @@ abstract class PageBase {
 	protected $_user;
 	/** Name of this page */
 	protected $_name;
+	/** Relative path inside this page */
+	protected $_path;
 	/** Headers to be output */
 	protected $_headers = array();
 	/**
@@ -90,16 +118,27 @@ abstract class PageBase {
 	/** After how many seconds cache will expire (cache is not enabled by default) */
 	protected $_cacheExpire = 300;
 
+	/** Will get and store the alerts here, if any */
+	protected $_alerts;
+	/** Will store the last login error occurred, if any */
+	protected $_loginError = null;
+
 	/**
 	* Constructor
 	*
 	* @see PageInterface::__construct
 	*/
-	public function __construct(& $config, $db, $user, $name) {
+	public function __construct(& $config, $db, $user, $name, $path) {
 		$this->_config = $config;
 		$this->_db = $db;
 		$this->_user = $user;
 		$this->_name = $name;
+		$this->_path = $path;
+
+		$this->_alerts = \DoPhp::getAlerts();
+		foreach( $this->_alerts as $alert )
+			if( $alert instanceof LoginErrorAlert )
+				$this->_loginError = $alert;
 	}
 
 	/**
@@ -116,13 +155,28 @@ abstract class PageBase {
 		return $this->_cacheExpire;
 	}
 
-	/**
-	* Returns headers
-	*
-	* @see PageInterface::headers
-	*/
 	public function headers() {
 		return $this->_headers;
+	}
+
+	public function name() {
+		return $this->_name;
+	}
+
+	public function path() {
+		return $this->_path;
+	}
+
+	public function &config() {
+		return $this->_config;
+	}
+
+	public function db() {
+		return $this->_db;
+	}
+
+	public function user() {
+		return $this->_user;
 	}
 
 	/**
@@ -172,7 +226,98 @@ abstract class PageBase {
 
 		return $str;
 	}
+
+	/**
+	 * Utility function: returns a json encoded version of data, just like
+	 * json_encode but failsafe
+	 *
+	 * @see json_encode
+	 * @param $res mixed: The data to be encoded
+	 * @param $opts int: Json options
+	 * @return The json encoded data
+	 * @throws RuntimeError en json_encode error
+	 */
+	protected function _jsonEncode(&$res, $opts=0) {
+		$encoded = json_encode($res, $opts);
+		if( $encoded === false )
+			throw new \Exception(json_last_error_msg(), json_last_error());
+		return $encoded;
+	}
 }
+
+/**
+ * Trait for adding Smarty functionalities to a Page
+ */
+trait SmartyFunctionalities {
+
+	/** Using a custom delimiter for improved readability */
+	public static $TAG_START = '{{';
+	/** Using a custom delimiter for improved readability */
+	public static $TAG_END = '}}';
+
+	/** Smarty instance */
+	protected $_smarty;
+	/** Name of the template to be used */
+	protected $_template;
+
+	/**
+	 * Creates an DoPhp-inited instance of smarty and returns it
+	 *
+	 * Useful when also using smarty in different context (eg. when sending
+	 * emails)
+	 *
+	 * @param $config array: DoPhp config array
+	 * @return Smarty instance
+	 */
+	public static function newSmarty(& $config) {
+		$smarty = new \Smarty();
+
+		$smarty->left_delimiter = self::$TAG_START;
+		$smarty->right_delimiter = self::$TAG_END;
+		$smarty->setTemplateDir(array(
+			"{$config['paths']['tpl']}/",
+			'dophp' => "{$config['dophp']['path']}/tpl/"
+		));
+		$smarty->setCompileDir("{$config['paths']['cac']}/");
+		$smarty->setCacheDir("{$config['paths']['cac']}/");
+
+		$smarty->registerPlugin('modifier', 'format', 'dophp\Utils::format');
+		$smarty->registerPlugin('modifier', 'formatTime', 'dophp\Utils::formatTime');
+		$smarty->registerPlugin('modifier', 'formatNumber', 'dophp\Utils::formatNumber');
+
+		$smarty->assign('config', $config);
+
+		return $smarty;
+	}
+
+	/**
+	* Prepares the template system
+	*/
+	protected function _initSmarty() {
+		// Init smarty
+		$this->_smarty = self::newSmarty($this->_config);
+
+		// Assign utility variables
+		$this->_smarty->assign('this', $this);
+		if( property_exists($this, '_name') )
+			$this->_smarty->assign('page', $this->_name);
+		foreach( $this->_config['paths'] as $k => $v )
+			$this->_smarty->assign($k, $v);
+		if( property_exists($this, '_user') )
+			$this->_smarty->assignByRef('user', $this->_user);
+
+		if( property_exists($this, '_alerts') )
+			$this->_smarty->assignByRef('alerts', $this->_alerts);
+		if( property_exists($this, '_loginError') )
+			$this->_smarty->assignByRef('loginError', $this->_loginError);
+
+		// Init default template name
+		$base_file = basename($_SERVER['PHP_SELF'], '.php');
+		$this->_template = "$base_file.{$this->_name}.tpl";
+	}
+
+}
+
 
 /**
 * Implements a page using Smarty template engine
@@ -181,15 +326,7 @@ abstract class PageBase {
 */
 abstract class PageSmarty extends PageBase implements PageInterface {
 
-	/** Using a custom delimiter for improved readability */
-	const TAG_START = '{{';
-	/** Using a custom delimiter for improved readability */
-	const TAG_END = '}}';
-
-	/** Smarty instance */
-	protected $_smarty;
-	/** Name of the template to be used */
-	protected $_template;
+	use SmartyFunctionalities;
 
 	/**
 	* Prepares the template system and passes execution to _build()
@@ -197,35 +334,12 @@ abstract class PageSmarty extends PageBase implements PageInterface {
 	* @see PageInterface::run
 	*/
 	public function run() {
-		// Init smarty
-		$this->_smarty = new \Smarty();
-		$this->_smarty->left_delimiter = self::TAG_START;
-		$this->_smarty->right_delimiter = self::TAG_END;
-		$this->_smarty->setTemplateDir(array(
-			"{$this->_config['paths']['tpl']}/",
-			'dophp' => "{$this->_config['dophp']['path']}/tpl/"
-		));
-		$this->_smarty->setCompileDir("{$this->_config['paths']['cac']}/");
-		$this->_smarty->setCacheDir("{$this->_config['paths']['cac']}/");
+		$this->_initSmarty();
 
-		$this->_smarty->registerPlugin('modifier', 'format', 'dophp\Utils::format');
-		$this->_smarty->registerPlugin('modifier', 'formatTime', 'dophp\Utils::formatTime');
-		$this->_smarty->registerPlugin('modifier', 'formatNumber', 'dophp\Utils::formatNumber');
-
-		// Assign utility variables
-		$this->_smarty->assign('this', $this);
-		$this->_smarty->assign('page', $this->_name);
-		foreach( $this->_config['paths'] as $k => $v )
-			$this->_smarty->assign($k, $v);
-		$this->_smarty->assign('config', $this->_config);
-		$this->_smarty->assignByRef('user', $this->_user);
-
-		// Init default template name
-		$base_file = basename($_SERVER['PHP_SELF'], '.php');
-		$this->_template = "$base_file.{$this->_name}.tpl";
-
-		// Call subclass build
-		$this->_build();
+		// Call subclass build, return its custom data if given
+		$custom = $this->_build();
+		if( $custom !== null )
+			return $custom;
 
 		// Run smarty
 		return $this->_compress($this->_smarty->fetch($this->_template));
@@ -233,9 +347,12 @@ abstract class PageSmarty extends PageBase implements PageInterface {
 
 	/**
 	* Build method to be overridden
+	*
+	* @return null too keep using smarty or custom data to be returned
 	*/
 	abstract protected function _build();
 }
+
 
 /**
 * Simple template for implementing a CRUD-based backend page by using the base
@@ -273,6 +390,8 @@ trait CrudFunctionalities {
 	protected $_buttons = true;
 	/** If set to true, will not call _requireLogin() */
 	protected $_public = false;
+	/** Name of the base template to extend */
+	protected $_baseTpl = 'base-backend.tpl';
 
 	/**
 	* Process and run the CRUD actions, should be called inside _build()
@@ -300,6 +419,7 @@ trait CrudFunctionalities {
 		$this->_smarty->assign('action', $action);
 		$this->_smarty->assign('buttons', $this->_buttons);
 		$this->_smarty->assign('localeconv', localeconv());
+		$this->_smarty->assign('baseTpl', $this->_baseTpl);
 
 		// Process the requested action
 		$method = '_build' . ucfirst($action);
@@ -357,6 +477,7 @@ trait CrudFunctionalities {
 				'sSortAscending' => ': ' . _('sort the column in ascending order'),
 				'sSortDescending' => ': ' . _('sort the column in descending order'),
 			],
+			'cInsert' => _('Insert'),
 		]);
 
 		$this->_smarty->assign('pageTitle', $this->_model->getNames()[1]);
@@ -452,7 +573,7 @@ trait CrudFunctionalities {
 		$this->_headers['Content-type'] = 'application/json';
 
 		$this->_template = $this->_templateName('crud/ajax.tpl');
-		$this->_smarty->assign('data', json_encode($data));
+		$this->_smarty->assign('data', $this->_jsonEncode($data));
 	}
 
 	/**
@@ -519,6 +640,8 @@ abstract class BaseMethod extends PageBase implements PageInterface {
 	* @see PageInterface::run
 	*/
 	public function run() {
+		$this->_init();
+
 		$req = $this->_getInput();
 		$val = new Validator($req, $_FILES, $this->_params);
 		list($pars, $errors) = $val->validate();
@@ -528,6 +651,13 @@ abstract class BaseMethod extends PageBase implements PageInterface {
 			$res = $this->_build($pars);
 
 		return $this->_output($res);
+	}
+
+	/**
+	 * Called before processing, useful for initing $this->_params at runtime
+	 * in subclass when overridden
+	 */
+	protected function _init() {
 	}
 
 	/**
@@ -542,7 +672,7 @@ abstract class BaseMethod extends PageBase implements PageInterface {
 	protected function _invalid(& $pars, & $errors) {
 		$mex = "Invalid arguments:<br/>\n";
 		foreach( $errors as $n=>$e ) {
-			$mex .= "- <b>$n</b>: $e<br/>\n";
+			$mex .= "- <b>$n</b>: " . (is_array($e)?print_r($e,true):$e) . "<br/>\n";
 			if( $this->_config['debug'] )
 				$mex .= '  (received: "' . print_r($pars[$n],true) . "\")<br/>\n";
 		}
@@ -550,26 +680,9 @@ abstract class BaseMethod extends PageBase implements PageInterface {
 	}
 
 	/**
-	* Returns the raw input data, after decoding
-	* This is not used directly, but it may be useful when called inside _getInput()
-	*
-	* @return The raw decoded input
-	*/
-	protected function _decodeInput() {
-		if( isset($_SERVER['HTTP_CONTENT_ENCODING']) && $_SERVER['HTTP_CONTENT_ENCODING'] == 'gzip' ) {
-			$input = gzdecode(file_get_contents("php://input"));
-			if( $input === false )
-				throw new PageError('Couldn\'t decode gzip input');
-		} else
-			$input = file_get_contents("php://input");
-
-		return $input;
-	}
-
-	/**
 	* Returns input parameters
 	*
-	* @see _decodeInput()
+	* @see Utils::decodeInput()
 	* @return array Input data
 	*/
 	abstract protected function _getInput();
@@ -634,11 +747,11 @@ abstract class JsonBaseMethod extends BaseMethod {
 	/** Encodes the response into JSON */
 	protected function _output(& $res) {
 		$opt = 0;
-		foreach( $this->_jsonOpts as $o );
+		foreach( $this->_jsonOpts as $o )
 			$opt |= $o;
 		if(PHP_VERSION_ID < 50303)
 			$opt ^= JSON_PRETTY_PRINT;
-		return $this->_compress(json_encode($res, $opt));
+		return $this->_compress($this->_jsonEncode($res, $opt));
 	}
 
 }
@@ -652,7 +765,7 @@ abstract class JsonRpcMethod extends JsonBaseMethod {
 	* Parses input JSON
 	*/
 	public function _getInput() {
-		return json_decode($this->_decodeInput(), true);
+		return json_decode(Utils::decodeInput(), true);
 	}
 
 }
@@ -693,4 +806,30 @@ class PageDenied extends PageError {
 * Exception raised when user is providing invalid credentials
 */
 class InvalidCredentials extends PageDenied {
+}
+
+/**
+ * Exception raised to create an internal transparent redirect
+ */
+class PageRedirect extends \Exception {
+
+	protected $_to;
+
+	/**
+	 * Construct the redirect
+	 *
+	 * @param $to New page to redirect to, already instantiated
+	 */
+	public function __construct(PageInterface $to) {
+		parent::__construct();
+		$this->_to = $to;
+	}
+
+	/**
+	 * Returns the redirect destination
+	 */
+	public function getPage() {
+		return $this->_to;
+	}
+
 }

@@ -11,6 +11,9 @@ namespace dophp;
 
 class Utils {
 
+	/** Formatted version of NULL, for internal usage */
+	const NULL_FMT = '-';
+
 	/** Default ports used for URL protocols */
 	public static $DEFAULT_PORTS = array(
 		'http' => 80,
@@ -56,11 +59,15 @@ class Utils {
 	*/
 	public static function parseUrl($url) {
 		$parsed = parse_url($url);
+		if( $parsed === false )
+			throw new \Exception('Seriously malformed URL');
+
 		if( isset($parsed['query']) ) {
 			$arr = array();
 			parse_str($parsed['query'], $arr);
 			$parsed['query'] = $arr;
 		}
+
 		return $parsed;
 	}
 
@@ -102,15 +109,16 @@ class Utils {
 	}
 
 	/**
-	* Returns a vormatted version of a time
-	*
-	* @deprecated Use Utils::format() instead, this function will be removed
+	* Returns a formatted version of a time
 	*
 	* @param $str string: Time string in the format hh:mm:ss
 	* @param $format string: Format string accepted by DateTime::format()
 	* @return string: The formatted time
 	*/
 	public static function formatTime($str, $format='H:i') {
+		if( $str === null )
+			return self::NULL_FMT;
+
 		$time = new \DateTime($str);
 		return $time->format($format);
 	}
@@ -118,29 +126,76 @@ class Utils {
 	/**
 	* Return a formatted version of a number
 	*
-	* @deprecated Use Utils::format() instead, this function will be removed
-	*
 	* @param $num int: The number to be formatted
 	* @param $decimals int: Number of decimals
 	* @param $dec_point str: Decimal point
 	* @param $thousands_sep str: Thousands separator
 	* @return string: The formatted version of the number
 	*/
-	public static function formatNumber($num, $decimals=2, $dec_point=',', $thousands_sep='.') {
+	public static function formatNumber($num, $decimals=null, $dec_point=',', $thousands_sep='.') {
+		if( $num === null )
+			return self::NULL_FMT;
+
+		if( $decimals === null )
+			$decimals = self::guessDecimals($num);
+
 		return number_format($num, $decimals, $dec_point, $thousands_sep);
 	}
 
 	/**
 	* Return a formatted version of a boolean
 	*
-	* @deprecated Use Utils::format() instead, this function will be removed
-	*
 	* @return string: The formatted version of the boolean
 	*/
 	public static function formatBool($bool) {
 		if( $bool === null )
-			return null;
-		return $bool ? 'Yes' : 'No';
+			return self::NULL_FMT;
+
+		return $bool ? _('Yes') : _('No');
+	}
+
+	/**
+	 * Returns a formatted version of given Exception
+	 *
+	 * Also tries to add useful extra data, like th4e last executed query for an
+	 * SQL exception.
+	 *
+	 * @warning The output may contain sensitive data!
+	 * @param $exception Exception: The exception
+	 * @param $html bool: If true, will format as HTML
+	 * @return a string, text or html
+	 */
+	public static function formatException($exception, $html=false) {
+		if( $exception === null )
+			return self::NULL_FMT;
+
+		$err =
+			'<h3>' . htmlentities(get_class($exception)) . "</h3>\n" .
+			'<p>&quot;' . htmlentities($exception->getCode()) . '.' . htmlentities($exception->getMessage()) . "&quot;</p>\n" .
+			'<ul>' .
+			'<li><b>File:</b> ' . htmlentities($exception->getFile()) . "</li>\n" .
+			'<li><b>Line:</b> ' . htmlentities($exception->getLine()) . "</li>\n" .
+			'<li><b>Trace:</b> ' . nl2br(htmlentities($exception->getTraceAsString())) . "</li>";
+
+		// Add extra useful information
+		try {
+			$db = \DoPhp::db();
+		} catch( \Exception $e ) {
+			$db = null;
+		}
+
+		if( $db && ( $exception instanceof \PDOException
+				|| $exception instanceof dophp\StatementExecuteError ) ) {
+			$err .= "\n<li><b>Last Query:</b> " . $db->lastQuery . "</li>\n" .
+				'<li><b>Last Params:</b> ' . nl2br(print_r($db->lastParams,true)) . "</li>\n";
+		}
+
+		$err .= '</ul>';
+
+		if( $html )
+			return $err;
+
+		return strip_tags(html_entity_decode($err));
 	}
 
 	/**
@@ -153,7 +208,7 @@ class Utils {
 		$lc = localeconv();
 
 		if( $type == 'NULL' )
-			$val = '-';
+			$val = self::NULL_FMT;
 		elseif( $type == 'string' )
 			$val = $value;
 		elseif( $value instanceof Time )
@@ -163,17 +218,37 @@ class Utils {
 		elseif( $value instanceof \DateTime )
 			$val = $value->format('d.m.Y H:i:s');
 		elseif( $type == 'boolean' )
-			$val = $value ? _('Yes') : _('No');
+			$val = self::formatBool($value);
 		elseif( $type == 'integer' )
-			$val = number_format($value, 0, $lc['decimal_point'], $lc['thousands_sep']);
+			$val = self::formatNumber($value, 0, $lc['decimal_point'], $lc['thousands_sep']);
 		elseif( $value instanceof Decimal )
-			$val = $value->format(4, $lc['decimal_point'], $lc['thousands_sep']);
+			$val = $value->format(null, $lc['decimal_point'], $lc['thousands_sep']);
 		elseif( $type == 'double' )
-			$val = number_format($value, 4, $lc['decimal_point'], $lc['thousands_sep']);
+			$val = self::formatNumber($value, null, $lc['decimal_point'], $lc['thousands_sep']);
 		else
 			throw new \Exception("Unsupported type $type class " . get_class($value));
 
 		return $val;
+	}
+
+	/**
+	 * Guesses the number of decimals in the given number
+	 *
+	 * @return int: The number of decimals
+	 */
+	public static function guessDecimals($num) {
+		if( gettype($num) == 'integer' )
+			return 0;
+
+		Lang::pushLocale(LC_NUMERIC);
+		$numStr = (string)$num;
+		Lang::popLocale();
+
+		$dot = strpos($numStr, '.');
+		if( $dot === false )
+			return 0;
+
+		return strlen($numStr) - $dot - 1;
 	}
 
 	/**
@@ -196,7 +271,7 @@ class Utils {
 	*             URL's ones
 	* @return string: The full page URL
 	*/
-	public static function fullUrl($url) {
+	public static function fullUrl($url='') {
 		$url = self::parseUrl($url);
 
 		if( ! isset($url['scheme']) )
@@ -215,7 +290,7 @@ class Utils {
 		if( ! array_key_exists('path', $url) ) {
 			$uri = self::parseUrl($_SERVER['REQUEST_URI']);
 			$url['path'] = $uri['path'];
-		} elseif( $url['path'][0] !== '/' ) {
+		} elseif( ! strlen($url['path']) || $url['path'][0] !== '/' ) {
 			// Relative path, add folder if available
 			$uri = self::parseUrl($_SERVER['REQUEST_URI']);
 			$pathi = explode('/', $uri['path']);
@@ -428,6 +503,75 @@ class Utils {
 		$dist = rad2deg($dist);
 
 		return $dist;
+	}
+
+	/**
+	* Returns the raw input data, after decoding it
+	*
+	* @return The raw decoded input
+	*/
+	public static function decodeInput() {
+		if( isset($_SERVER['HTTP_CONTENT_ENCODING']) && $_SERVER['HTTP_CONTENT_ENCODING'] == 'gzip' ) {
+			$input = gzdecode(file_get_contents("php://input"));
+			if( $input === false )
+				throw new PageError('Couldn\'t decode gzip input');
+		} else
+			$input = file_get_contents("php://input");
+
+		return $input;
+	}
+
+	/**
+	 * Returns list of accepted HTTP encodings based on the Accept header
+	 *
+	 * @yields string: Accepted HTTP encodings, sorted by preference
+	 */
+	public static function listHttpAccept() {
+		if( ! isset($_SERVER['HTTP_ACCEPT']) )
+		 	return [];
+
+		$encodings = [];
+		// first iterate encodings
+		foreach( explode(',', $_SERVER['HTTP_ACCEPT']) as $astr ) {
+			// then seperate params
+			$aspl = explode(';', $astr, 2);
+			$encoding = trim($aspl[0]);
+
+			if( isset($aspl[1]) ) {
+				$matches = [];
+				$m = preg_match('/^\s*q=([0-9.]+)\s*$/', $aspl[1], $matches);
+				if( ! $m )
+					throw new \Exception("Could not decode Accept params: \"$aspl[1]\"");
+				$pri = (double)$matches[1];
+			} else
+				$pri = 1;
+
+			$encodings[$encoding] = $pri;
+		}
+
+		asort($encodings);
+
+		foreach( $encodings as $encoding => $pri )
+			yield $encoding;
+	}
+
+	/**
+	 * Tells whether a given encoding is accepted
+	 *
+	 * @param $encoding string: The encoding to check for
+	 * @return bool
+	 */
+	public static function isAcceptedEncoding($encoding) {
+		foreach( self::listHttpAccept() as $enc ) {
+			if( $enc == $encoding )
+				return true;
+			if( substr($enc, -1) == '*' ) {
+				$base = substr($enc, 0, -1);
+				if( substr($encoding, 0, strlen($base)) == $base )
+					return true;
+			}
+		}
+		return false;
 	}
 
 }
