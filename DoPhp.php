@@ -373,10 +373,13 @@ class DoPhp {
 		} catch( Exception $e ) {
 			header("HTTP/1.1 500 Internal Server Error");
 			if( $this->__conf['debug'] ) {
-				$html = "<html><h1>DoPhp Catched Exception</h1>\n"
-					. dophp\Utils::formatException($e, true)
-					. "\n</html>";
-				echo $html;
+				$title = 'DoPhp Catched Exception';
+				if( dophp\Utils::isAcceptedEncoding('text/html') )
+					echo "<html><h1>$title</h1>\n"
+						. dophp\Utils::formatException($e, true)
+						. "\n</html>";
+				else
+					echo $title . "\n\n" . dophp\Utils::formatException($e);
 			} else
 				echo _('Internal Server Error, please contact support or try again later') . '.';
 			error_log('DoPhp Catched Exception: ' . dophp\Utils::formatException($e, false));
