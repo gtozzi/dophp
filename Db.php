@@ -69,7 +69,7 @@ class Db {
 		case 'mysql':
 			$this->_type = self::TYPE_MYSQL;
 			$this->_pdo->exec('SET sql_mode = \'TRADITIONAL,STRICT_ALL_TABLES,NO_AUTO_VALUE_ON_ZERO,NO_ZERO_DATE,NO_ZERO_IN_DATE\'');
-			$this->_pdo->exec('SET NAMES utf8');
+			$this->_pdo->exec('SET NAMES utf8mb4');
 			break;
 		case 'odbc':
 			$this->_hasLid = false;
