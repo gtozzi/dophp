@@ -49,7 +49,7 @@ interface AuthInterface {
 abstract class AuthBase implements AuthInterface {
 
 	/** Name of the session variable */
-	const SESS_VAR = 'DoPhpAuth_';
+	const SESS_VAR = 'DoPhp::Auth';
 
 	/** Config array */
 	protected $_config;
@@ -122,10 +122,8 @@ abstract class AuthBase implements AuthInterface {
 	*/
 	public function logout() {
 		$this->_uid = null;
-		if( $this->_sess )
-			foreach( $_SESSION as $k => $v )
-				if( substr($k,0,strlen(self::SESS_VAR)) == self::SESS_VAR )
-					unset($_SESSION[$k]);
+		if( isset($_SESSION[self::SESS_VAR]) )
+			unset($_SESSION[self::SESS_VAR]);
 	}
 
 }
@@ -146,6 +144,11 @@ class AuthPlain extends AuthBase {
 	const HEAD_USER = 'HTTP_X_AUTH_USER';
 	/** Password header name ($_SERVER key name) */
 	const HEAD_PASS = 'HTTP_X_AUTH_PASS';
+
+	/** Name of the session array username key */
+	const SESS_VUSER = 'username';
+	/** Name of the session array password key */
+	const SESS_VPASS = 'password';
 
 	/**
 	 * Method the may be called manually by a page script to login an user
@@ -192,10 +195,13 @@ class AuthPlain extends AuthBase {
 				&& isset($_REQUEST['username']) && isset($_REQUEST['password']) )
 			return [ $_REQUEST['username'], $_REQUEST['password'], 'user' ];
 
-		$svaruser = self::SESS_VAR . 'username';
-		$svarpass = self::SESS_VAR . 'password';
-		if( $this->_sess && isset($_SESSION[$svaruser]) && isset($_SESSION[$svarpass]) )
-			return [ $_SESSION[$svaruser], $_SESSION[$svarpass], 'session' ];
+		if( $this->_sess && isset($_SESSION[self::SESS_VAR][self::SESS_VUSER]) &&
+				isset($_SESSION[self::SESS_VAR][self::SESS_VPASS]) )
+			return [
+				$_SESSION[self::SESS_VAR][self::SESS_VUSER],
+				$_SESSION[self::SESS_VAR][self::SESS_VPASS],
+				'session'
+			];
 
 		return null;
 	}
@@ -209,8 +215,10 @@ class AuthPlain extends AuthBase {
 	*/
 	public function saveSession($user, $pwd) {
 		if( $this->_sess ) {
-			$_SESSION[self::SESS_VAR.'username'] = $user;
-			$_SESSION[self::SESS_VAR.'password'] = $pwd;
+			if( ! isset($_SESSION[self::SESS_VAR]) )
+				$_SESSION[self::SESS_VAR] = [];
+			$_SESSION[self::SESS_VAR][self::SESS_VUSER] = $user;
+			$_SESSION[self::SESS_VAR][self::SESS_VPASS] = $pwd;
 			return true;
 		}
 		return false;
@@ -249,6 +257,11 @@ class AuthSign extends AuthBase {
 	/** Signature header name ($_SERVER key name) */
 	const HEAD_SIGN = 'HTTP_X_AUTH_SIGN';
 
+	/** Name of the session array username key */
+	const SESS_VUSER = 'username';
+	/** Name of the session array signature key */
+	const SESS_VSIGN = 'password';
+
 	/**
 	* @see AuthBase::_doLogin
 	*/
@@ -261,8 +274,8 @@ class AuthSign extends AuthBase {
 			$user = $_SERVER[self::HEAD_USER];
 			$sign = $_SERVER[self::HEAD_SIGN];
 		}elseif( $this->_sess ) {
-			$user = $_SESSION[self::SESS_VAR.'user'];
-			$sign = $_SESSION[self::SESS_VAR.'sign'];
+			$user = $_SESSION[self::SESS_VAR][self::SESS_VUSER];
+			$sign = $_SESSION[self::SESS_VAR][self::SESS_VSIGN];
 		}
 		list($uid, $pwd) = $this->_getUserPwd($user);
 
@@ -287,8 +300,10 @@ class AuthSign extends AuthBase {
 	*/
 	public function saveSession($user, $sign) {
 		if( $this->_sess ) {
-			$_SESSION[self::SESS_VAR.'user'] = $user;
-			$_SESSION[self::SESS_VAR.'sign'] = $sign;
+			if( ! isset($_SESSION[self::SESS_VAR]) )
+				$_SESSION[self::SESS_VAR] = [];
+			$_SESSION[self::SESS_VAR][self::SESS_VUSER] = $user;
+			$_SESSION[self::SESS_VAR][self::SESS_VSIGN] = $sign;
 			return true;
 		}
 		return false;
