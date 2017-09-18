@@ -12,7 +12,7 @@ namespace dophp;
 /**
 * Parse and validate form data
 *
-* @version 0.4
+* @version 0.5
 * @see __construct
 */
 class Validator {
@@ -24,8 +24,8 @@ class Validator {
 	/**
 	* Main costructor
 	*
-	* @param $post array: $_POST data (usually), passed byRef
-	* @param $files array: $_FILES data (usually), passed byRef
+	* @param $post array: $_POST data (usually)
+	* @param $files array: $_FILES data (usually)
 	* @param $rules The rules, associative array with format:
 	*               'field_name' => array('field_type', array('options'))
 	*               - If field_type is 'array', handles it as a
@@ -35,9 +35,9 @@ class Validator {
 	*                 of $post
 	* @see <type>_validator
 	*/
-	public function __construct( &$post, &$files, $rules) {
-		$this->__post = & $post;
-		$this->__files = & $files;
+	public function __construct( $post, $files, $rules) {
+		$this->__post = $post;
+		$this->__files = $files;
 		\DoPhp::lang()->dophpDomain();
 
 		// Handle multiple validator: copy 0 validator over all numeric data
@@ -102,9 +102,9 @@ interface field_validator {
 	*
 	* @param mixed value: The field value
 	* @param array options: The options for this field
-	* @param array values: The raw POST data (byRef, MUST not be modified)
+	* @param array values: The raw POST data
 	*/
-	public function __construct($value, $options, & $values);
+	public function __construct($value, $options, $values);
 	/** Returns error string or false */
 	public function validate();
 	/** Returns cleaned value */
@@ -133,9 +133,9 @@ abstract class base_validator implements field_validator {
 	private $__options;
 	private $__cleaned;
 
-	public function __construct($value, $options, & $values) {
+	public function __construct($value, $options, $values) {
 		$this->__value = $value;
-		$this->__values = & $values;
+		$this->__values = $values;
 		$this->__options = $options;
 		$nullified = $this->nullify($value);
 		// Null doesn't need to be cleaned
@@ -210,7 +210,7 @@ abstract class base_validator implements field_validator {
 		return false;
 	}
 
-	protected function do_validate(& $v, & $o) {
+	protected function do_validate($v, $o) {
 		return null;
 	}
 }
@@ -227,7 +227,7 @@ abstract class base_validator implements field_validator {
 */
 class string_validator extends base_validator {
 
-	protected function do_validate( &$v, &$o ) {
+	protected function do_validate($v, $o) {
 		if( isset($o['email']) && $o['email'] )
 			if( $err = $this->check_email($v) )
 				return $err;
@@ -268,7 +268,7 @@ class string_validator extends base_validator {
 */
 abstract class number_validator extends base_validator {
 
-	protected function do_validate( &$v, &$o ) {
+	protected function do_validate($v, $o) {
 		if( isset($o['min']) )
 			if( $err = $this->check_min($v, $o['min']) )
 				return $err;
@@ -352,7 +352,7 @@ class bool_validator extends base_validator {
 */
 class date_validator extends base_validator {
 
-	protected function do_validate( &$v, &$o ) {
+	protected function do_validate($v, $o) {
 		if( isset($o['min']) )
 			if( $err = $this->check_min($v, $o['min']) )
 				return $err;
@@ -444,7 +444,7 @@ class file_validator extends base_validator {
 			return _("File size mismatch");
 		return false;
 	}
-	protected function do_validate( &$v, &$o ) {
+	protected function do_validate($v, $o) {
 		if( isset($v['error']) && $v['error'] )
 			return _("Error") . " {$v['error']} ";
 		if( isset($o['type']) && $v['size'] ) {
@@ -477,7 +477,7 @@ class array_validator implements field_validator {
 	private $__error = null;
 	private $__options;
 
-	public function __construct($value, $options, & $values) {
+	public function __construct($value, $options, $values) {
 		$this->__options = $options;
 
 		if( ! $value ) {
