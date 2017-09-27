@@ -574,4 +574,15 @@ class Utils {
 		return false;
 	}
 
+	/**
+	 * Escape a string to be included in a Javascript Template Literal
+	 *
+	 * @param $html string: The code to be escaped
+	 * @return string
+	 */
+	public static function escapeJsTpl($html) {
+		$html = str_replace('`', '\`', $html);
+		$html = str_replace('</script>', '</scr`+`ipt>', $html);
+		return $html;
+	}
 }

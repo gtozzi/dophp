@@ -284,6 +284,7 @@ trait SmartyFunctionalities {
 		$smarty->registerPlugin('modifier', 'format', 'dophp\Utils::format');
 		$smarty->registerPlugin('modifier', 'formatTime', 'dophp\Utils::formatTime');
 		$smarty->registerPlugin('modifier', 'formatNumber', 'dophp\Utils::formatNumber');
+		$smarty->registerPlugin('modifier', 'escapeJsTpl', 'dophp\Utils::escapeJsTpl');
 
 		$smarty->assign('config', $config);
 
