@@ -145,7 +145,7 @@ abstract class base_validator implements field_validator {
 			else
 				$this->__cleaned = $nullified;
 		}else
-			$this->__cleaned = $this->do_clean($nullified);
+			$this->__cleaned = $this->do_clean($nullified, $this->__options);
 	}
 
 	public function clean() {
@@ -198,7 +198,7 @@ abstract class base_validator implements field_validator {
 	/**
 	* Cleans the value and converts it to right type before being validated
 	*/
-	protected function do_clean($val) {
+	protected function do_clean($val, $opt) {
 		if( is_string($val) )
 			$val = trim($val);
 		return $this->nullify($val);
@@ -265,6 +265,10 @@ class string_validator extends base_validator {
 *
 * Custom validation rules: 'min'=>val, Number must be greater or equal than value
 *                          'max'=>val, Number must be lesser or equal than value
+*                          'decsep'=>char, Decimal separator used
+*                                          The default (null) accepts both '.' and ','
+*                          'thosep'=>char, Thousands separator used
+*                                          The default (null) means none
 */
 abstract class number_validator extends base_validator {
 
@@ -296,6 +300,24 @@ abstract class number_validator extends base_validator {
 		return sprintf('%f', $num);
 	}
 
+	/**
+	 * Utility function for subclass usage
+	 */
+	protected function do_number_clean($val, $opt, $type) {
+		if( gettype($val) == $type )
+			return $val;
+
+		$val = trim($val);
+
+		if( isset($opt['thosep']) )
+			$val = str_replace($opt['thosep'], '', $val);
+
+		$decsep = isset($opt['decsep']) ? $opt['decsep'] : ',';
+		$val = str_replace($decsep, '.', $val);
+
+		return $val;
+	}
+
 }
 
 /**
@@ -305,10 +327,8 @@ abstract class number_validator extends base_validator {
 */
 class int_validator extends number_validator {
 
-	protected function do_clean($val) {
-		if( gettype($val) == 'integer' )
-			return $val;
-		return (int)trim($val);
+	protected function do_clean($val, $opt) {
+		return (int)$this->do_number_clean($val, $opt, 'integer');
 	}
 }
 
@@ -319,11 +339,8 @@ class int_validator extends number_validator {
 */
 class double_validator extends number_validator {
 
-	protected function do_clean($val) {
-		if( gettype($val) == 'double' )
-			return $val;
-		$val = str_replace(',', '.', trim($val));
-		return (double)$val;
+	protected function do_clean($val, $opt) {
+		return (int)$this->do_number_clean($val, $opt, 'double');
 	}
 }
 
@@ -334,7 +351,7 @@ class double_validator extends number_validator {
 */
 class bool_validator extends base_validator {
 
-	protected function do_clean($val) {
+	protected function do_clean($val, $opt) {
 		if( gettype($val) == 'boolean' )
 			return $val;
 		return (bool)trim($val);
@@ -371,7 +388,7 @@ class date_validator extends base_validator {
 		return str_replace('{date}', $this->format_date($max), _('Date must be {date} or before')) . '.';
 	}
 
-	protected function do_clean($val) {
+	protected function do_clean($val, $opt) {
 		if( gettype($val) == 'object' && $val instanceof \DateTime )
 			return $val;
 		try {
@@ -397,7 +414,7 @@ class date_validator extends base_validator {
 */
 class time_validator extends base_validator {
 
-	protected function do_clean($val) {
+	protected function do_clean($val, $opt) {
 		if( gettype($val) == 'object' && $val instanceof Time )
 			return $val;
 		$vals = preg_split('/(\\.|:|\\s+)/', trim($val));
@@ -426,7 +443,7 @@ class time_validator extends base_validator {
 */
 class file_validator extends base_validator {
 
-	protected function do_clean($val) {
+	protected function do_clean($val, $opt) {
 		if( ! $val )
 			return null;
 		if( ! $val['size'] )
