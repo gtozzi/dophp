@@ -443,6 +443,17 @@ class DoPhp {
 	}
 
 	/**
+	 * Throws an exception if given PHP extension is not installed
+	 *
+	 * @param $name string: The extension name
+	 * @throws \Exception
+	 */
+	public static function requirePhpExt($name) {
+		if ( ! extension_loaded($name))
+			throw new \Exception("Required PHP extension \"$name\" is not loaded");
+	}
+
+	/**
 	* Returns class name for a given page
 	*
 	* @param $page string: The page name
