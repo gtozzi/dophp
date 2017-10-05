@@ -585,4 +585,30 @@ class Utils {
 		$html = str_replace('</script>', '</scr`+`ipt>', $html);
 		return $html;
 	}
+
+	/**
+	 * Returns decoded POST data, tries to automaticaly guess it from
+	 * HTML headers
+	 */
+	public static function getPostData() {
+		$headers = self::headers();
+
+		if ( ! isset($headers['Content-Type']) )
+			throw new \Exception('Missing Content-Type header');
+
+		$parts = explode(';', $headers['Content-Type']);
+		$ctype = trim($parts[0]);
+
+		switch ($ctype) {
+		case 'application/json':
+			// Decode JSON
+			return json_decode(self::decodeInput(), true);
+		case 'multipart/form-data':
+		case 'application/x-www-form-urlencoded':
+			// This is decoded builtin
+			return $_POST + $_FILES;
+		}
+
+		throw new \Exception("Unsupported Content-Type \"$ctype\"");
+	}
 }
