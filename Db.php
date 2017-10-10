@@ -125,7 +125,7 @@ class Db {
 	public function run($query, $params=array(), $vcharfix=null) {
 		if( $this->debug && $this->debug instanceof debug\Request && $this->debug->isEnabled() ) {
 			$dbgquery = new debug\DbQuery();
-			$this->debug->addQuery($dbgquery);
+			$this->debug->add($dbgquery);
 		} else
 			$dbgquery = null;
 

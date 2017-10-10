@@ -124,15 +124,19 @@ class DoPhp {
 	public function __construct($conf=null, $db='dophp\\Db', $auth=null, $lang='dophp\\Lang',
 			$sess=true, $def='home', $key=self::BASE_KEY, $strict=false) {
 
+		$start = microtime(true);
+
 		// Don't allow multiple instances of this class
 		if( self::$__instance )
 			throw new Exception('DoPhp is already instantiated');
 		self::$__instance = $this;
-		$this->__start = microtime(true);
+		$this->__start = $start;
 
 		// Start the session
 		if( $sess )
 			session_start();
+
+		$sesstime = microtime(true);
 
 		// Sets the error handler and register a shutdown function to catch fatal errors
 		if( $strict ) {
@@ -190,8 +194,29 @@ class DoPhp {
 			$def_domain = self::TEXT_DOMAIN;
 		textdomain($def_domain);
 
+		// Init memcached if in use
+		if( isset($conf['memcache']) && isset($conf['memcache']['host']) ) {
+			if( ! isset($conf['memcache']['port']) )
+				$conf['memcache']['port'] = 11211;
+
+			if( class_exists('Memcache') ) {
+				$this->__cache = new Memcache;
+				if( ! $this->__cache->connect($conf['memcache']['host'], $conf['memcache']['port']) ) {
+					$this->__cache = null;
+					error_log("Couldn't connect to memcached at {$conf['memcache']['host']}:{$conf['memcache']['port']}");
+				}
+			} else
+				error_log("DoPhp is configured to use memcached but memcached extension is not loaded");
+		}
+
 		// Creates the debug object
+		if( $this->__cache )
+			dophp\debug\MemcacheDebug::init($this->__cache);
+		else
+			dophp\debug\SessionDebug::init();
 		$this->__debug = new dophp\debug\Request($this->__conf['debug']);
+		$this->__debug->add(new dophp\debug\CheckPoint('DoPhp::start', $this->__start));
+		$this->__debug->add(new dophp\debug\CheckPoint('DoPhp::session started', $sesstime));
 
 		// Creates database connection, if needed
 		if( array_key_exists('db', $this->__conf) )
@@ -311,18 +336,6 @@ class DoPhp {
 			return;
 		}
 
-		// Init memcached if in use
-		if( isset($conf['memcache']) && isset($conf['memcache']['host']) && isset($conf['memcache']['port']) ) {
-			if( class_exists('Memcache') ) {
-				$this->__cache = new Memcache;
-				if( ! $this->__cache->connect($conf['memcache']['host'], $conf['memcache']['port']) ) {
-					$this->__cache = null;
-					error_log("Couldn't connect to memcached at {$conf['memcache']['host']}:{$conf['memcache']['port']}");
-				}
-			} else
-				error_log("DoPhp is configured to use memcached but memcached extension is not loaded");
-		}
-
 		// Init return var and execute page
 		try {
 			require $inc_file;
@@ -410,7 +423,7 @@ class DoPhp {
 
 		// First attempt to retrieve data from the cache
 		if( $this->__cache !== null ) {
-			$cacheKey = $pobj->cacheKey();
+			$cacheKey = $page->cacheKey();
 			if( $cacheKey !== null ) {
 				$cacheBase = $page->name() . '::' . $cacheKey;
 				$headers = $cache->get("$cacheBase::headers");
@@ -432,7 +445,7 @@ class DoPhp {
 
 		// Write cache if needed
 		if( $this->__cache !== null && $cacheKey !== null ) {
-			$expire = $pobj->cacheExpire();
+			$expire = $page->cacheExpire();
 			if( $expire !== null ) {
 				$cache->set("$cacheBase::headers", $headers, 0, $expire);
 				$cache->set("$cacheBase::output", $out, 0, $expire);

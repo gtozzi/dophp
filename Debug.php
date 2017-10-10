@@ -11,18 +11,81 @@ namespace dophp\debug;
 
 
 /**
- * Holds the whole debug data
+ * Holds the whole debug data, singleton
  */
 abstract class Debug {
+
+	/** Stores the current instance */
+	private static $__instance = null;
+
+	/**
+	 * To be called only internally
+	 */
+	protected function __construct() {
+	}
+
+	/**
+	 * Returns the singleton instance
+	 */
+	public function instance() {
+		if ( ! self::$__instance )
+			throw new \Exception('Debug has not been instantiated');
+
+		return self::$__instance;
+	}
+
+	/**
+	 * Stores the new instance, must be called by child's init()
+	 */
+	protected function _init(Debug $inst) {
+		if ( self::$__instance )
+			throw new \Exception('Can\'t init twice');
+
+		self::$__instance = $inst;
+	}
+
+	/**
+	 * Adds a request to the debug data
+	 *
+	 * @param $request Request: The request to be added
+	 */
+	abstract public function add(Request $request);
+
+	/**
+	 * This is called to inform the container that it should save its data
+	 */
+	abstract public function save();
+
+	/**
+	 * Yields all the stored requests, from most recent to the oldest
+	 *
+	 * @yield Request
+	 */
+	abstract public function getRequests();
+
+	/**
+	 * Counts how many requests are stored
+	 */
+	abstract public function countRequests();
+
+}
+
+
+/**
+ * Debug container holding the whole data in a session variable
+ */
+class SessionDebug extends Debug {
 
 	const SESS_KEY = 'DoPhp::Debug';
 
 	/**
-	 * Adds a request to the session data
-	 *
-	 * @param $request Request: The request to be added
+	 * Inits the debug container
 	 */
-	public static function add(Request $request) {
+	public static function init() {
+		parent::_init(new self());
+	}
+
+	public function add(Request $request) {
 		if( session_status() != PHP_SESSION_ACTIVE )
 			return;
 
@@ -31,23 +94,87 @@ abstract class Debug {
 		$_SESSION[self::SESS_KEY][] = $request;
 	}
 
-	/**
-	 * Yields all the requests in session, from most recent to the oldest
-	 *
-	 * @yield Request
-	 */
-	public static function getRequests() {
+	public function save() {
+		// This does nothing, since session is updated automagically
+	}
+
+	protected function _getSessArray() {
 		if( session_status() != PHP_SESSION_ACTIVE )
-			return;
+			return [];
 
 		if( ! isset($_SESSION[self::SESS_KEY]) )
-			return;
+			return [];
 
 		if( ! is_array($_SESSION[self::SESS_KEY]) )
 			throw new \Exception('Malformed session data');
 
-		foreach( array_reverse($_SESSION[self::SESS_KEY]) as $req )
+		return $_SESSION[self::SESS_KEY];
+	}
+
+	public function getRequests() {
+		foreach( array_reverse($this->_getSessArray()) as $req )
 			yield $req;
+	}
+
+	public function countRequests() {
+		return count($this->_getSessArray());
+	}
+
+}
+
+
+/**
+ * Debug container holding the whole data in memcached
+ */
+class MemcacheDebug extends Debug {
+
+	const CACHE_KEY = 'DoPhp::Debug';
+	const CACHE_FLAGS = 0;
+	const CACHE_EXPIRE_SEC = 60 * 60; // 1 hour
+
+	/** The Memcache object */
+	protected $_cache;
+	/** The "hot" data object */
+	protected $_data;
+
+	/**
+	 * Inits the debug container
+	 *
+	 * $cache Memcache The cache object instance
+	 */
+	public static function init(\Memcache $cache) {
+		parent::_init(new self($cache));
+	}
+
+	protected function __construct(\Memcache $cache) {
+		parent::__construct();
+
+		$this->_cache = $cache;
+
+		$this->_data = $this->_cache->get(self::CACHE_KEY);
+		if( $this->_data === false )
+			$this->_data = [];
+
+		if( ! is_array($this->_data) )
+			throw new \Exception('Malformed cache data');
+	}
+
+	public function add(Request $request) {
+		$this->_data[] = $request;
+		$this->save();
+	}
+
+	public function save() {
+		$this->_cache->set(self::CACHE_KEY, $this->_data, self::CACHE_FLAGS, self::CACHE_EXPIRE_SEC);
+	}
+
+	public function getRequests() {
+		foreach( array_reverse($this->_data) as $req )
+			yield $req;
+	}
+
+	public function countRequests() {
+		return count($this->_data);
 	}
 
 }
@@ -109,7 +236,7 @@ class Request {
 		$this->_enabled = $enabled;
 		$this->_rtime = $_SERVER['REQUEST_TIME_FLOAT'];
 		$this->_uri = $_SERVER['REQUEST_URI'];
-		Debug::add($this);
+		Debug::instance()->add($this);
 		register_shutdown_function([$this, 'end']);
 	}
 
@@ -123,12 +250,15 @@ class Request {
 	}
 
 	/**
-	 * Adds a query debug information to this request
+	 * Adds an action to this request
+	 *
+	 * Action may be a Query, a checkpoint, etc...
 	 *
 	 * @param $query DbQuery The query debug info object
 	 */
-	public function addQuery(DbQuery $query) {
-		$this->_actions[] = $query;
+	public function add(Action $action) {
+		$this->_actions[] = $action;
+		Debug::instance()->save();
 	}
 
 	/**
@@ -136,6 +266,7 @@ class Request {
 	 */
 	public function end() {
 		$this->_etime = microtime(true);
+		Debug::instance()->save();
 	}
 
 	/**
@@ -173,14 +304,95 @@ class Request {
 
 
 /**
- * Holds debug info for a database query
+ * A generic debug action
  */
-class DbQuery {
+interface Action {
+
+	/**
+	 * Returns an HTML representation of this action
+	 *
+	 * @param $request Request: The parent request, used for comparison
+	 */
+	public function asHtml(Request $request);
+
+}
+
+
+/**
+ * A base helper class for implementing an action
+ */
+abstract class BaseAction implements Action {
 
 	use OutputsHtml;
 
 	/** The start time */
-	protected $_tstart = null;
+	protected $_tstart;
+
+	/**
+	 * Sets the start timer
+	 *
+	 * @param $time float: The start microtime (use current time by default)
+	 */
+	public function __construct($time=null) {
+		$this->_tstart = $time===null ? microtime(true) : $time;
+	}
+
+	public function asHtml(Request $request) {
+		$info = $this->getInfo();
+
+		$out = '<div class="action">';
+		$out .= '<h3>' . get_class($this) . '</h3><ul>';
+		$reltime = $this->_tstart - $request->getTime();
+		$out .= $this->_fKvli('RelTime', '+' . $this->_fDur($reltime));
+		foreach( $info as $k => $v )
+			$out .= $this->_fKvli($k, $v);
+		$out .= '</ul>';
+		$out .= "</div>\n";
+		return $out;
+	}
+
+	/**
+	 * Returns an associative array of information to be displayed
+	 * in the HTML output
+	 */
+	abstract public function getInfo();
+
+}
+
+
+/**
+ * A simple checkpoint in the code
+ */
+class CheckPoint extends BaseAction {
+
+	protected $_name;
+
+	/**
+	 * Sets a checkpoint
+	 *
+	 * @param $name string: The checkpoint descriptive name
+	 * @param $time double: The checkpoint's microtime (current time by default)
+	 */
+	public function __construct($name, $time=null) {
+		parent::__construct($time);
+
+		$this->_name = $name;
+	}
+
+	public function getInfo() {
+		return [
+			'Name' => $this->_name,
+		];
+	}
+
+}
+
+
+/**
+ * Holds debug info for a database query
+ */
+class DbQuery extends BaseAction {
+
 	/** The build completion time */
 	protected $_tbuilt = null;
 	/** The prepared query time */
@@ -195,7 +407,7 @@ class DbQuery {
 
 	/** Called when the query creation starts */
 	public function __construct() {
-		$this->_tstart = microtime(true);
+		parent::__construct();
 	}
 
 	/** Called when the query has been created */
@@ -215,36 +427,28 @@ class DbQuery {
 		$this->_texecuted = microtime(true);
 	}
 
-	/**
-	 * Returns an HTML representation of this action
-	 *
-	 * @param $request Request: The parent request, used for comparison
-	 */
-	public function asHtml(Request $request) {
-		$out = '<div class="action">';
-		$out .= '<h3>Query</h3><ul>';
-		$out .= $this->_fKvli('SQL', $this->_query);
-		$out .= $this->_fKvli('Params', print_r($this->_params, true));
-		$reltime = $this->_tstart - $request->getTime();
-		$out .= $this->_fKvli('RelTime', '+' . $this->_fDur($reltime));
+	public function getInfo() {
+		$ret = [
+			'SQL' => $this->_query,
+			'Params' => print_r($this->_params, true),
+		];
+
 		if( $this->_tbuilt ) {
 			$duration = $this->_tbuilt - $this->_tstart;
-			$out .= $this->_fKvli('Build Time', $this->_fDur($duration));
+			$ret['Build Time'] = $this->_fDur($duration);
 
 			if( $this->_tprepared ) {
 				$duration = $this->_tprepared - $this->_tbuilt;
-				$out .= $this->_fKvli('Prepare Time', $this->_fDur($duration));
+				$ret['Prepare Time'] = $this->_fDur($duration);
 
 				if( $this->_texecuted ) {
 					$duration = $this->_texecuted - $this->_tstart;
-					$out .= $this->_fKvli('Execute Time', $this->_fDur($duration));
+					$ret['Execute Time'] = $this->_fDur($duration);
 				}
 			}
 		}
-		$out .= '</ul>';
-		$out .= "</div>\n";
-		return $out;
+
+		return $ret;
 	}
 
 }
-
