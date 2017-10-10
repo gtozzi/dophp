@@ -48,13 +48,16 @@ abstract class Debug {
 	 * Adds a request to the debug data
 	 *
 	 * @param $request Request: The request to be added
+	 * @return $id mixed: An unique request ID
 	 */
 	abstract public function add(Request $request);
 
 	/**
-	 * This is called to inform the container that it should save its data
+	 * This is called to inform the container that it should refresh its data
+	 *
+	 * @param $id mixed: The ID of the request to be updated
 	 */
-	abstract public function save();
+	abstract public function update($id, Request $request);
 
 	/**
 	 * Yields all the stored requests, from most recent to the oldest
@@ -91,10 +94,17 @@ class SessionDebug extends Debug {
 
 		if( ! isset($_SESSION[self::SESS_KEY]) )
 			$_SESSION[self::SESS_KEY] = [];
+
 		$_SESSION[self::SESS_KEY][] = $request;
+
+		end($_SESSION[self::SESS_KEY]);
+		$id = key($_SESSION[self::SESS_KEY]);
+		reset($_SESSION[self::SESS_KEY]);
+
+		return $id;
 	}
 
-	public function save() {
+	public function update($id, Request $request) {
 		// This does nothing, since session is updated automagically
 	}
 
@@ -128,14 +138,13 @@ class SessionDebug extends Debug {
  */
 class MemcacheDebug extends Debug {
 
-	const CACHE_KEY = 'DoPhp::Debug';
+	const CACHE_PREFIX = 'DoPhp::Debug::';
+	const CACHE_KEY_IDX = self::CACHE_PREFIX . 'idx';
 	const CACHE_FLAGS = 0;
 	const CACHE_EXPIRE_SEC = 60 * 60; // 1 hour
 
 	/** The Memcache object */
 	protected $_cache;
-	/** The "hot" data object */
-	protected $_data;
 
 	/**
 	 * Inits the debug container
@@ -150,31 +159,46 @@ class MemcacheDebug extends Debug {
 		parent::__construct();
 
 		$this->_cache = $cache;
-
-		$this->_data = $this->_cache->get(self::CACHE_KEY);
-		if( $this->_data === false )
-			$this->_data = [];
-
-		if( ! is_array($this->_data) )
-			throw new \Exception('Malformed cache data');
 	}
 
 	public function add(Request $request) {
-		$this->_data[] = $request;
-		$this->save();
+		// Reads last used ID
+		$lid = $this->_cache->get(self::CACHE_KEY_IDX);
+		if( $lid === false )
+			$lid = -1;
+
+		$id = $lid + 1;
+		$k = self::CACHE_PREFIX . $id;
+
+		$this->_cache->set($k, $request, self::CACHE_FLAGS, self::CACHE_EXPIRE_SEC);
+		$this->_cache->set(self::CACHE_KEY_IDX, $id, self::CACHE_FLAGS, self::CACHE_EXPIRE_SEC);
+
+		return $id;
 	}
 
-	public function save() {
-		$this->_cache->set(self::CACHE_KEY, $this->_data, self::CACHE_FLAGS, self::CACHE_EXPIRE_SEC);
+	public function update($id, Request $request) {
+		$k = self::CACHE_PREFIX . $id;
+		$this->_cache->set($k, $request, self::CACHE_FLAGS, self::CACHE_EXPIRE_SEC);
 	}
 
 	public function getRequests() {
-		foreach( array_reverse($this->_data) as $req )
-			yield $req;
+		$lid = $this->_cache->get(self::CACHE_KEY_IDX);
+		if( $lid === false )
+			return;
+
+		for( $id=$lid; $id>=0; $id-- ) {
+			$k = self::CACHE_PREFIX . $id;
+			$req = $this->_cache->get($k);
+			if( $req !== false )
+				yield $req;
+		}
 	}
 
 	public function countRequests() {
-		return count($this->_data);
+		$lid = $this->_cache->get(self::CACHE_KEY_IDX);
+		if( $lid === false )
+			return 0;
+		return $lid + 1;
 	}
 
 }
@@ -216,6 +240,8 @@ class Request {
 
 	use OutputsHtml;
 
+	/** The request's id */
+	protected $_id;
 	/** Tells whether debugging is enabled */
 	protected $_enabled = false;
 	/** Stores debugged actions, in order */
@@ -236,8 +262,16 @@ class Request {
 		$this->_enabled = $enabled;
 		$this->_rtime = $_SERVER['REQUEST_TIME_FLOAT'];
 		$this->_uri = $_SERVER['REQUEST_URI'];
-		Debug::instance()->add($this);
-		register_shutdown_function([$this, 'end']);
+
+		$this->_id = Debug::instance()->add($this);
+	}
+
+	/**
+	 * Ends the request time counter, may not always be called
+	 */
+	public function __destruct() {
+		$this->_etime = microtime(true);
+		Debug::instance()->update($this->_id, $this);
 	}
 
 	/**
@@ -258,15 +292,7 @@ class Request {
 	 */
 	public function add(Action $action) {
 		$this->_actions[] = $action;
-		Debug::instance()->save();
-	}
-
-	/**
-	 * Ends the request time counter, may not always be called
-	 */
-	public function end() {
-		$this->_etime = microtime(true);
-		Debug::instance()->save();
+		Debug::instance()->update($this->_id, $this);
 	}
 
 	/**
@@ -274,7 +300,7 @@ class Request {
 	 */
 	public function asHtml() {
 		$out = '<div class="request">';
-		$out .= '<h1>Request</h1><ul>';
+		$out .= '<h1>Request #' . $this->_id . '</h1><ul>';
 		$out .= $this->_fKvli('URI', $this->_uri);
 		$out .= $this->_fKvli('Time', date('d M Y H:i:s', $this->_rtime));
 		if( $this->_etime ) {
