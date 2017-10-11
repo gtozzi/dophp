@@ -403,7 +403,11 @@ class date_validator extends base_validator {
 	* Utility function to convert a date to string
 	*/
 	protected function format_date($date) {
-		return strftime('%c', $date->format('U'));
+		if( $date instanceof Date )
+			$fmt = '%x';
+		else
+			$fmt = '%c';
+		return strftime('%x', $date->format('U'));
 	}
 }
 
