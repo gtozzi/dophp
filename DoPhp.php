@@ -112,6 +112,7 @@ class DoPhp {
 	*                               Default: automatically detect it
 	*                 )
 	*                 'debug' => enables debug info, should be false in production servers
+	*                 'strict' => triggers an error on any notice
 	*
 	* @param $db     string: Name of the class to use for the database connection
 	* @param $auth   string: Name of the class to use for user authentication
@@ -137,12 +138,6 @@ class DoPhp {
 			session_start();
 
 		$sesstime = microtime(true);
-
-		// Sets the error handler and register a shutdown function to catch fatal errors
-		if( $strict ) {
-			set_error_handler(array('DoPhp', 'error_handler'));
-			register_shutdown_function(array('DoPhp', 'shutdown_handler'));
-		}
 
 		// Build default config
 		$this->__conf = $conf;
@@ -181,6 +176,14 @@ class DoPhp {
 			$this->__conf['cors']['maxage'] = 86400;
 		if( ! array_key_exists('debug', $this->__conf) )
 			$this->__conf['debug'] = false;
+		if( ! array_key_exists('strict', $this->__conf) )
+			$this->__conf['strict'] = false;
+
+		// Sets the error handler and register a shutdown function to catch fatal errors
+		if( $strict || $this->__conf['strict'] ) {
+			set_error_handler(array($this, 'error_handler'));
+			register_shutdown_function(array('DoPhp', 'shutdown_handler'));
+		}
 
 		//Set the locale
 		bindtextdomain(self::TEXT_DOMAIN, __DIR__ . '/locale');
@@ -389,17 +392,7 @@ class DoPhp {
 			return;
 		} catch( Exception $e ) {
 			header("HTTP/1.1 500 Internal Server Error");
-			if( $this->__conf['debug'] ) {
-				$title = 'DoPhp Catched Exception';
-				if( dophp\Utils::isAcceptedEncoding('text/html') )
-					echo "<html><h1>$title</h1>\n"
-						. dophp\Utils::formatException($e, true)
-						. "\n</html>";
-				else
-					echo $title . "\n\n" . dophp\Utils::formatException($e);
-			} else
-				echo _('Internal Server Error, please contact support or try again later') . '.';
-			error_log('DoPhp Catched Exception: ' . dophp\Utils::formatException($e, false));
+			$this->__printException($e);
 			return;
 		}
 
@@ -615,9 +608,42 @@ class DoPhp {
 	 * DoPhp's error handler, just takes care of setting a 500 header
 	 * and leaves the rest to the default handler
 	 */
-	public static function error_handler( $errno, $errstr ) {
+	public function error_handler( $errno, $errstr ) {
 		header("HTTP/1.1 500 Internal Server Error");
-		return false;
+
+		switch ($errno) {
+		default:
+			$et = "E$errno";
+			break;
+		case E_ERROR:
+			$et = 'ERROR';
+			break;
+		case E_WARNING:
+			$et = 'WARNING';
+			break;
+		case E_PARSE:
+			$et = 'PARSE ERROR';
+			break;
+		case E_NOTICE:
+			$et = 'NOTICE';
+			break;
+		case E_USER_ERROR:
+			$et = 'USER ERROR';
+			break;
+		case E_USER_WARNING:
+			$et = 'USER WARNING';
+			break;
+		case E_USER_NOTICE:
+			$et = 'USER NOTICE';
+			break;
+		}
+
+		try {
+			throw new \Exception("$et $errno: $errstr");
+		} catch (Exception $e) {
+			$this->__printException($e);
+		}
+		exit();
 	}
 
 	/**
@@ -628,4 +654,22 @@ class DoPhp {
 			header("HTTP/1.1 500 Internal Server Error");
 	}
 
+	/**
+	 * Prints and logs an exception, internal usage
+	 *
+	 * @param $e Exception
+	 */
+	private function __printException( $e ) {
+		if( $this->__conf['debug'] ) {
+			$title = 'DoPhp Catched Exception';
+			if( dophp\Utils::isAcceptedEncoding('text/html') )
+				echo "<html><h1>$title</h1>\n"
+					. dophp\Utils::formatException($e, true)
+					. "\n</html>";
+			else
+				echo $title . "\n\n" . dophp\Utils::formatException($e);
+		} else
+			echo _('Internal Server Error, please contact support or try again later') . '.';
+		error_log('DoPhp Catched Exception: ' . dophp\Utils::formatException($e, false));
+	}
 }
