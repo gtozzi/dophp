@@ -27,7 +27,7 @@ abstract class Debug {
 	/**
 	 * Returns the singleton instance
 	 */
-	public function instance() {
+	public static function instance() {
 		if ( ! self::$__instance )
 			throw new \Exception('Debug has not been instantiated');
 
@@ -37,7 +37,7 @@ abstract class Debug {
 	/**
 	 * Stores the new instance, must be called by child's init()
 	 */
-	protected function _init(Debug $inst) {
+	protected static function _init(Debug $inst) {
 		if ( self::$__instance )
 			throw new \Exception('Can\'t init twice');
 
