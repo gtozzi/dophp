@@ -528,7 +528,7 @@ class Utils {
 	 */
 	public static function listHttpAccept() {
 		if( ! isset($_SERVER['HTTP_ACCEPT']) )
-		 	return [];
+			return;
 
 		$encodings = [];
 		// first iterate encodings
