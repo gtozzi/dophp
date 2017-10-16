@@ -17,7 +17,7 @@ namespace dophp;
 * is used for text storage and must have a composed primary key (index, language)
 * and a `text` field for text storage.
 *
-* @example Database structure:
+* Example Database structure:
 * CREATE TABLE IF NOT EXISTS `i18n` (
 *  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
 *  PRIMARY KEY (`id`))
@@ -186,8 +186,9 @@ class Lang {
 	* Checks if a language name is supported, returns the closest matching
 	* supported language
 	*
+	* example: getSupportedLanguageName('en') could return 'en_US'
+	*
 	* @return string: The full supported name, or null if not supported
-	* @example getSupportedLanguageName('en') could return 'en_US'
 	*/
 	public function getSupportedLanguageName($lang) {
 		if( ! $lang )

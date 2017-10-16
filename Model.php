@@ -32,7 +32,7 @@ abstract class Model {
 	* defining an associative array or arrays in the format accepted by
 	* FieldDefinition::__construct()
 	*
-	* Array keys are used as <name> attribute when not numeric if a name has not
+	* Array keys are used as \<name\> attribute when not numeric if a name has not
 	* already been provided inside the field definition. Numeric keys are ignored.
 	*
 	* @see initFields()
@@ -46,7 +46,7 @@ abstract class Model {
 	protected $_names = null;
 	/**
 	* The base filter to apply on the table (by exaple, for access limiting),
-	* associative array of field => <value(s)>. If value is an array, multiple
+	* associative array of field => \<value(s)\>. If value is an array, multiple
 	* values are allowed with and OR condition.
 	* initFilter() also supports advanced filters.
 	* @see initFilter()
@@ -162,7 +162,7 @@ abstract class Model {
 	/**
 	* Returns singular and plural names for the elements of this model
 	*
-	* @return array [<singular>, <plural>]
+	* @return array [\<singular\>, \<plural\>]
 	*/
 	public function getNames() {
 		return $this->_names;
@@ -171,7 +171,7 @@ abstract class Model {
 	/**
 	* Returns all column labels
 	*
-	* @return array Associative array of column [ <name> => <label> ]
+	* @return array Associative array of column [ \<name\> =\> \<label\> ]
 	*/
 	public function getLabels() {
 		$labels = array();
@@ -187,7 +187,7 @@ abstract class Model {
 	* @param $mode   The action to get the rules for (insert or update). If
 	*                unvalid or null acton is given, only rules common to all
 	*                actions are returned
-	* @return array Associative array [ <name> => [<type>, [<rules>]] ]
+	* @return array Associative array [ \<name\> => [\<type\>, [\<rules\>]] ]
 	*/
 	public function getRules($mode=null) {
 		$rules = array();
@@ -249,7 +249,7 @@ abstract class Model {
 	* @param $pk mixed: The PK to select the record to be edited, null on insert
 	* @param $post array: Associative array of data, usually $_POST
 	* @param $post array: Associative array of file data, usually $_FILES
-	* @return array Associative array of column [ <name> => <label> ] or
+	* @return array Associative array of column [ \<name\> => \<label\> ] or
 	*         null on success
 	*/
 	protected function _insertOrEdit($pk, & $post, & $files) {
@@ -472,9 +472,9 @@ abstract class Model {
 	* Returns the data for rendering a summary table
 	*
 	* @todo Will supporto filtering, ordering, etc...
-	* @return Array of <data>: associative array of data as <pk> => <Field>
-	*                  <count>: total number of records found
-	*                  <heads>: column headers
+	* @return Array of data: associative array of data as \<pk\> => \<Field\>
+	*                  count: total number of records found
+	*                  heads: column headers
 	*/
 	public function table() {
 		return $this->__readData('admin');
@@ -486,9 +486,9 @@ abstract class Model {
 	* @todo Support filtering, ordering, etc... (datatables server-side)
 	* @param $action The action name (admin|view)
 	* @param $pk Where instance: The PK to use for view action
-	* @return Array of <data>: associative array of data as <pk> => <Field>
-	*                  <count>: total number of records found
-	*                  <heads>: column headers
+	* @return Array of data: associative array of data as \<pk\> => \<Field\>
+	*                  count: total number of records found
+	*                  heads: column headers
 	*/
 	private function __readData($action, Where $pk=null) {
 		if( $action != 'admin' && $action != 'view' )
@@ -781,7 +781,7 @@ abstract class Model {
 	*
 	* @param $filter The filter condition as Where instance or the PK
 	* @param $col The name of the column to use as display field
-	* @return array: Associative array [ <pk> => <description> ], or just <description>
+	* @return array: Associative array [ \<pk\> =\> \<description\> ], or just \<description\>
 	*                if PK is given
 	*/
 	public function summary($filter=null, $col=null) {
@@ -819,7 +819,7 @@ abstract class Model {
 	* Returns a string resume of a given data row
 	*
 	* @param $row array: The row
-	* @param $prefix bool: If true, expect column name in the format <table>.<column>
+	* @param $prefix bool: If true, expect column name in the format \<table\>.\<column\>
 	* @param $prefix Prefix prepended to column names in data
 	* @param $summary If given, use this column name as summary column
 	*/
@@ -877,7 +877,7 @@ abstract class Model {
 	* Saves a file, should override
 	*
 	* @param $name string: the field name
-	* @param $data array: File data as returned in $_FILES (<name>, <type>, <tmp_name>, <error>, <size>)
+	* @param $data array: File data as returned in $_FILES (\<name\>, \<type\>, \<tmp_name\>, \<error\>, \<size\>)
 	* @return Mixed: the value to store in the database
 	*/
 	protected function _saveFile($name, $data) {
@@ -980,7 +980,7 @@ class FieldDefinition {
 
 	/**
 	* string: The field renderring type in insert/edit mode:
-	*         - <null> [or missing]: The field is not rendered at all
+	*         - \<null\> [or missing]: The field is not rendered at all
 	*         - label: The field is rendered as a label
 	*         - select: The field is rendered as a select box
 	*         - multi: The field is rendered as multiple select box
