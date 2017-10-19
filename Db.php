@@ -123,10 +123,9 @@ class Db {
 	* @throws StatementExecuteError
 	*/
 	public function run($query, $params=array(), $vcharfix=null) {
-		if( $this->debug && $this->debug instanceof debug\Request && $this->debug->isEnabled() ) {
+		if( $this->debug && $this->debug instanceof debug\Request && $this->debug->isEnabled() )
 			$dbgquery = new debug\DbQuery();
-			$this->debug->addQuery($dbgquery);
-		} else
+		else
 			$dbgquery = null;
 
 		if( ! is_array($params) )
@@ -169,8 +168,11 @@ class Db {
 		if( ! $st->execute($params) )
 			throw new StatementExecuteError($st);
 
-		if( $dbgquery )
+		if( $dbgquery ) {
 			$dbgquery->executed();
+
+			$this->debug->add($dbgquery);
+		}
 
 		return $st;
 	}

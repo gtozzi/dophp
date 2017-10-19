@@ -859,8 +859,9 @@ class Viewer extends \dophp\PageBase implements \dophp\PageInterface {
 		';
 
 		$htmls = [];
+		$dbg = Debug::instance();
 
-		foreach( Debug::getRequests() as $req )
+		foreach( $dbg->getRequests() as $req )
 			$htmls[] = $req->asHtml();
 
 		$out = '<!DOCTYPE html>';
@@ -868,6 +869,10 @@ class Viewer extends \dophp\PageBase implements \dophp\PageInterface {
 		$out .= "<title>DoPhp Debug Info</title>\n";
 		$out .= $style;
 		$out .= "\n</head>\n<body>\n";
+		$out .= "<p>";
+		$out .= "Debug class <b>" . get_class($dbg) . "</b>";
+		$out .= " stored <i>" . $dbg->countRequests() . "</i> requests.";
+		$out .= "</p>";
 		$out .= implode($htmls);
 		$out .= "\n</body>\n</html>";
 
