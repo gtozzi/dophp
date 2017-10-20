@@ -114,9 +114,10 @@ interface field_validator {
 /**
 * Base abstract validator class.
 *
-* Common rules: 'required'=>boolean|lambda($field_values, $all_values).
+* Common rules: 'required'=>boolean|field_name|lambda($field_values, $all_values).
 *                   When true (or when the lambda returns true, check that field
-*                   is not empty.
+*                   is not empty. If a string field_name is given, this field is
+*                   required when the other field is false
 *               'choices'=>array()
 *                   When specified, the validated value MUST be in_array(<choice>)
 *               'custom'=>lambda($field_values, $all_values).
@@ -158,8 +159,13 @@ abstract class base_validator implements field_validator {
 
 		// Perform common validation tasks
 		if( array_key_exists('required',$o) && $o['required'] ) {
-			// Convert lambda
-			$req = is_callable($o['required']) ? $o['required']($v, $this->__values) : $o['required'];
+			if( is_callable($o['required']) )
+				$req = $o['required']($v, $this->__values);
+			elseif( is_string($o['required']) )
+				$req = ! isset($this->__values[$o['required']]) || ! $this->__values[$o['required']];
+			else
+				$req = $o['required'];
+
 			if( $req ) {
 				$err = $this->check_required($v);
 				if( $err )
