@@ -606,9 +606,10 @@ class Utils {
 		case 'multipart/form-data':
 		case 'application/x-www-form-urlencoded':
 			// This is decoded builtin
-			return $_POST + $_FILES;
+			return $_POST;
 		}
 
 		throw new \Exception("Unsupported Content-Type \"$ctype\"");
 	}
+
 }
