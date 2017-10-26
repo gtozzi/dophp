@@ -215,7 +215,7 @@ class AuthPlain extends AuthBase {
 	*/
 	public function saveSession($user, $pwd) {
 		if( $this->_sess ) {
-			if( ! isset($_SESSION[self::SESS_VAR]) )
+			if( ! isset($_SESSION[self::SESS_VAR]) || ! is_array($_SESSION[self::SESS_VAR]) )
 				$_SESSION[self::SESS_VAR] = [];
 			$_SESSION[self::SESS_VAR][self::SESS_VUSER] = $user;
 			$_SESSION[self::SESS_VAR][self::SESS_VPASS] = $pwd;

@@ -152,8 +152,11 @@ class Lang {
 				return $this->setLanguage($lang);
 		}
 
-		if( isset($_SESSION[self::LANG_KEY]) )
-			return $this->setLanguage($_SESSION[self::LANG_KEY]);
+		if( isset($_SESSION[self::LANG_KEY]) ) {
+			$lang = $_SESSION[self::LANG_KEY];
+			if( in_array($lang, $this->_supported, true) )
+				return $this->setLanguage($lang);
+		}
 
 		if( isset($_COOKIE[self::LANG_KEY]) ) {
 			$lang = $this->getSupportedLanguageName($_COOKIE[self::LANG_KEY]);

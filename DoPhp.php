@@ -584,6 +584,8 @@ class DoPhp {
 			return [];
 
 		$alerts = $_SESSION[self::SESS_ALERTS];
+		if( ! is_array($alerts) )
+			$alerts = [];
 		$_SESSION[self::SESS_ALERTS] = [];
 		return $alerts;
 	}
