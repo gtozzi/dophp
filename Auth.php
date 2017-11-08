@@ -50,6 +50,10 @@ abstract class AuthBase implements AuthInterface {
 
 	/** Name of the session variable */
 	const SESS_VAR = 'DoPhp::Auth';
+	/** Name of the session array username key */
+	const SESS_VUSER = 'username';
+	/** Name of the session array password key */
+	const SESS_VPASS = 'password';
 
 	/** Config array */
 	protected $_config;
@@ -126,29 +130,39 @@ abstract class AuthBase implements AuthInterface {
 			unset($_SESSION[self::SESS_VAR]);
 	}
 
+	/**
+	* Save login credentials in session
+	*
+	* @param $user string: The username
+	* @param $pwd string: The password (or equivalent)
+	* @return bool: True if session has been saved
+	*/
+	public function saveSession($user, $pwd) {
+		if( $this->_sess ) {
+			if( ! isset($_SESSION[self::SESS_VAR]) || ! is_array($_SESSION[self::SESS_VAR]) )
+				$_SESSION[self::SESS_VAR] = [];
+			$_SESSION[self::SESS_VAR][self::SESS_VUSER] = $user;
+			$_SESSION[self::SESS_VAR][self::SESS_VPASS] = $pwd;
+			return true;
+		}
+		return false;
+	}
+
 }
 
+
 /**
-* Class for username/password authentication
+* Implements HTTP Basic authentication
 *
-* First checks for X-Auth-User and X-Auth-Pass headers, if not found, then 
-* checks $_REQUEST for 'username' and 'password' variables. 'login' must be true
-* for security reasons
+* Uses the HTTP "Authorization" header
 *
 * Database MUST implement a login($user, $password) method returning the user's
 * ID on succesfull login
 */
-class AuthPlain extends AuthBase {
+class AuthBasic extends AuthBase {
 
-	/** UserId header name ($_SERVER key name) */
-	const HEAD_USER = 'HTTP_X_AUTH_USER';
-	/** Password header name ($_SERVER key name) */
-	const HEAD_PASS = 'HTTP_X_AUTH_PASS';
-
-	/** Name of the session array username key */
-	const SESS_VUSER = 'username';
-	/** Name of the session array password key */
-	const SESS_VPASS = 'password';
+	/** Standard HTTP Authorization header */
+	const HEAD_HTTP_AUTH = 'HTTP_AUTHORIZATION';
 
 	/**
 	 * Method the may be called manually by a page script to login an user
@@ -188,6 +202,71 @@ class AuthPlain extends AuthBase {
 	 * @return [$username, $password, $source] or null
 	 */
 	protected function _detectLogin() {
+		if( isset($_SERVER[self::HEAD_HTTP_AUTH]) ) {
+			$parts = explode(' ', $_SERVER[self::HEAD_HTTP_AUTH]);
+
+			if( count($parts) == 2 ) {
+				$method = strtolower(trim($parts[0]));
+				$auth = base64_decode(trim($parts[1]), true);
+
+				if( $method == 'basic' && $auth !== false ) {
+					$parts2 = explode(':', $auth);
+
+					if( count($parts2) == 2 )
+						return [ $parts2[0], $parts2[1], 'headers' ];
+				}
+			}
+		}
+
+		if( $this->_sess && isset($_SESSION[self::SESS_VAR][self::SESS_VUSER]) &&
+				isset($_SESSION[self::SESS_VAR][self::SESS_VPASS]) )
+			return [
+				$_SESSION[self::SESS_VAR][self::SESS_VUSER],
+				$_SESSION[self::SESS_VAR][self::SESS_VPASS],
+				'session'
+			];
+
+		return null;
+	}
+
+	/**
+	* Reads user's ID from database, if password is correct
+	*
+	* @param $user string: The username
+	* @param $pwd string: The password
+	* @param $source string: The source for the credendials (headers|user|session|hand)
+	* @return integer The user's ID on success
+	*/
+	protected function _login($user, $pwd, $source) {
+		return $this->_db->login($user, $pwd, $source);
+	}
+
+}
+
+
+/**
+* Class for username/password authentication
+*
+* First checks for X-Auth-User and X-Auth-Pass headers, if not found, then 
+* checks $_REQUEST for 'username' and 'password' variables. 'login' must be true
+* for security reasons
+*
+* Database MUST implement a login($user, $password) method returning the user's
+* ID on succesfull login
+*/
+class AuthPlain extends AuthBasic {
+
+	/** UserId header name ($_SERVER key name) */
+	const HEAD_USER = 'HTTP_X_AUTH_USER';
+	/** Password header name ($_SERVER key name) */
+	const HEAD_PASS = 'HTTP_X_AUTH_PASS';
+
+	/**
+	 * Detect login request
+	 *
+	 * @return [$username, $password, $source] or null
+	 */
+	protected function _detectLogin() {
 		if( isset($_SERVER[self::HEAD_USER]) && isset($_SERVER[self::HEAD_PASS]) )
 			return [ $_SERVER[self::HEAD_USER], $_SERVER[self::HEAD_PASS], 'headers' ];
 
@@ -205,38 +284,8 @@ class AuthPlain extends AuthBase {
 
 		return null;
 	}
-
-	/**
-	* Save login credentials in session
-	*
-	* @param $user string: The username
-	* @param $pwd string: The password
-	* @return bool: True if session has been saved
-	*/
-	public function saveSession($user, $pwd) {
-		if( $this->_sess ) {
-			if( ! isset($_SESSION[self::SESS_VAR]) || ! is_array($_SESSION[self::SESS_VAR]) )
-				$_SESSION[self::SESS_VAR] = [];
-			$_SESSION[self::SESS_VAR][self::SESS_VUSER] = $user;
-			$_SESSION[self::SESS_VAR][self::SESS_VPASS] = $pwd;
-			return true;
-		}
-		return false;
-	}
-
-	/**
-	* Reads user's ID from database, if password is correct
-	*
-	* @param $user string: The username
-	* @param $pwd string: The password
-	* @param $source string: The source for the credendials (headers|user|session|hand)
-	* @return integer The user's ID on success
-	*/
-	protected function _login($user, $pwd, $source) {
-		return $this->_db->login($user, $pwd, $source);
-	}
-
 }
+
 
 /**
 * Class for Signature-based stateless authentication
@@ -257,11 +306,6 @@ class AuthSign extends AuthBase {
 	/** Signature header name ($_SERVER key name) */
 	const HEAD_SIGN = 'HTTP_X_AUTH_SIGN';
 
-	/** Name of the session array username key */
-	const SESS_VUSER = 'username';
-	/** Name of the session array signature key */
-	const SESS_VSIGN = 'password';
-
 	/**
 	* @see AuthBase::_doLogin
 	*/
@@ -275,7 +319,7 @@ class AuthSign extends AuthBase {
 			$sign = $_SERVER[self::HEAD_SIGN];
 		}elseif( $this->_sess ) {
 			$user = $_SESSION[self::SESS_VAR][self::SESS_VUSER];
-			$sign = $_SESSION[self::SESS_VAR][self::SESS_VSIGN];
+			$sign = $_SESSION[self::SESS_VAR][self::SESS_VPASS];
 		}
 		list($uid, $pwd) = $this->_getUserPwd($user);
 
@@ -290,25 +334,6 @@ class AuthSign extends AuthBase {
 
 		return $uid;
 	}
-
-	/**
-	* Save login credentials in session
-	*
-	* @param $user string: The username
-	* @param $sign string: The signature
-	* @return bool: True if session has been saved
-	*/
-	public function saveSession($user, $sign) {
-		if( $this->_sess ) {
-			if( ! isset($_SESSION[self::SESS_VAR]) )
-				$_SESSION[self::SESS_VAR] = [];
-			$_SESSION[self::SESS_VAR][self::SESS_VUSER] = $user;
-			$_SESSION[self::SESS_VAR][self::SESS_VSIGN] = $sign;
-			return true;
-		}
-		return false;
-	}
-
 
 	/**
 	* Reads user's ID and password from database, may be overridden
