@@ -1651,11 +1651,15 @@ class Decimal {
 		if( $this->__int === null && $this->__dec === null )
 			return '-';
 
-		$str = $this->__int;
+		$str = (string)abs($this->__int);
+		$li = strlen($str) - 1;
 		if( $thousands_sep )
-			for($i=strlen($this->__int)-1; $i>=0; $i--)
-				if($i > 0 && $i % 3 == 0)
+			for($i=$li; $i>=0; $i--)
+				if($i != $li && ($li-$i) % 3 == 0)
 					$str = substr_replace($str, '.', $i+1, 0);
+
+		if( $this->__int < 0 )
+			$str = '-' . $str;
 
 		// Deprecated and undocumented: -1 is the same as null
 		if( $decimals == -1 ) {
