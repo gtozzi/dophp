@@ -844,6 +844,9 @@ namespace dophp\debug;
 class Viewer extends \dophp\PageBase implements \dophp\PageInterface {
 
 	public function run() {
+		// Do not log this request
+		$this->debug->hide();
+
 		$style = '
 		<style>
 			div {

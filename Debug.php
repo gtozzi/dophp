@@ -60,6 +60,11 @@ abstract class Debug {
 	abstract public function update($id, Request $request);
 
 	/**
+	 * Removes given request from debug
+	 */
+	abstract public function del($id);
+
+	/**
 	 * Yields all the stored requests, from most recent to the oldest
 	 *
 	 * @yield Request
@@ -70,7 +75,6 @@ abstract class Debug {
 	 * Counts how many requests are stored
 	 */
 	abstract public function countRequests();
-
 }
 
 
@@ -108,6 +112,16 @@ class SessionDebug extends Debug {
 		// This does nothing, since session is updated automagically
 	}
 
+	public function del($id) {
+		if( session_status() != PHP_SESSION_ACTIVE )
+			return;
+
+		if( ! isset($_SESSION[self::SESS_KEY]) )
+			return;
+
+		unset($_SESSION[self::SESS_KEY][$id]);
+	}
+
 	protected function _getSessArray() {
 		if( session_status() != PHP_SESSION_ACTIVE )
 			return [];
@@ -141,7 +155,7 @@ class MemcacheDebug extends Debug {
 	const CACHE_PREFIX = 'DoPhp::Debug::';
 	const CACHE_KEY_IDX = self::CACHE_PREFIX . 'idx';
 	const CACHE_FLAGS = 0;
-	const CACHE_EXPIRE_SEC = 60 * 60; // 1 hour
+	const CACHE_EXPIRE_SEC = 60 * 5; // 5 minutes
 
 	/** The Memcache object */
 	protected $_cache;
@@ -178,7 +192,12 @@ class MemcacheDebug extends Debug {
 
 	public function update($id, Request $request) {
 		$k = self::CACHE_PREFIX . $id;
-		$this->_cache->set($k, $request, self::CACHE_FLAGS, self::CACHE_EXPIRE_SEC);
+		$this->_cache->replace($k, $request, self::CACHE_FLAGS, self::CACHE_EXPIRE_SEC);
+	}
+
+	public function del($id) {
+		$k = self::CACHE_PREFIX . $id;
+		$this->_cache->delete($k);
 	}
 
 	public function getRequests() {
@@ -264,14 +283,7 @@ class Request {
 		$this->_uri = $_SERVER['REQUEST_URI'];
 
 		$this->_id = Debug::instance()->add($this);
-	}
-
-	/**
-	 * Ends the request time counter, may not always be called
-	 */
-	public function __destruct() {
-		$this->_etime = microtime(true);
-		Debug::instance()->update($this->_id, $this);
+		register_shutdown_function([$this, 'shutdown']);
 	}
 
 	/**
@@ -293,6 +305,13 @@ class Request {
 	public function add(Action $action) {
 		$this->_actions[] = $action;
 		Debug::instance()->update($this->_id, $this);
+	}
+
+	/**
+	 * Removes current request from debug info
+	 */
+	public function hide() {
+		Debug::instance()->del($this->_id);
 	}
 
 	/**
@@ -326,6 +345,13 @@ class Request {
 		return $this->_rtime;
 	}
 
+	/**
+	 * Called by the shutdown handler
+	 */
+	public function shutdown() {
+		$this->_etime = microtime(true);
+		Debug::instance()->update($this->_id, $this);
+	}
 }
 
 

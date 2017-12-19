@@ -351,6 +351,9 @@ class DoPhp {
 					throw new Exception('Page class not found');
 			$pobj = new $classname($this->__conf, $this->__db, $this->__auth, $page, $path );
 
+			// Inject the debug object
+			$pobj->debug = $this->__debug;
+
 			list($out, $headers) = $this->__runPage($pobj, $path);
 		} catch( dophp\PageDenied $e ) {
 			if( $def ) {
