@@ -613,7 +613,7 @@ class DoPhp {
 	 * DoPhp's error handler, just takes care of setting a 500 header
 	 * and leaves the rest to the default handler
 	 */
-	public function error_handler( $errno, $errstr ) {
+	public function error_handler( $errno, $errstr, $errfile, $errline ) {
 		header("HTTP/1.1 500 Internal Server Error");
 
 		switch ($errno) {
@@ -644,7 +644,7 @@ class DoPhp {
 		}
 
 		try {
-			throw new \Exception("$et $errno: $errstr");
+			throw new \Exception("$et $errno: '$errstr' in '$errfile', $errline");
 		} catch (Exception $e) {
 			$this->__printException($e);
 		}
