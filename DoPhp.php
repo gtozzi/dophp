@@ -354,7 +354,7 @@ class DoPhp {
 			// Inject the debug object
 			$pobj->debug = $this->__debug;
 
-			list($out, $headers) = $this->__runPage($pobj, $path);
+			list($out, $headers) = $this->__runPage($pobj);
 		} catch( dophp\PageDenied $e ) {
 			if( $def ) {
 				if( $def == $page ) {
