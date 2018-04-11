@@ -298,6 +298,9 @@ trait SmartyFunctionalities {
 		// Init smarty
 		$this->_smarty = self::newSmarty($this->_config);
 
+		// Init custom plugins
+		$this->_smarty->registerPlugin('block', 'mstrip', ['Page','mStrip']);
+
 		// Assign utility variables
 		$this->_smarty->assign('this', $this);
 		if( property_exists($this, '_name') )
@@ -315,6 +318,22 @@ trait SmartyFunctionalities {
 		// Init default template name
 		$base_file = basename($_SERVER['PHP_SELF'], '.php');
 		$this->_template = "$base_file.{$this->_name}.tpl";
+	}
+
+	/**
+	 * Smarty plugin
+	 *
+	 * Leaves only one space where multiple spaces are found
+	 */
+	public static function mStrip($params, $content, $smarty, &$repeat) {
+		if ( ! isset($content) )
+			return;
+
+		$out = preg_replace('/\s+/m', ' ', $content);
+		if ( $out === null )
+			throw new \Exception('Error in estrip block');
+
+		return $out;
 	}
 
 }
