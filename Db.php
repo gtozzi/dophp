@@ -549,6 +549,18 @@ class Db {
 		return $ord;
 	}
 
+	/**
+	 * Returns a dophp\Table instance (invokes Table::__construct)
+	 *
+	 * @param $name string: The table name
+	 * @return dophp\Table
+	 * @throws \Exception on invalid name
+	 * @see dophp\Table::__construct
+	 */
+	public function table($name) {
+		return new Table($this, $name);
+	}
+
 }
 
 
