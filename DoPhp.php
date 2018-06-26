@@ -7,6 +7,7 @@
 * @brief Main DoPhp framework class
 */
 
+require_once(__DIR__ . '/Url.php');
 require_once(__DIR__ . '/Debug.php');
 require_once(__DIR__ . '/Lang.php');
 require_once(__DIR__ . '/Db.php');

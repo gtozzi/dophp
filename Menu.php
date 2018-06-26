@@ -240,8 +240,8 @@ class MenuItem implements MenuInterface {
 			return false;
 
 		if( $this->_url ) {
-			$reqUrl = Utils::parseUrl($url);
-			$myUrl = Utils::parseUrl($this->_url);
+			$reqUrl = Url::parseUrl($url);
+			$myUrl = Url::parseUrl($this->_url);
 			if(
 				( ! isset($myUrl['path']) || $myUrl['path'] == $reqUrl['path'] )
 				&&
