@@ -654,9 +654,10 @@ class DoPhp {
 
 	/**
 	 * Called at shutdown, trick to catch fatal errors, sets a 500 header
+	 * when possible
 	 */
 	public static function shutdown_handler() {
-		if( error_get_last() )
+		if( error_get_last() && ! headers_sent() )
 			header("HTTP/1.1 500 Internal Server Error");
 	}
 
