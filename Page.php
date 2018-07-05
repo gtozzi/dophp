@@ -516,7 +516,7 @@ trait CrudFunctionalities {
 		$fields = $this->_model->insert($_POST, $_FILES);
 
 		if( $fields === null ) // Data has been created correctly
-			$this->_headers['Location'] = Utils::fullPageUrl($this->actionUrl('admin'),null);
+			$this->_headers['Location'] = Url::fullPageUrl($this->actionUrl('admin'),null);
 
 		$this->_smarty->assign('pageTitle', _('Insert') . ' ' . $this->_model->getNames()[0]);
 		$this->_smarty->assign('fields', $fields);
@@ -548,7 +548,7 @@ trait CrudFunctionalities {
 		$fields = $this->_model->edit($pk, $_POST, $_FILES);
 
 		if( $fields === null ) // Data has been updated correctly
-			$this->_headers['Location'] = Utils::fullPageUrl($this->actionUrl('admin',$pk),null);
+			$this->_headers['Location'] = Url::fullPageUrl($this->actionUrl('admin',$pk),null);
 
 		$this->_smarty->assign('pageTitle', _('Edit') . ' ' . $this->_model->getNames()[0] . " #$pk");
 		$this->_smarty->assign('pk', $pk);
@@ -568,7 +568,7 @@ trait CrudFunctionalities {
 		$errors = $this->_model->delete($pk);
 
 		if( ! $errors ) // Delete succesful
-			$this->_headers['Location'] = Utils::fullPageUrl($this->actionUrl('admin',$pk),null);
+			$this->_headers['Location'] = Url::fullPageUrl($this->actionUrl('admin',$pk),null);
 
 		$this->_smarty->assign('strCantDelete', _('Can\'t delete'));
 

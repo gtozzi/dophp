@@ -258,7 +258,7 @@ class DoPhp {
 				return;
 			}
 
-			$to = dophp\Utils::fullPageUrl($def, $key);
+			$to = dophp\Url::fullPageUrl($def, $key);
 			header("HTTP/1.1 301 Moved Permanently");
 			header("Location: $to");
 			echo $to;
@@ -367,7 +367,7 @@ class DoPhp {
 
 				self::addAlert(new dophp\LoginErrorAlert($e));
 
-				$to = dophp\Utils::fullPageUrl($def, $key);
+				$to = dophp\Url::fullPageUrl($def, $key);
 				header("HTTP/1.1 303 Login Required");
 				header("Location: $to");
 				echo $e->getMessage();

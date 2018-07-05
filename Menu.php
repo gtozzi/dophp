@@ -35,7 +35,7 @@ interface MenuInterface {
 	* Returns the item's childs
 	*/
 	public function getChilds();
-	
+
 	/**
 	* Returns an array containing the current active path.
 	*
@@ -136,7 +136,7 @@ class Menu implements MenuInterface {
 	public function getChilds() {
 		return $this->_root->getChilds();
 	}
-	
+
 	public function getBreadcrumb($url=null) {
 		if( $url === null )
 			$url = $this->_currentUrl;
@@ -254,7 +254,7 @@ class MenuItem implements MenuInterface {
 				return true;
 		}
 
-		if( $this->_alt && preg_match($this->_alt, Utils::fullUrl($url)) )
+		if( $this->_alt && preg_match($this->_alt, Url::fullUrl($url)) )
 			return true;
 
 		return false;
