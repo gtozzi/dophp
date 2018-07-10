@@ -137,7 +137,7 @@ class Url {
 		return $parsed;
 	}
 
-		/**
+	/**
 	* Returns the full URL of a page
 	*
 	* @param $page string: The page name or relative url (if $do is null)
