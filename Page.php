@@ -299,7 +299,7 @@ trait SmartyFunctionalities {
 		$this->_smarty = self::newSmarty($this->_config);
 
 		// Init custom plugins
-		$this->_smarty->registerPlugin('block', 'mstrip', ['Page','mStrip']);
+		$this->_smarty->registerPlugin('block', 'mstrip', ['dophp\SmartyFunctionalities','mStrip']);
 
 		// Assign utility variables
 		$this->_smarty->assign('this', $this);
