@@ -1390,7 +1390,342 @@ class Table {
 
 
 /**
+ * An error occurred where parsing a Select Query string
+ */
+class SelectQueryStringParseException extends \Exception {
+	/** The queryb being parsed */
+	public $query;
+
+	public function __construct( string $query, string $message ) {
+		$this->query = $query;
+
+		parent::__construct($message . ' in query ' . $query);
+	}
+}
+
+
+/**
+ * Represents a SELECT query
+ *
+ * @warning This class is experimental and will be subject to modifications
+ */
+class SelectQuery {
+
+	/** Internal usage, make private in PHP 7.2 */
+	const _PARTS = [ 'SELECT', 'FROM', 'WHERE', 'ORDER BY' ];
+
+	/**
+	 * The columns definitions. Array
+	 */
+	protected $_cols;
+
+	/**
+	 * The FROM part of the query to be executed to get data for the table,
+	 * without the "FROM" keyword, must be defined in child
+	 */
+	protected $_from;
+
+	/** Where clause, if any, without "WHERE" keyword */
+	protected $_where = null;
+
+	/** Group by, if any, without "GROUP BY" keyword */
+	protected $_groupBy = null;
+
+	/** Order by, if any, without "ORDER BY" keyword */
+	protected $_orderBy = null;
+
+	/** Limit clause, if any, without "LIMIT" keyword */
+	protected $_limit = null;
+
+	/**
+	 * Construct the query from a string or an array of parameters
+	 *
+	 * @see self::_constructFromArray
+	 * @see self::_constructFromString
+	 */
+	public function __construct($query) {
+		if( is_array($query) )
+			$this->_constructFromArray($query);
+		elseif( is_string($query) )
+			$this->_constructFromString($query);
+		else
+			throw new \Exception('Invalid argument type: must be array or string');
+	}
+
+	/** Constructs a query from an array of parameters
+	 * 
+	 * @param $query associative array:
+	 *        - cols: Column definitions, array or string.
+	 *                Every index is the unique column name (alias).
+	 *                Possible keys in definition array:
+	 *                - qname: Name of the column as defined in the query
+	 *                  (ie. `a`.`id`). Mandatory. This will be the only field
+	 *                  if a string is given
+	 *                - pk: Tells whether this column is part of the PK
+	 *        - from: The FROM part of the query, without the FROM keyword.
+	 *                Also includes joins. Mandatory.
+	 *        - where: The WHERE part of the query, without the WHERE keyword
+	 *        - groupBy: The GROUP BY part of the query, without the GROUP BY
+	 *                   keyword
+	 */
+	protected function _constructFromArray(array $query) {
+		if( ! is_array($query) )
+			throw new \Exception('Query definition must be an array');
+
+		if( ! isset($query['cols']) )
+			throw new \Exception('Columns definitions are mandatory');
+		if( ! is_array($query['cols']) )
+			throw new \Exception('Columns definitions must be an array');
+
+		$this->_cols = $query['cols'];
+		foreach( $this->_cols as &$col ) {
+			if( is_string($col) ) {
+				$col = [ 'qname' => $col ];
+				continue;
+			}
+
+			if( ! is_array($col) )
+				throw new \Exception('Column must be an array');
+			if( ! isset($col['qname']) )
+				throw new \Exception('Column must define qname');
+		}
+		unset($col);
+
+		if( ! isset($query['from']) )
+			throw new \Exception('From part is mandatory');
+		if( ! is_string($query['from']) )
+			throw new \Exception('From must be a string');
+
+		$this->_from = $query['from'];
+
+		if( isset($query['where']) ) {
+			if( ! is_string($query['where']) )
+				throw new \Exception('Where must be a string');
+
+			$this->_where = $query['where'];
+		}
+
+		if( isset($query['groupBy']) ) {
+			if( ! is_string($query['groupBy']) )
+				throw new \Exception('Group BY must be a string');
+
+			$this->_where = $query['groupBy'];
+		}
+
+		if( isset($query['orderBy']) ) {
+			if( ! is_string($query['orderBy']) )
+				throw new \Exception('Order BY must be a string');
+
+			$this->_orderBy = $query['orderBy'];
+		}
+	}
+
+	/**
+	 * Tries to parse a select query, only very simple queries are supported
+	 */
+	protected function _constructFromString(string $query) {
+		//TODO: Use cache if available
+		if( ! is_string($query) )
+			throw new SelectQueryStringParseException($query, 'Query must be a string');
+
+		// Will build an array query to be used later
+		$arrQuery = [];
+
+		// Remove spaces and ;
+		$query = trim(rtrim(trim($query), ';'));
+
+		// Find query parts
+		$partpos = [];
+		$last = null;
+		foreach( self::_PARTS as $pk ) {
+			$ppos = self::__strposnc($query, $pk);
+			if( $ppos === false )
+				continue;
+
+			if( isset($last) && $ppos <= $last['start'] )
+				throw new SelectQueryStringParseException($query, "Found $pk in wrong order");
+			$partpos[$pk] = [ 'start' => $ppos, 'end' => null ];
+			if( isset($last) )
+				$last['end'] = $ppos;
+			$last = & $partpos[$pk];
+		}
+		unset($last);
+
+		// Split query into parts
+		$parts = [];
+		$parsedParts = [];
+		foreach( $partpos as $pk => $pi ) {
+			if( $pi['end'] === null )
+				$pi['end'] = strlen($query);
+			$parts[$pk] = trim(substr($query, $pi['start'], $pi['end']-$pi['start']));
+		}
+
+		// Parse SELECT
+		if( ! isset($parts['SELECT']) )
+			throw new SelectQueryStringParseException('Missing SELECT');
+		$colDefs = substr($parts['SELECT'], strlen('SELECT'));
+		if( $colDefs === false )
+			throw new SelectQueryStringParseException($query, 'Error parsing column definitions');
+		$cols = self::__parseColDefs($colDefs);
+		$arrQuery['cols'] = $cols;
+		$parsedParts['SELECT'] = true;
+
+		// Parse FROM
+		if( ! isset($parts['FROM']) )
+			throw new SelectQueryStringParseException($query, 'Missing FROM');
+		$from = substr($parts['FROM'], strlen('FROM'));
+		$arrQuery['from'] = $from;
+		$parsedParts['FROM'] = true;
+
+		// Parse WHERE
+		if( isset($parts['WHERE']) ) {
+			$where = substr($parts['WHERE'], strlen('WHERE'));
+			$arrQuery['where'] = $where;
+			$parsedParts['WHERE'] = true;
+		}
+
+		// Parse ORDER BY
+		if( isset($parts['ORDER BY']) ) {
+			$orderBy = substr($parts['ORDER BY'], strlen('ORDER BY'));
+			$arrQuery['orderBy'] = $orderBy;
+			$parsedParts['ORDER BY'] = true;
+		}
+
+		// Consinstency check
+		foreach( $parts as $pk => $pi )
+			if( ! isset($parsedParts[$pk]) || ! $parsedParts[$pk] )
+				throw new SelectQueryStringParseException($query, "$pk parsing not implemented");
+
+		$this->_constructFromArray($arrQuery);
+	}
+
+	/** Parses a string column definition into an array column definition */
+	private static function __parseColDefs(string $colDefs) {
+		//TODO: improve, many bugs
+		$cols = [];
+		$colRe = '/^\s*([^\s]+)(?:\s+AS\s+([^\s]+))?\s*$/';
+		foreach( explode(',', $colDefs) as $cd ) {
+			$matches = [];
+			$r = preg_match($colRe, $cd, $matches);
+			if( ! $r )
+				throw new \Exception("Unparsable column definition: \"$cd\"");
+
+			$parsed = self::__parseColName($matches[1]);
+			end($parsed);
+			$lk = key($parsed);
+			reset($parsed);
+
+			$col = [ 'qname' => $matches[1] ];
+			$colk = isset($matches[2]) ? $matches[2] : $parsed[$lk];
+
+			if( array_key_exists($colk, $cols) )
+				throw new \Exception("Duplicate column alias \"$colk\"");
+			$cols[$colk] = $col;
+		}
+		return $cols;
+	}
+
+	/** Parses a column name: splits it into parts and unquote it */
+	private static function __parseColName(string $colname) {
+		//TODO: improve, many bugs
+		$parts = explode('.', $colname);
+		foreach( $parts as &$p )
+			$p = trim($p, '`');
+		unset($p);
+		return $parts;
+	}
+
+	/** Case- insensitive strpos */
+	private static function __strposnc(string $haystack, string $needle, int $offset = 0) {
+		$lower = strpos(strtolower($haystack), strtolower($needle), $offset);
+		if( $lower !== false )
+			return $lower;
+
+		$upper = strpos(strtoupper($haystack), strtoupper($needle), $offset);
+		return $upper;
+	}
+
+	/**
+	 * Returns column definitions
+	 */
+	public function cols(): array {
+		return $this->_cols;
+	}
+
+	/**
+	 * Returns a single column
+	 *
+	 * @param $ck string: The column's unique ID
+	 * @return string
+	 */
+	public function col(string $ck): array {
+		if( ! isset($this->_cols[$ck]) )
+			throw new \Exception("Unknown column \"$ck\"");
+		return $this->_cols[$ck];
+	}
+
+	/**
+	 * Returns the query as SQL
+	 *
+	 * @todo Use Caching
+	 */
+	public function asSql(): string {
+		foreach( $this->_cols as $name => $def )
+			$select[] = $def['qname'] . " AS $name";
+
+		$sql = 'SELECT ' . implode(', ', $select) . "\nFROM " . $this->_from;
+		if( $this->_where )
+			$sql .= "\nWHERE {$this->_where}";
+		if( $this->_groupBy )
+			$sql .= "\nGROUP BY {$this->_groupBy}";
+		if( $this->_orderBy )
+			$sql .= "\nORDER BY {$this->_orderBy}";
+		if( $this->_limit )
+			$sql .= "\nLIMIT {$this->_limit}";
+
+		return $sql;
+	}
+
+	/**
+	 * @see self::asSql()
+	 */
+	public function __toString() {
+		return $this->asSql();
+	}
+
+	/**
+	 * Appends a where condition to this query
+	 *
+	 * @param $where string: The where condition
+	 * @param $op string: Operator: 'AND' or 'OR'
+	 */
+	public function addWhere(string $where, string $op='AND') {
+		if( $op != 'AND' && $op != 'OR' )
+			throw new \Exception("Unknown operator $op");
+
+		if( $this->_where === null ) {
+			$this->_where = $where;
+			return;
+		}
+
+		$this->_where = "( {$this->_where} ) $op ( $where )";
+	}
+
+	/**
+	 * Sets a new limit clause
+	 *
+	 * @param $limit string: The new clause, wihout LIMIT keyword
+	 */
+	public function setLimit(string $limit) {
+		$this->_limit = $limit;
+	}
+}
+
+
+/**
 * Represents a where condition query
+*
+* @deprecated
 */
 class Where {
 
@@ -1519,6 +1854,8 @@ class Where {
 
 /**
 * Represents a join in a query
+*
+* @deprecated
 */
 class Join {
 
