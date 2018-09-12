@@ -1467,6 +1467,8 @@ class SelectQuery {
 	 *        - where: The WHERE part of the query, without the WHERE keyword
 	 *        - groupBy: The GROUP BY part of the query, without the GROUP BY
 	 *                   keyword
+	 *        - orderBy: The ORDER BY part of the query, without the ORDER BY
+	 *                   keyword
 	 */
 	protected function _constructFromArray(array $query) {
 		if( ! is_array($query) )

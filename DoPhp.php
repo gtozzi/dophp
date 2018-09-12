@@ -518,6 +518,17 @@ class DoPhp {
 	}
 
 	/**
+	* Returns Memcache instance, if available
+	*
+	* @return object: A Memcache instance or null
+	*/
+	public static function cache() {
+		if( ! self::$__instance )
+			throw new Exception(self::INSTANCE_ERROR);
+		return self::$__instance->__cache;
+	}
+
+	/**
 	* Returns a model by name
 	*
 	* @param $name The case-sensitive model's name (without prefix)
