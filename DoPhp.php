@@ -56,6 +56,8 @@ class DoPhp {
 	private $__cache = null;
 	/** The debugger object */
 	private $__debug;
+	/** Custom excetion printer, if any */
+	private $__customExceptionPrinter = null;
 
 	/**
 	* Handles page rendering and everything
@@ -622,6 +624,24 @@ class DoPhp {
 	}
 
 	/**
+	 * Sets a custom printer to be called when an exception is catched
+	 *
+	 * @param $callable A callable, the following parameters are passed:
+	 *                  - exception: The raised exception
+	 *                  If may return true to also trigger the default exception
+	 *                  printing
+	 */
+	public static function setCustomExceptionPrinter( $callable ) {
+		if( ! self::$__instance )
+			throw new Exception(self::INSTANCE_ERROR);
+
+		if( ! is_callable($callable) )
+			throw new \Exception('Custom exception printer must be callable');
+
+		self::$__instance->__customExceptionPrinter = $callable;
+	}
+
+	/**
 	 * DoPhp's error handler, just takes care of setting a 500 header
 	 * and leaves the rest to the default handler
 	 */
@@ -678,16 +698,24 @@ class DoPhp {
 	 * @param $e Exception
 	 */
 	private function __printException( $e ) {
-		if( $this->__conf['debug'] ) {
-			$title = 'DoPhp Catched Exception';
-			if( dophp\Utils::isAcceptedEncoding('text/html') )
-				echo "<html><h1>$title</h1>\n"
-					. dophp\Utils::formatException($e, true)
-					. "\n</html>";
-			else
-				echo $title . "\n\n" . dophp\Utils::formatException($e);
-		} else
-			echo _('Internal Server Error, please contact support or try again later') . '.';
+		if( $this->__customExceptionPrinter && is_callable($this->__customExceptionPrinter))
+			$print = ($this->__customExceptionPrinter)($e);
+		else
+			$print = true;
+
+		if( $print ) {
+			if( $this->__conf['debug'] ) {
+				$title = 'DoPhp Catched Exception';
+				if( dophp\Utils::isAcceptedEncoding('text/html') )
+					echo "<html><h1>$title</h1>\n"
+						. dophp\Utils::formatException($e, true)
+						. "\n</html>";
+				else
+					echo $title . "\n\n" . dophp\Utils::formatException($e);
+			} else
+				echo _('Internal Server Error, please contact support or try again later') . '.';
+		}
+
 		error_log('DoPhp Catched Exception: ' . dophp\Utils::formatException($e, false));
 	}
 }
