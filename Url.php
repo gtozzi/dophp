@@ -201,4 +201,13 @@ class Url {
 		return self::buildUrl(self::fullUrlArray($url));
 	}
 
+	/**
+	 * Returns actual URL for the invoked page
+	 *
+	 * @return string
+	 */
+	public static function myUrl() {
+		return (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http")
+			. "://$_SERVER[HTTP_HOST]$_SERVER[REQUEST_URI]";
+	}
 }
