@@ -855,6 +855,41 @@ class PageRedirect extends \Exception {
 }
 
 
+/**
+ * Exception raised to immediately redirect to a url
+ */
+class UrlRedirect extends \Exception {
+
+	protected $_url;
+
+	/**
+	 * Construct the redirect
+	 *
+	 * @param $url Reddirect destination
+	 */
+	public function __construct($url) {
+		parent::__construct();
+		$this->_url = $url;
+	}
+
+	/**
+	 * @see PageInterface::headers()
+	 */
+	public function headers() {
+		return [
+			'Location' => $this->_url,
+		];
+	}
+
+	/**
+	 * Returns redirect body
+	 */
+	public function body() {
+		return "Redirecting to {$this->_url}";
+	}
+}
+
+
 namespace dophp\debug;
 
 /**

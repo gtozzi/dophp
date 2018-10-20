@@ -440,6 +440,9 @@ class DoPhp {
 			if( $depth >= $maxDepth )
 				throw new \Exception("Maximum internal redirect depth of $maxDepth reached");
 			return $this->__runPage($e->getPage(), $depth + 1);
+		} catch( dophp\UrlRedirect $e ) {
+			$out = $e->body();
+			$headers = $e->headers();
 		}
 
 		// Write cache if needed
