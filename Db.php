@@ -1718,8 +1718,8 @@ class SelectQuery {
 	 *
 	 * @param $limit string: The new clause, wihout LIMIT keyword
 	 */
-	public function setLimit(string $limit) {
-		$this->_limit = $limit;
+	public function setLimit($limit) {
+		$this->_limit = (string)$limit;
 	}
 }
 
