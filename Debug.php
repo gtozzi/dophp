@@ -96,7 +96,7 @@ class SessionDebug extends Debug {
 		if( session_status() != PHP_SESSION_ACTIVE )
 			return;
 
-		if( ! isset($_SESSION[self::SESS_KEY]) )
+		if( ! isset($_SESSION[self::SESS_KEY]) || ! is_array($_SESSION[self::SESS_KEY]) )
 			$_SESSION[self::SESS_KEY] = [];
 
 		$_SESSION[self::SESS_KEY][] = $request;
