@@ -9,12 +9,12 @@ namespace dophp\widgets;
  */
 interface Widget {
 
-	/** Returns element's unique ID */
+	/** Returns element's unique ID, must be HTML's ID safe */
 	public function getId(): string;
 
 	/**
 	 * Returns this object's "class" unique identifier, to be used as key for
-	 * storing/retrieving data
+	 * storing/retrieving data, must be HTML's ID safe
 	 */
 	public function getClsId(): string;
 }
@@ -35,7 +35,7 @@ abstract class BaseWidget implements Widget {
 	 * Base constructor, generates the unique id
 	 */
 	public function __construct() {
-		$this->__clsId = get_class($this);
+		$this->__clsId = str_replace('\\','_',get_class($this));
 		$prefix = strtolower($this->__clsId) . '_';
 		$this->_id = uniqid($prefix);
 	}
