@@ -36,7 +36,8 @@ class DoPhpNewProject:
 			if os.path.isdir(s):
 				shutil.copytree(s, d, symlinks, ignore)
 			else:
-				shutil.copy2(s, d)
+				follow = not symlinks
+				shutil.copy2(s, d, follow_symlinks=follow)
 
 	def create(self):
 		if not os.path.isdir(self.dest):
