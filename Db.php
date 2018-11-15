@@ -671,8 +671,8 @@ class Result implements \Iterator {
 			if( ! $meta )
 				throw new \Exception("No meta for column $idx");
 
-			if( isset($types[$meta['name']]) )
-				$type = $types[$meta['name']];
+			if( isset($this->_types[$meta['name']]) )
+				$type = $this->_types[$meta['name']];
 			else
 				$type = Table::getType($meta['native_type'], $meta['len']);
 
@@ -1347,7 +1347,7 @@ class Table {
 	protected function _buildColumList($cols, $alias=null, $joins=null) {
 		if( ! $cols )
 			return "\t*";
-		
+
 		if( $cols === true )
 			$cols = $this->_pk;
 
@@ -1453,7 +1453,7 @@ class SelectQuery {
 	}
 
 	/** Constructs a query from an array of parameters
-	 * 
+	 *
 	 * @param $query associative array:
 	 *        - cols: Column definitions, array or string.
 	 *                Every index is the unique column name (alias).
