@@ -76,11 +76,23 @@ class Utils {
 	public static function formatNumber($num, $decimals=null, $dec_point=',', $thousands_sep='.') {
 		if( $num === null )
 			return self::NULL_FMT;
+		if( $num instanceof Decimal )
+			$num = $num->toDouble();
 
 		if( $decimals === null )
 			$decimals = self::guessDecimals($num);
 
 		return number_format($num, $decimals, $dec_point, $thousands_sep);
+	}
+
+	/**
+	 * Return a formatted version of a currency
+	 *
+	 * @see self::formatNumber
+	 * @return string: ie. "€ 1.000,00"
+	 */
+	public static function formatCurrency($num, $symbol='€', $decimals=2, $dec_point=',', $thousands_sep='.') {
+		return $symbol . ' ' . self::formatNumber($num, $decimals, $dec_point, $thousands_sep);
 	}
 
 	/**
