@@ -80,11 +80,11 @@ class Validator {
 			$vname = 'dophp\\' . $type . '_validator';
 
 			if( substr($type,0,4) == 'file' )
-				$validator = new $vname(isset($this->__files[$k])?$this->__files[$k]:null, $options, $this->__files);
+				$validator = new $vname(isset($this->__files[$k])?$this->__files[$k]:null, $options, $this->__files, $k);
 			elseif( substr($type,0,5) == 'array' )
-				$validator = new $vname(isset($this->__post[$k])?$this->__post[$k]:null, $options, $this->__post);
+				$validator = new $vname(isset($this->__post[$k])?$this->__post[$k]:null, $options, $this->__post, $k);
 			else
-				$validator = new $vname(isset($this->__post[$k])?$this->__post[$k]:null, $options, $this->__post);
+				$validator = new $vname(isset($this->__post[$k])?$this->__post[$k]:null, $options, $this->__post, $k);
 			$data[$k] = $validator->clean();
 			if( $err = $validator->validate() )
 				$errors[$k] = $err;
@@ -103,24 +103,27 @@ interface field_validator {
 	* @param mixed value: The field value
 	* @param array options: The options for this field
 	* @param array values: The raw POST data
+	* @param string name: This field's name (may be null)
 	*/
-	public function __construct($value, $options, $values);
+	public function __construct($value, $options, $values, $name=null);
 	/** Returns error string or false */
 	public function validate();
 	/** Returns cleaned value */
 	public function clean();
+	/** Returns field's name */
+	public function name();
 }
 
 /**
 * Base abstract validator class.
 *
-* Common rules: 'required'=>boolean|field_name|lambda($field_values, $all_values).
+* Common rules: 'required'=>boolean|field_name|lambda($field_values, $all_values, $field_validator_object).
 *                   When true (or when the lambda returns true, check that field
 *                   is not empty. If a string field_name is given, this field is
 *                   required when the other field is false
 *               'choices'=>array()
 *                   When specified, the validated value MUST be in_array(<choice>)
-*               'custom'=>lambda($field_values, $all_values).
+*               'custom'=>lambda($field_values, $all_values, $field_validator_object).
 *                   validates using custom function. Must return string error or
 *                   null on success.
 *               'default'=>specify a default value to be used in place of null
@@ -129,12 +132,14 @@ interface field_validator {
 */
 abstract class base_validator implements field_validator {
 
+	private $__name;
 	private $__value;
 	private $__values;
 	private $__options;
 	private $__cleaned;
 
-	public function __construct($value, $options, $values) {
+	public function __construct($value, $options, $values, $name=null) {
+		$this->__name = $name;
 		$this->__value = $value;
 		$this->__values = $values;
 		$this->__options = $options;
@@ -149,6 +154,10 @@ abstract class base_validator implements field_validator {
 			$this->__cleaned = $this->do_clean($nullified, $this->__options);
 	}
 
+	public function name() {
+		return $this->__name;
+	}
+
 	public function clean() {
 		return $this->__cleaned;
 	}
@@ -160,7 +169,7 @@ abstract class base_validator implements field_validator {
 		// Perform common validation tasks
 		if( array_key_exists('required',$o) && $o['required'] ) {
 			if( is_callable($o['required']) )
-				$req = $o['required']($v, $this->__values);
+				$req = $o['required']($v, $this->__values, $this);
 			elseif( is_string($o['required']) )
 				$req = ! isset($this->__values[$o['required']]) || ! $this->__values[$o['required']];
 			else
@@ -173,7 +182,7 @@ abstract class base_validator implements field_validator {
 			}
 		}
 		if( array_key_exists('custom',$o) && $o['custom'] ) {
-			$err = $o['custom']($v, $this->__values);
+			$err = $o['custom']($v, $this->__values, $this);
 			if( $err )
 				return $err;
 		}
@@ -500,11 +509,13 @@ class file_validator extends base_validator {
 */
 class array_validator implements field_validator {
 
+	private $__name;
 	private $__value = null;
 	private $__error = null;
 	private $__options;
 
-	public function __construct($value, $options, $values) {
+	public function __construct($value, $options, $values, $name=null) {
+		$this->__name = $name;
 		$this->__options = $options;
 
 		if( ! $value ) {
@@ -522,6 +533,10 @@ class array_validator implements field_validator {
 		}else
 			$this->__value = $value;
 
+	}
+
+	public function name() {
+		return $this->__name;
 	}
 
 	public function clean() {

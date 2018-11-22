@@ -161,7 +161,7 @@ abstract class BaseField extends BaseFormWidget implements Field {
 	 */
 	protected function _validate($value, array $all) {
 		$vclass = '\\dophp\\' . $this->_vtype . '_validator';
-		$validator = new $vclass($value, $this->_getValidationOptions(), $all);
+		$validator = new $vclass($value, $this->_getValidationOptions(), $all, $this->getName());
 		return [ $validator->clean(), $validator->validate() ];
 	}
 
