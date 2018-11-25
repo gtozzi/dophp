@@ -537,6 +537,8 @@ class AsyncFileField extends InputField {
  */
 class BoolField extends InputField {
 
+	const DEFAULT = false;
+
 	protected $_type = 'checkbox';
 	protected $_vtype = 'bool';
 
@@ -549,7 +551,7 @@ class BoolField extends InputField {
 	protected function _getValidationOptions(): array {
 		$vo = parent::_getValidationOptions();
 		if( ! isset($vo['default']) )
-			$vo['default'] = false;
+			$vo['default'] = static::DEFAULT;
 		return $vo;
 	}
 }

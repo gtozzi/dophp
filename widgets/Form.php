@@ -142,6 +142,7 @@ class Form extends BaseWidget {
 
 		$this->_fields[$field->getName()] = $field;
 		$field->setForm($this);
+		$field->setNamespace($this->_namespace);
 
 		if( $groupName )
 			$this->_fieldGroups[$groupName]->addField($field);

@@ -27,6 +27,9 @@ interface FormWidget extends Widget {
 	/** Returns widgets's namespace */
 	public function getNamespace(): array;
 
+	/** Sets widgets's namespace */
+	public function setNamespace(array $namespace);
+
 	/** Returns widgets's User-friendly name */
 	public function getLabel(): string;
 }
@@ -76,6 +79,10 @@ abstract class BaseFormWidget extends BaseWidget implements FormWidget {
 
 	public function getNameSpace(): array {
 		return $this->_namespace;
+	}
+
+	public function setNamespace(array $namespace) {
+		$this->_namespace = $namespace;
 	}
 
 	public function getLabel(): string {
