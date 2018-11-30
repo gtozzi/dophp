@@ -118,6 +118,12 @@ abstract class TablePage extends \dophp\HybridRpcMethod {
 	}
 
 	/**
+	 * Inits the menu (when interactive), may be overridden in child
+	 */
+	protected function _initMenu() {
+	}
+
+	/**
 	 * Override child run determine whether to return the HTML or the JSON code
 	 */
 	public function run() {
