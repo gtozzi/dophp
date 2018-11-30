@@ -33,6 +33,9 @@ trait BackendComponent {
 	/** The gender of what is being inserted (m/f) */
 	protected $_whatGender = 'm';
 
+	/** Name of the base template to extend */
+	protected $_baseTpl = 'base-backend.tpl';
+
 	/**
 	 * Inits common CRUD stuff
 	 */
@@ -178,8 +181,9 @@ abstract class TablePage extends \dophp\HybridRpcMethod {
 		$this->_pageTitle = $this->title ?? _('List') . ' ' .  ucwords($this->_what);
 
 		// By default, use the generic "admin" template
-		$this->_template = 'crud/admin.tpl';
+		$this->_template = 'backend/tablepage.tpl';
 
+		$this->_smarty->assignByRef('baseTpl', $this->_baseTpl);
 		$this->_smarty->assign('table', $this->_table);
 		$this->_smarty->assignByRef('pageTitle', $this->_pageTitle);
 		$this->_smarty->assign('action', '?'.\DoPhp::BASE_KEY."={$this->_name}");
@@ -412,7 +416,7 @@ abstract class FormPage extends \dophp\PageSmarty {
 				break;
 			}
 		if( ! $tplFound )
-			$this->_template = 'crud/mod.tpl';
+			$this->_template = 'backend/formpage.tpl';
 
 		// Child init tasks, if any
 		$this->_initChild($id);
@@ -491,6 +495,7 @@ abstract class FormPage extends \dophp\PageSmarty {
 		$this->_smarty->assignByRef('form', $this->_form);
 
 		// Assign useful smarty variables
+		$this->_smarty->assignByRef('baseTpl', $this->_baseTpl);
 		$this->_smarty->assignByRef('what', $this->_what);
 		$this->_smarty->assignByRef('whatGender', $this->_whatGender);
 
