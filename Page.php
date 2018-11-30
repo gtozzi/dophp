@@ -16,7 +16,8 @@ require_once(__DIR__ . '/pages/base.php');
 require_once(__DIR__ . '/pages/exceptions.php');
 
 require_once(__DIR__ . '/pages/smarty.php');
-require_once(__DIR__ . '/pages/oldcrud.php');
+require_once(__DIR__ . '/pages/crud.php');
 require_once(__DIR__ . '/pages/methods.php');
+require_once(__DIR__ . '/pages/backend.php');
 
 require_once(__DIR__ . '/pages/debug.php');

@@ -128,6 +128,9 @@ abstract class PageBase {
 	/** Will store the last login error occurred, if any */
 	protected $_loginError = null;
 
+	/** The optional page title, mostly useful in interactive pages */
+	protected $_pageTitle = null;
+
 	/**
 	* Constructor
 	*

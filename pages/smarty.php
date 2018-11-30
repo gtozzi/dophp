@@ -83,6 +83,8 @@ trait SmartyFunctionalities {
 			$this->_smarty->assignByRef('alerts', $this->_alerts);
 		if( property_exists($this, '_loginError') )
 			$this->_smarty->assignByRef('loginError', $this->_loginError);
+		if( property_exists($this, '_pageTitle') )
+			$this->_smarty->assignByRef('pageTitle', $this->_pageTitle);
 
 		// Init default template name
 		$base_file = basename($_SERVER['PHP_SELF'], '.php');
