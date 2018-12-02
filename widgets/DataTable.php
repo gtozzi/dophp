@@ -113,6 +113,9 @@ class DataTable extends BaseWidget {
 	/** Tells whether elements in this table can be selected */
 	public $selectable = false;
 
+	/** Name of the preferences table (es. prefs_table) */
+	protected $_prefsTable = 'datatable_prefs';
+
 	/**
 	 * Inits some props at runtime, overridable in child
 	 */
@@ -201,9 +204,12 @@ class DataTable extends BaseWidget {
 	 * @return [ colid, ascdesc ] or [ colidx, ascdesc ] or null if not found
 	 */
 	protected function _getSavedOrder(bool $asIdx = false) /** TODO:PHP 7.2 :?array */ {
+		if( ! $this->_prefsTable )
+			return null;
+
 		$q = "
 			SELECT `sort_col`, `sort_ord`
-			FROM `datatable_prefs`
+			FROM `" . $this->_prefsTable . "`
 			WHERE `collaboratore` = ? AND `table` = ?
 		";
 		$p = [ $this->_user->getUid(), $this->getClsId() ];
