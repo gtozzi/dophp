@@ -1140,10 +1140,10 @@ class DataTable extends BaseWidget {
 
 				// if current year is divisible by $step
 				// go to the next block of years
-                if(($currY%$step)==1){
-                    $currY--;
-                    break;
-                }
+				if(($currY%$step)==1){
+					$currY--;
+					break;
+				}
 
 				// decrease year of the list by one
 				$currY--;
@@ -1247,7 +1247,7 @@ class DataTableColumn extends DataTableBaseColumn {
 	public function __construct(string $id, array $opt) {
 		parent::__construct($id);
 		$this->descr = isset($opt['descr']) ? $opt['descr'] : str_replace('_',' ',ucfirst($this->id));
-		$this->qname = isset($opt['qname']) ? $opt['qname'] : Dophp::db()->quoteObj($this->id);
+		$this->qname = isset($opt['qname']) ? $opt['qname'] : \Dophp::db()->quoteObj($this->id);
 		$this->type = isset($opt['type']) ? $opt['type'] : null;
 		if( isset($opt['visible']) )
 			$this->visible = (bool)$opt['visible'];
