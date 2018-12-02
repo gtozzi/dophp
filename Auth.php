@@ -95,7 +95,7 @@ abstract class AuthBase implements AuthInterface {
 	/**
 	 * Process and apply login result
 	 *
-	 * @param $uid The user id, ad returned from _doLogin()
+	 * @param $uid mixed: The user id, ad returned from _doLogin()
 	 * @return boolean: True on success or False on failure
 	 */
 	protected function _processLogin($uid) {

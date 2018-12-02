@@ -9,6 +9,7 @@
 
 namespace dophp;
 
+
 /**
 * The main language class.
 *
@@ -346,32 +347,32 @@ class Lang {
 	/**
 	 * Temporarily sets 'C' locale for the given categpory
 	 *
-	 * @see popLocale
+	 * @see self::popLocale
 	 * @param $category int: the locale category, as in builtin setlocale()
 	 */
 	public static function pushLocale($category) {
 		if( self::$_pushedLocale !== null || self::$_pushedLocaleCategory !== null )
-			throw new Exception('Locale is already pushed, can\'t push twice');
+			throw new \Exception('Locale is already pushed, can\'t push twice');
 
 		self::$_pushedLocaleCategory = $category;
 		self::$_pushedLocale = setlocale(self::$_pushedLocaleCategory, 0);
 		if( ! self::$_pushedLocale )
-			throw new Exception('Couldn\'t read current locale');
+			throw new \Exception('Couldn\'t read current locale');
 		if( ! setlocale(self::$_pushedLocaleCategory, 'C') )
-			throw new Exception('Couldn\'t set C locale');
+			throw new \Exception('Couldn\'t set C locale');
 	}
 
 	/**
 	 * Restores the locale status as it was before calling pushLocale()
 	 *
-	 * @see pushLocale
+	 * @see self::pushLocale
 	 */
 	public static function popLocale() {
 		if( ! self::$_pushedLocale || ! self::$_pushedLocaleCategory )
-			throw new Exception('Locale is already pushed, can\'t push twice');
+			throw new \Exception('Locale is already pushed, can\'t push twice');
 
 		if( ! setlocale(self::$_pushedLocaleCategory, self::$_pushedLocale) )
-			throw new Exception('Couldn\'t restore previous locale');
+			throw new \Exception('Couldn\'t restore previous locale');
 		self::$_pushedLocaleCategory = null;
 		self::$_pushedLocale = null;
 	}

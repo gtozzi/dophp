@@ -11,6 +11,7 @@
 
 namespace dophp;
 
+require_once(__DIR__ . '/DoPhp.php');
 
 require_once(__DIR__ . '/pages/base.php');
 require_once(__DIR__ . '/pages/exceptions.php');

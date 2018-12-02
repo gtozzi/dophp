@@ -97,7 +97,7 @@ trait CrudFunctionalities {
 	/**
 	* Inits the actions variable, allows for more wide syntax
 	*
-	* @see _actions
+	* @see self::_actions
 	* @return array: actions variable
 	*/
 	protected function _initActions() {

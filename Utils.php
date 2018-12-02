@@ -116,7 +116,7 @@ class Utils {
 	 * @warning The output may contain sensitive data!
 	 * @param $exception Exception: The exception
 	 * @param $html bool: If true, will format as HTML
-	 * @return a string, text or html
+	 * @return string: text or html
 	 */
 	public static function formatException($exception, $html=false) {
 		if( $exception === null )
@@ -138,7 +138,7 @@ class Utils {
 		}
 
 		if( $db && ( $exception instanceof \PDOException
-				|| $exception instanceof dophp\StatementExecuteError ) ) {
+				|| $exception instanceof \dophp\StatementExecuteError ) ) {
 			$err .= "\n<li><b>Last Query:</b> " . $db->lastQuery . "</li>\n" .
 				'<li><b>Last Params:</b> ' . nl2br(print_r($db->lastParams,true)) . "</li>\n";
 		}
@@ -300,8 +300,8 @@ class Utils {
 	*
 	* @param $supported array: List of supported languages, in the form
 	*                          'en' or 'it_IT'
-	* @return The preferred language, if any matched, or the first of the
-	*         supported ones, if no match found
+	* @return string: The preferred language, if any matched, or the first of
+	*         the supported ones, if no match found
 	*/
 	public static function getBrowserLanguage($supported) {
 		if( ! array_key_exists('HTTP_ACCEPT_LANGUAGE',$_SERVER) || ! $_SERVER['HTTP_ACCEPT_LANGUAGE'] )
@@ -362,7 +362,7 @@ class Utils {
 	/**
 	* Find a class name case-insensitive
 	*
-	* @param $name The class name to search for
+	* @param $name string: The class name to search for
 	* @return string: The found class name, null on failure
 	*/
 	public static function findClass($name) {
@@ -377,8 +377,8 @@ class Utils {
 	* Makes a string filename-safe by replacing unsafe characters
 	* Uses the most wide range un unsafe characters possible
 	*
-	* @param $name The input string
-	* @param $replace The replace character
+	* @param $name string: The input string
+	* @param $replace char: The replace character
 	* @return string: The sanitized string
 	*/
 	public static function safeFileName($name, $replace='_') {
@@ -409,7 +409,7 @@ class Utils {
 	/**
 	* Returns the raw input data, after decoding it
 	*
-	* @return The raw decoded input
+	* @return string: The raw decoded input
 	*/
 	public static function decodeInput() {
 		if( isset($_SERVER['HTTP_CONTENT_ENCODING']) && $_SERVER['HTTP_CONTENT_ENCODING'] == 'gzip' ) {

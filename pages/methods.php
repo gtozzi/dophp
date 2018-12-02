@@ -22,7 +22,7 @@ abstract class BaseMethod extends PageBase implements PageInterface {
 	* Associative array defining accepted parameters, used for request
 	* validation.
 	*
-	* @see dophp\Validator
+	* @see \dophp\Validator
 	*/
 	protected $_params = array();
 
@@ -63,7 +63,6 @@ abstract class BaseMethod extends PageBase implements PageInterface {
 	* @param $pars array: Associative array of invalid parameters, passed ByRef
 	* @param $errors array: Associative array of errors, passed ByRef
 	* @throws PageError by default
-	* @return The value to be json-encoded and returned to the client
 	*/
 	protected function _invalid(& $pars, & $errors) {
 		$mex = "Invalid arguments:<br/>\n";
@@ -114,7 +113,7 @@ abstract class BaseMethod extends PageBase implements PageInterface {
 	* Build method to be overridden
 	*
 	* @param $pars array: The parameters associative array, passed byRef
-	* @return The value to be formatted and returned to the client
+	* @return mixed: The value to be formatted and returned to the client
 	*/
 	abstract protected function _build(& $pars);
 

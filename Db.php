@@ -88,7 +88,7 @@ class Db {
 	 *
 	 * @warning This makes the object serializable, but unusable after
 	 *          unserialization
-	 * @return list of properties to include in serialized object
+	 * @return array: list of properties to include in serialized object
 	 */
 	public function __sleep() {
 		$vars = get_object_vars($this);
@@ -197,7 +197,7 @@ class Db {
 	* Runs an INSERT statement from an associative array and returns ID of the
 	* last auto_increment value
 	*
-	* @see buildInsUpdQuery
+	* @see self::buildInsUpdQuery
 	*/
 	public function insert($table, $params) {
 		list($q,$p) = $this->buildInsUpdQuery('ins', $table, $params);
@@ -221,8 +221,8 @@ class Db {
 	/**
 	* Runs an UPDATE statement from an associative array
 	*
-	* @see buildInsUpdQuery
-	* @see buildParams
+	* @see self::buildInsUpdQuery
+	* @see self::buildParams
 	* @return int: Number of affected rows
 	*/
 	public function update($table, $params, $where) {
@@ -238,7 +238,7 @@ class Db {
 	/**
 	* Runs a DELETE statement
 	*
-	* @see buildParams
+	* @see self::buildParams
 	* @return int: Number of affected rows
 	*/
 	public function delete($table, $where) {
@@ -251,7 +251,7 @@ class Db {
 	/**
 	* Runs an INSERT ON DUPLICATE KEY UPDATE statement from an associative array
 	*
-	* @see buildInsUpdQuery
+	* @see self::buildInsUpdQuery
 	*/
 	public function insertOrUpdate($table, $params) {
 		list($q,$p) = $this->buildInsUpdQuery('insupd', $table, $params);
@@ -275,7 +275,7 @@ class Db {
 	/**
 	* Begins a transaction
 	*
-	* @see PDO::beginTransaction()
+	* @see \PDO::beginTransaction()
 	* @param $useExisting bool: If true, will not try to open a new transaction
 	*                     when there is already an active transaction
 	* @return true when transaction has been started, false instead
@@ -293,7 +293,7 @@ class Db {
 	/**
 	* Checks if a transaction is currently active within the driver
 	*
-	* @see PDO::inTransaction()
+	* @see \PDO::inTransaction()
 	*/
 	public function inTransaction() {
 		return $this->_pdo->inTransaction();
@@ -302,7 +302,7 @@ class Db {
 	/**
 	* Commits a transaction
 	*
-	* @see PDO::commit()
+	* @see \PDO::commit()
 	*/
 	public function commit() {
 		if( ! $this->_pdo->commit() )
@@ -312,7 +312,7 @@ class Db {
 	/**
 	* Rolls back a transaction
 	*
-	* @see PDO::rollBack()
+	* @see \PDO::rollBack()
 	*/
 	public function rollBack() {
 		if( ! $this->_pdo->rollBack() )
@@ -322,8 +322,8 @@ class Db {
 	/**
 	* Returns last insert ID
 	*
-	* @see PDO::lastInsertId()
-	* @return The ID of the last inserted row
+	* @see \PDO::lastInsertId()
+	* @return string: The ID of the last inserted row
 	*/
 	public function lastInsertId() {
 		return $this->_pdo->lastInsertId();
@@ -332,7 +332,7 @@ class Db {
 	/**
 	 * Quotes a parameter
 	 *
-	 * @see PDO::quote
+	 * @see \PDO::quote
 	 * @param $param string: The string to be quoted
 	 * @param $ptype int: The parameter type, as PDO constant
 	 * @return string: The quoted string
@@ -404,7 +404,7 @@ class Db {
 	*
 	* @param $type string: The query type (ins, upd, insupd)
 	* @param $table string: The name of the table
-	* @see buildParams
+	* @see self::buildParams
 	* @return array [query string, params]
 	*/
 	public function buildInsUpdQuery($type, $table, $params) {
@@ -495,7 +495,7 @@ class Db {
 	* associative array ready to be passed to pdo
 	*
 	* @deprecated
-	* @see processParams
+	* @see self::processParams
 	* @param $glue string: The string to join the arguments, usually ', ' or ' AND '
 	* @return array [query string, params array]
 	*/
@@ -553,9 +553,9 @@ class Db {
 	 * Returns a dophp\Table instance (invokes Table::__construct)
 	 *
 	 * @param $name string: The table name
-	 * @return dophp\Table
+	 * @return \dophp\Table
 	 * @throws \Exception on invalid name
-	 * @see dophp\Table::__construct
+	 * @see \dophp\Table::__construct
 	 */
 	public function table($name) {
 		return new Table($this, $name);
@@ -967,7 +967,7 @@ class Table {
 	* @param $pk mixed The primary key, array if composite (associative or numeric)
 	* @param $cols array Names of the columns. null to select all. true to
 	*                    select only PKs.
-	* @return The fetched row or null if not found
+	* @return mixed: The fetched row or null if not found
 	*/
 	public function get($pk, $cols=null) {
 		$pk = $this->parsePkArgs($pk);
@@ -995,8 +995,8 @@ class Table {
 	*                     See dophp\Db::buildLimit
 	* @param $joins array Array list Join objects
 	* @param $order array Names of the columns to order by as strings.
-	* @see dophp\Db::buildParams
-	* @see dophp\Db::buildLimit
+	* @see \dophp\Db::buildParams
+	* @see \dophp\Db::buildLimit
 	* @return mixed Generator of fetched rows.
 	*         Every element is converted to the right data type.
 	*         When using joins, joined column names are in the form table.column
@@ -1078,7 +1078,7 @@ class Table {
 	*
 	* @param $col string: the column name
 	* @see Table::getType()
-	* @return Same as Table::getType()
+	* @return string: Same as Table::getType()
 	*/
 	public function getColumnType($col) {
 		if( ! array_key_exists($col, $this->_cols) )
@@ -1252,7 +1252,7 @@ class Table {
 	 * into a standard xx.xxx number
 	 *
 	 * @param $num string: The number as string
-	 * @return The number as string
+	 * @return string: The number as string
 	 */
 	public static function normNumber($num) {
 		$locInfo = localeconv();
@@ -1328,7 +1328,7 @@ class Table {
 	/**
 	* Gets a primary key argument and format them into a Where object
 	*
-	* @see parsePkArgs
+	* @see self::parsePkArgs
 	* @param $pk mixed: The primary key, array if composite (associative or numeric)
 	* @return Where: The built Where instance
 	*/
@@ -1454,7 +1454,7 @@ class SelectQuery {
 
 	/** Constructs a query from an array of parameters
 	 *
-	 * @param $query associative array:
+	 * @param $query array: associative array:
 	 *        - cols: Column definitions, array or string.
 	 *                Every index is the unique column name (alias).
 	 *                Possible keys in definition array:

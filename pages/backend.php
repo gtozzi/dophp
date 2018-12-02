@@ -107,7 +107,7 @@ abstract class TablePage extends \dophp\HybridRpcMethod {
 	 */
 	protected function _initTable(): \dophp\widgets\DataTable {
 		if( ! isset($this->_tableClass) )
-			throw new Exception('Missing Table class');
+			throw new \Exception('Missing Table class');
 		return new $this->_tableClass($this);
 	}
 
@@ -531,7 +531,7 @@ abstract class FormPage extends \dophp\PageSmarty {
 	/**
 	 * Loads the form from session and assign it to $this->_form
 	 *
-	 * @throws Exception
+	 * @throws \Exception
 	 */
 	protected function _loadFormFromSession() {
 		if( ! isset($_SESSION[$this->_sesskey][self::SESS_FORM]) )
@@ -599,7 +599,7 @@ abstract class FormPage extends \dophp\PageSmarty {
 		if( array_intersect($this->_perm, $perm) )
 			return;
 
-		throw new PageDeniedPermissions();
+		throw new \dophp\PageDenied();
 	}
 
 	/**

@@ -598,7 +598,7 @@ class SelectField extends InputField {
 	/**
 	 * Returns a list of options
 	 *
-	 * @param $ajax associative array of ajax options when invoked in ajax mode:
+	 * @param $ajax array: associative array of ajax options when invoked in ajax mode:
 	 *              - term: the search term
 	 *              - params: the base option params
 	 *              - extra: Extra params

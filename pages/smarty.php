@@ -35,7 +35,7 @@ trait SmartyFunctionalities {
 	 * emails)
 	 *
 	 * @param $config array: DoPhp config array
-	 * @return Smarty instance
+	 * @return \Smarty instance
 	 */
 	public static function newSmarty(& $config) {
 		$smarty = new \Smarty();

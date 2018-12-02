@@ -538,7 +538,7 @@ class DoPhp {
 	/**
 	* Returns a model by name
 	*
-	* @param $name The case-sensitive model's name (without prefix)
+	* @param $name string: The case-sensitive model's name (without prefix)
 	* @return object: A model's instance
 	*/
 	public static function model($name) {
@@ -579,7 +579,7 @@ class DoPhp {
 	 * Adds an alert to the current alerts
 	 * If session is not enabled does nothing
 	 *
-	 * @param $alert Alert object to append to list
+	 * @param $alert \dophp\Alert object to append to list
 	 */
 	public static function addAlert(dophp\Alert $alert) {
 		if( ! self::$__instance )
@@ -631,7 +631,7 @@ class DoPhp {
 	/**
 	 * Sets a custom printer to be called when an exception is catched
 	 *
-	 * @param $callable A callable, the following parameters are passed:
+	 * @param $callable callable: A callable, the following parameters are passed:
 	 *                  - exception: The raised exception
 	 *                  If may return true to also trigger the default exception
 	 *                  printing

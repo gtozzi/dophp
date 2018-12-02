@@ -34,10 +34,10 @@ interface PageInterface {
 	* Method called prior of page execution to determine if the page can be
 	* retrieved from the cache.
 	*
-	* @return Must return an unique cache KEY that will be used as the key for
-	*         storing the output after page had been executed. When running the
-	*         page again, if a valid key will be found in the cache it will be
-	*         used instead of calling run() again.
+	* @return mixed: Must return an unique cache KEY that will be used as the
+	*         key for storing the output after page had been executed. When
+	*         running the page again, if a valid key will be found in the cache
+	*         it will be used instead of calling run() again.
 	*         Returning NULL disables caching.
 	*/
 	public function cacheKey();
@@ -239,11 +239,10 @@ abstract class PageBase {
 	 * Utility function: returns a json encoded version of data, just like
 	 * json_encode but failsafe
 	 *
-	 * @see json_encode
 	 * @param $res mixed: The data to be encoded
 	 * @param $opts int: Json options
-	 * @return The json encoded data
-	 * @throws RuntimeError en json_encode error
+	 * @return string: The json encoded data
+	 * @throws \Exception en json_encode error
 	 */
 	protected function _jsonEncode(&$res, $opts=0) {
 		$encoded = json_encode($res, $opts);

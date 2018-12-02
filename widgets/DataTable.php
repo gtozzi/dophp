@@ -9,6 +9,8 @@
 
 namespace dophp\widgets;
 
+require_once(__DIR__ . '/../Page.php');
+
 
 /**
  * A data table, uses the datatable javascript library
@@ -142,9 +144,9 @@ class DataTable extends BaseWidget {
 
 		// Checks for data validity
 		if( ! isset($this->_from) || ! is_string($this->_from) )
-			throw new Exception('Missing or invalid From definition');
+			throw new \Exception('Missing or invalid From definition');
 		if( ! isset($this->_cols) || ! is_array($this->_cols) )
-			throw new Exception('Missing or invalid Cols definition');
+			throw new \Exception('Missing or invalid Cols definition');
 
 		// Builds the super filter
 		foreach( $this->_sfilter as $name => &$field ) {

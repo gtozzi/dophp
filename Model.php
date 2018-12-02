@@ -184,8 +184,8 @@ abstract class Model {
 	/**
 	* Returns validation rules
 	*
-	* @param $mode   The action to get the rules for (insert or update). If
-	*                unvalid or null acton is given, only rules common to all
+	* @param $mode   string: The action to get the rules for (insert or update).
+	*                If unvalid or null acton is given, only rules common to all
 	*                actions are returned
 	* @return array Associative array [ \<name\> => [\<type\>, [\<rules\>]] ]
 	*/
@@ -484,7 +484,7 @@ abstract class Model {
 	* Returns the data for rendering a summary table or a view page
 	*
 	* @todo Support filtering, ordering, etc... (datatables server-side)
-	* @param $action The action name (admin|view)
+	* @param $action string: The action name (admin|view)
 	* @param $pk Where instance: The PK to use for view action
 	* @return Array of data: associative array of data as \<pk\> => \<Field\>
 	*                  count: total number of records found
@@ -595,7 +595,7 @@ abstract class Model {
 	* @param $q string: The search query string to filter (null = don't filter)
 	* @param $pks mixed: If given, only return the given PK or PKs if array
 	*
-	* @return associative array of key => FormFieldData
+	* @return array: associative array of key => FormFieldData
 	*/
 	public function fieldData($name, $q=null, $pks=null) {
 		if( $pks !== null && ! is_array($pks) )
@@ -768,7 +768,7 @@ abstract class Model {
 	* @param $mode string: Running mode ('insert', 'edit', null if unknown)
 	* @param $pk mixed: The PK on edit mode, null if unknown (unused, may be used in subclass)
 	* @see getRules()
-	* @see dophp\Validator
+	* @see \dophp\Validator
 	*/
 	public function validate(&$post, &$files, $mode=null, $pk=null) {
 		$val = new Validator($post, $files, $this->getRules($mode));
@@ -779,8 +779,8 @@ abstract class Model {
 	* Returns a short representation of model content, to be used in a select box
 	* By default, only selects first non-hidden field
 	*
-	* @param $filter The filter condition as Where instance or the PK
-	* @param $col The name of the column to use as display field
+	* @param $filter string: The filter condition as Where instance or the PK
+	* @param $col string: The name of the column to use as display field
 	* @return array: Associative array [ \<pk\> =\> \<description\> ], or just \<description\>
 	*                if PK is given
 	*/
@@ -820,8 +820,8 @@ abstract class Model {
 	*
 	* @param $row array: The row
 	* @param $prefix bool: If true, expect column name in the format \<table\>.\<column\>
-	* @param $prefix Prefix prepended to column names in data
-	* @param $summary If given, use this column name as summary column
+	* @param $prefix string: Prefix prepended to column names in data
+	* @param $summary string: If given, use this column name as summary column
 	*/
 	public function summaryRow(& $row, $prefix=false, $summary=null) {
 		if( $summary ) {
@@ -1250,7 +1250,7 @@ class RenderedField extends Field {
 	/**
 	* Creates the field
 	*
-	* @param $row The raw row
+	* @param $row string: The raw row
 	* @param $def FieldDefinition: The field definition
 	*/
 	public function __construct(& $row, FieldDefinition $def) {

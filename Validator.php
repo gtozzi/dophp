@@ -26,7 +26,7 @@ class Validator {
 	*
 	* @param $post array: $_POST data (usually)
 	* @param $files array: $_FILES data (usually)
-	* @param $rules The rules, associative array with format:
+	* @param $rules array: The rules, associative array with format:
 	*               'field_name' => array('field_type', array('options'))
 	*               - If field_type is 'array', handles it as a
 	*                 sub-validator: expects data to be an array too.

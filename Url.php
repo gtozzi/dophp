@@ -153,8 +153,8 @@ class Url {
 	/**
 	* Returns the full URL for a partial URI
 	*
-	* @param $url Any url combination. Missing informations are filled with current
-	*             URL's ones
+	* @param $url string: Any url combination. Missing informations are filled
+	*             with current URL's ones
 	* @return array: The URL array
 	*/
 	public static function fullUrlArray($url='') {
@@ -193,8 +193,8 @@ class Url {
 	* Returns the full URL for a partial URI
 	*
 	* @see self::fullUrlArray
-	* @param $url Any url combination. Missing informations are filled with current
-	*             URL's ones
+	* @param $url string: Any url combination. Missing informations are filled
+	*             with current URL's ones
 	* @return string: The full page URL
 	*/
 	public static function fullUrl($url='') {

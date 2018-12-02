@@ -48,7 +48,7 @@ class PageRedirect extends \Exception {
 	/**
 	 * Construct the redirect
 	 *
-	 * @param $to New page to redirect to, already instantiated
+	 * @param $to PageInterface: New page to redirect to, already instantiated
 	 */
 	public function __construct(PageInterface $to) {
 		parent::__construct();
@@ -75,7 +75,7 @@ class UrlRedirect extends \Exception {
 	/**
 	 * Construct the redirect
 	 *
-	 * @param $url Reddirect destination
+	 * @param $url string: Redirect destination
 	 */
 	public function __construct($url) {
 		parent::__construct();
