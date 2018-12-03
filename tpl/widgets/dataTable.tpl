@@ -109,7 +109,7 @@
 			autoWidth:      true,
 
 			"language": {
-				"url": "med/DataTables/Italian.json"
+				"url": "{{$config['dophp']['url']}}/webcontent/DataTables/Italian.json"
 			},
 
 			ordering: true,
@@ -445,7 +445,7 @@
 		});
 
 		$(".wp-date-filt-mthCont .wp-mthUnit, .wp-date-filt-yeaCont .wp-yeaUnit").click(function(){
-			
+
 			$(".wp-date-filt-mthCont .wp-mthUnit, .wp-date-filt-yeaCont .wp-yeaUnit")
 				.removeClass("wp-range")
 
@@ -454,7 +454,7 @@
 			}
 			else{
 
-				// check if selected dates are more than one, if so 
+				// check if selected dates are more than one, if so
 				// get the first and last selected items
 				var currParent = $(this).parents(".wp-date-filt-univCont");
 				var selectedElem = currParent.children(".wp-active");
@@ -464,14 +464,14 @@
 				if((selectedElem.length+1)>1){
 					firstElem=selectedElem.first();
 					lastElem=selectedElem.last();
-					
+
 					firstElemID =$(firstElem).attr("id");
-					lastElemID =$(lastElem).attr("id");					
+					lastElemID =$(lastElem).attr("id");
 
 					$(".wp-date-filt-mthCont .wp-mthUnit, .wp-date-filt-yeaCont .wp-yeaUnit")
 						.removeClass("wp-range wp-active")
-			
-					
+
+
 					// last click is after lastSelection
 					if($(this).prevAll("div#"+lastElemID).length){
 						$(firstElem).addClass("wp-active");
