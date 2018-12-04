@@ -911,10 +911,10 @@ class MultiSelectField extends BaseField {
 			$attrs = [];
 			foreach( $oattrs as $name => $ao ) {
 				if( isset($ao['type']) ) {
-					$ocls = "MultiSelectFieldOption{$ao['type']}Attr";
+					$ocls = "\\dophp\\widgets\\MultiSelectFieldOption{$ao['type']}Attr";
 					unset($ao['type']);
 				} else
-					$ocls = 'MultiSelectFieldOptionAttr';
+					$ocls = '\dophp\widgets\MultiSelectFieldOptionAttr';
 				$attrs[$name] = new $ocls($name, $ao);
 			}
 			$this->_options[$id] = new MultiSelectFieldOption($id, false, $descr, $attrs);
