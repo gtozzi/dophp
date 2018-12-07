@@ -611,7 +611,8 @@ abstract class FormPage extends \dophp\PageSmarty {
 	 * Sets the default "insert" page title
 	 */
 	protected function _setDefaultInsertPageTitle() {
-		$new = $this->_whatGender=='f' ? _("female\x04new") : _("male\x04new");
+		//TODO: How to use gettext contexts in PHP?
+		$new = $this->_whatGender=='f' ? _('(m)new') : _('(f)new');
 		$this->_pageTitle = _('Insert') . ' ' . $new .  ' ' . ucwords($this->_what);
 	}
 
@@ -782,4 +783,3 @@ abstract class FormPage extends \dophp\PageSmarty {
 		return $ret;
 	}
 }
-
