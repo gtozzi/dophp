@@ -612,7 +612,7 @@ abstract class FormPage extends \dophp\PageSmarty {
 	 */
 	protected function _setDefaultInsertPageTitle() {
 		//TODO: How to use gettext contexts in PHP?
-		$new = $this->_whatGender=='f' ? _('(m)new') : _('(f)new');
+		$new = $this->_whatGender=='f' ? _('(f)new') : _('(m)new');
 		$this->_pageTitle = _('Insert') . ' ' . $new .  ' ' . ucwords($this->_what);
 	}
 
