@@ -254,6 +254,16 @@ class Form extends BaseWidget {
 	}
 
 	/**
+	 * Tells whether a field with given name is known
+	 *
+	 * @param $name string: The field's name
+	 * @return bool
+	 */
+	public function hasField(string $name): bool {
+		return isset($this->_fields[$name]);
+	}
+
+	/**
 	 * Returns a single field by name
 	 *
 	 * @param $name string: The field's name
