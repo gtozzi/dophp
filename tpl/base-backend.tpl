@@ -193,7 +193,7 @@
 	<footer class="footer">
 		<div class="container text-muted navbar-dark">
 			{{$config['site']['name']}} ver. {{$config['site']['version']}}
-			{{block name='foterinnerend'}}{{/block}}
+			{{block name='footerinnerend'}}{{/block}}
 		</div>
 	</footer>
 {{/block}}
