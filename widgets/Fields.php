@@ -710,7 +710,7 @@ class SelectField extends InputField {
 	 */
 	public function validateOption($v, $a) {
 		if( $this->__customValidator !== null ) {
-			$ret = $this->__customValidator($v, $a);
+			$ret = ($this->__customValidator)($v, $a);
 			if( $ret )
 				return $ret;
 		}
