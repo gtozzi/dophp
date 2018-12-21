@@ -11,6 +11,11 @@ $config =  [
 		'name' => 'New DoPhp Site',
 		'version' => '0.1',
 	],
+	/*
+	'session' => [
+		'name' => 'MYSESSID',
+	],
+	*/
 	'lang' => [
 		'supported' => ['it_IT'],
 		'coding' => 'utf8',

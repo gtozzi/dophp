@@ -80,10 +80,14 @@ class DoPhp {
 	*                     'usr'=> Database username
 	*                     'pwd'=> Database password
 	*                 )
+	*                 'session' => array( // Session configuration
+	*                     'name' => The name to set on session_name()
+	*                 )
 	*                 'memcache' => array( // Memcached configuration
 	*                     // see http://php.net/manual/en/memcache.connect.php
 	*                     'host'=> Valid host or unix socket
 	*                     'port'=> Valid port or 0
+	*                 )
 	*                 'lang' => array( //see Lang class description
 	*                     'supported' => array() List of supported languages,
 	*                                    in the form 'en' or 'en_US'. First one is
@@ -139,6 +143,8 @@ class DoPhp {
 		$this->__start = $start;
 
 		// Start the session
+		if( isset($conf['session']['name']) )
+			session_name($conf['session']['name']);
 		if( $sess )
 			session_start();
 
