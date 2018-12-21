@@ -92,7 +92,7 @@
 {{block name='body'}}
 
 	{{block name='navbar'}}
-		{{if $user->getUid()}}
+		{{if isset($user) && $user->getUid()}}
 
 			<nav class="navbar navbar-expand-lg navbar-dark bg-dark ag-navbar">
 				<button class="navbar-toggler navbar-toggler-right" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
@@ -137,20 +137,21 @@
 										{{/if}}
 									</li>
 								{{/foreach}}
-
-								{{block name='navbarmenulogout'}}
-									<form method="GET" action="" class="d-lg-none">
-										<input type="hidden" name="do" value="logout">
-										<span class="fa fa-sign-out ag-nav-img"></span><input type="submit" class="dropdown-item ag-nav-btn ag-img-btn" value="Esci">
-									</form>
-								{{/block}}
-
 							{{/if}}
 						</ul>
 					</div>
 				{{/block}}
 
-				{{block name='navbarinnerend'}}{{/block}}
+				{{block name='navbarinner'}}{{/block}}
+
+				{{block name='navbarlogout'}}
+					<form method="GET" action="" class="d-none d-lg-block">
+						<input type="hidden" name="do" value="logout">
+						<button type="submit" class="btn btn-sm btn-outline-secondary ag-foreBtn ag-logged-btn"><span class="fa fa-sign-out"></span>
+							{{_('Logout')}}
+						</button>
+					</form>
+				{{/block}}
 			</nav>
 
 		{{/if}}

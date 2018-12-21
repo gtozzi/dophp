@@ -6,8 +6,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: DoPhp\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2018-12-13 05:01+0100\n"
-"PO-Revision-Date: 2018-12-13 05:02+0200\n"
+"POT-Creation-Date: 2018-12-21 09:03+0100\n"
+"PO-Revision-Date: 2018-12-21 09:04+0200\n"
 "Last-Translator: Gabriele Tozzi <gabriele@tozzi.eu>\n"
 "Language-Team: Gabriele Tozzi <tozzi@despammed.com>\n"
 "Language: it\n"
@@ -118,12 +118,12 @@ msgid "Canceling"
 msgstr "Annullamento"
 
 #: pages/backend.php:615
-msgid "(m)new"
-msgstr "nuovo"
-
-#: pages/backend.php:615
 msgid "(f)new"
 msgstr "nuova"
+
+#: pages/backend.php:615
+msgid "(m)new"
+msgstr "nuovo"
 
 #: pages/backend.php:616 pages/crud.php:78 pages/crud.php:142
 #: pages/crud.php:163
@@ -213,6 +213,10 @@ msgstr "ordina la colonna in ordine decrescente"
 #: pages/crud.php:215
 msgid "Can't delete"
 msgstr "Non posso cancellare"
+
+#: /tmp/dophp_tpl_strings.php:2
+msgid "Logout"
+msgstr "Esci"
 
 #~ msgid "Invalid credentials"
 #~ msgstr "Credenziali non valide"
