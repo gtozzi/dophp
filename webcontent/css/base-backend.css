@@ -1,4 +1,9 @@
 
+/** Generic utility classes */
+.do-hide{
+	display:none;
+}
+
 /** Navbar */
 .navbar-brand img.logo {
 	max-height: 35px;

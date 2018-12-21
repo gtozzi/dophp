@@ -592,7 +592,7 @@
 
 	function filterShowDate(formEl){
 
-		$(".wp-date-filter-cont").removeClass("ag-hide");
+		$(".wp-date-filter-cont").removeClass("do-hide");
 
 		var jQ_formEl = $(formEl);
 
@@ -616,11 +616,11 @@
 		$(".wpdf_y_cck").click(function(){
 			if($(this).prop("checked")){
 				$(this).siblings(".wpdf_month_list")
-						.removeClass("ag-hide");
+						.removeClass("do-hide");
 			}
 			else{
 				$(this).siblings(".wpdf_month_list")
-						.addClass("ag-hide");
+						.addClass("do-hide");
 			}
 		});
 		*/
@@ -677,7 +677,7 @@
 
 
 	function wpHideDateWidget(){
-		$(".wp-date-filter-cont").addClass("ag-hide");
+		$(".wp-date-filter-cont").addClass("do-hide");
 	}
 
 </script>
@@ -756,7 +756,7 @@
 </div>
 
 <!-- Date Filter -->
-<div class="wp-date-filter-cont ag-hide">
+<div class="wp-date-filter-cont do-hide">
 	<input type="hidden" id="wp-date-filter-col" name="wp-date-filter-col" value="-1" />
 	<div class="wp-date-filter-head">
 		Filtra data
