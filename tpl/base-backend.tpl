@@ -81,6 +81,9 @@
 		<script type="text/javascript" src="{{$config['dophp']['url']}}/webcontent/DataTables/RowReorder-1.2.0/js/dataTables.rowReorder.min.js"></script>
 		<script type="text/javascript" src="{{$config['dophp']['url']}}/webcontent/DataTables/Scroller-1.4.2/js/dataTables.scroller.min.js"></script>
 		<script type="text/javascript" src="{{$config['dophp']['url']}}/webcontent/DataTables/Select-1.2.2/js/dataTables.select.min.js"></script>
+
+		<!-- DoPhp base -->
+		<link rel="stylesheet" type="text/css" href="{{$config['dophp']['url']}}/webcontent/css/base-backend.css"/>
 	{{/block}}
 
 	{{block name='head'}}{{/block}}
@@ -91,7 +94,7 @@
 	{{block name='navbar'}}
 		{{if $user->getUid()}}
 
-			<nav class="navbar navbar-expand-lg navbar-dark ag-navbar">
+			<nav class="navbar navbar-expand-lg navbar-dark bg-dark ag-navbar">
 				<button class="navbar-toggler navbar-toggler-right" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
 					<span class="navbar-toggler-icon"></span>
 				</button>
@@ -105,7 +108,7 @@
 				{{block name='navbarmenu'}}
 					<div class="collapse navbar-collapse ag-main-menu-cont" id="navbarSupportedContent">
 						<ul class="navbar-nav mr-auto">
-							{{if $user->getUid()}}
+							{{if isset($menu) && $user->getUid()}}
 								{{foreach $menu->getChilds() as $m}}
 									{{$childs=$m->getChilds()}}
 									<li class="nav-item {{if $childs}}dropdown{{/if}} {{if $m->isActive()}}active{{/if}} ag-mmexp-targ">

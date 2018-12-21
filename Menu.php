@@ -181,6 +181,8 @@ class MenuItem implements MenuInterface {
 	protected $_childs = array();
 	/** Alternative URL regex */
 	protected $_alt;
+	/** The name of the icon to be displayed */
+	protected $_icon;
 
 	/**
 	* Creates a new menu item
@@ -189,11 +191,13 @@ class MenuItem implements MenuInterface {
 	* @param $url string: The url, if clickable
 	* @param $alt string: Regular expression matching alternative URLs for this element
 	*                     (used in breadcrumb building)
+	* @param $icon string: The optional icon name, if used
 	*/
-	public function __construct($label=null, $url=null, $alt=null) {
+	public function __construct($label=null, $url=null, $alt=null, $icon=null) {
 		$this->_label = $label;
 		$this->_url = $url;
 		$this->_alt = $alt;
+		$this->_icon = $icon;
 	}
 
 	public function append(MenuInterface $item) {
@@ -206,6 +210,10 @@ class MenuItem implements MenuInterface {
 
 	public function getUrl() {
 		return $this->_url;
+	}
+
+	public function getIcon() {
+		return $this->_icon;
 	}
 
 	public function getChilds() {
