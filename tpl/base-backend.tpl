@@ -82,8 +82,9 @@
 		<script type="text/javascript" src="{{$config['dophp']['url']}}/webcontent/DataTables/Scroller-1.4.2/js/dataTables.scroller.min.js"></script>
 		<script type="text/javascript" src="{{$config['dophp']['url']}}/webcontent/DataTables/Select-1.2.2/js/dataTables.select.min.js"></script>
 
-		<!-- DoPhp base -->
+		<!-- DoPhp utils -->
 		<link rel="stylesheet" type="text/css" href="{{$config['dophp']['url']}}/webcontent/css/base-backend.css"/>
+		<script src="{{$config['dophp']['url']}}/webcontent/js/form.js"></script>
 	{{/block}}
 
 	{{block name='head'}}{{/block}}
