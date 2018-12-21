@@ -15,4 +15,15 @@ $config =  [
 		'supported' => ['it_IT'],
 		'coding' => 'utf8',
 	],
+	/*
+	'datatable' => [
+		'prefs' => [
+			'table' => 'datatable_prefs',
+			'tablecol' => 'table',
+			'uidcol' => 'user',
+			'sortcol' => 'sort_col',
+			'ordcol' => 'sort_ord',
+		],
+	],
+	*/
 ];

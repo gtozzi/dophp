@@ -113,9 +113,6 @@ class DataTable extends BaseWidget {
 	/** Tells whether elements in this table can be selected */
 	public $selectable = false;
 
-	/** Name of the preferences table (es. prefs_table) */
-	protected $_prefsTable = 'datatable_prefs';
-
 	/**
 	 * Inits some props at runtime, overridable in child
 	 */
@@ -198,32 +195,57 @@ class DataTable extends BaseWidget {
 	}
 
 	/**
+	 * Validate and return Datatable preferences from config
+	 *
+	 * @return array
+	 */
+	protected function _getConfigPrefs(): array {
+		if( ! isset($this->_config['datatable']['prefs']) )
+			return [];
+
+		$prefs = $this->_config['datatable']['prefs'];
+		if( ! isset($prefs['table']) )
+			return [];
+		if( ! isset($prefs['uidcol']) )
+			return [];
+		if( ! isset($prefs['sortcol']) )
+			return [];
+		if( ! isset($prefs['ordcol']) )
+			return [];
+
+		return $prefs;
+	}
+
+	/**
 	 * Retrieve saved order from DB
 	 *
 	 * @param $asIdx bool: If true, returns colidx instead of colid
 	 * @return [ colid, ascdesc ] or [ colidx, ascdesc ] or null if not found
 	 */
-	protected function _getSavedOrder(bool $asIdx = false) /** TODO:PHP 7.2 :?array */ {
-		if( ! $this->_prefsTable )
+	protected function _getSavedOrder(bool $asIdx = false): ?array {
+		$prefs = $this->_getConfigPrefs();
+		if( ! $prefs ) {
+			error_log('Not reading datatable order. See $config[\'datatable\'][\'prefs\']');
 			return null;
+		}
 
 		$q = "
-			SELECT `sort_col`, `sort_ord`
-			FROM `" . $this->_prefsTable . "`
-			WHERE `collaboratore` = ? AND `table` = ?
+			SELECT `{$prefs['sortcol']}`, `{$prefs['ordcol']}`
+			FROM `{$prefs['table']}`
+			WHERE `{$prefs['uidcol']}` = ? AND `{$prefs['tablecol']}` = ?
 		";
 		$p = [ $this->_user->getUid(), $this->getClsId() ];
 		$r = $this->_db->xrun($q, $p)->fetch();
-		if( ! $r || ! $r['sort_col'] || ! $r['sort_ord'] )
+		if( ! $r || ! $r[$prefs['sortcol']] || ! $r[$prefs['ordcol']] )
 			return null;
 
-		if( $r['sort_ord'] != self::ORDER_ASC && $r['sort_ord'] != self::ORDER_DESC )
+		if( $r[$prefs['sortcol']] != self::ORDER_ASC && $r[$prefs['ordcol']] != self::ORDER_DESC )
 			return null;
 
-		if( ! array_key_exists($r['sort_col'], $this->_cols) )
+		if( ! array_key_exists($r[$prefs['sortcol']], $this->_cols) )
 			return null;
 
-		return [ $asIdx ? $this->colIdToIdx($r['sort_col']) : $r['sort_col'], $r['sort_ord'] ];
+		return [ $asIdx ? $this->colIdToIdx($r[$prefs['sortcol']]) : $r[$prefs['sortcol']], $r[$prefs['ordcol']] ];
 	}
 
 	/**
@@ -233,11 +255,17 @@ class DataTable extends BaseWidget {
 	 * @param $ascDesc string: asc or desc
 	 */
 	protected function _saveOrder(string $colId, string $ascDesc) {
-		$this->_db->insertOrUpdate('datatable_prefs', [
-			'collaboratore' => $this->_user->getUid(),
-			'table' => $this->getClsId(),
-			'sort_col' => $colId,
-			'sort_ord' => $ascDesc,
+		$prefs = $this->_getConfigPrefs();
+		if( ! $prefs ) {
+			error_log('Not saving datatable order. See $config[\'datatable\'][\'prefs\']');
+			return;
+		}
+
+		$this->_db->insertOrUpdate($prefs['table'], [
+			$prefs['uidcol'] => $this->_user->getUid(),
+			$prefs['tablecol'] => $this->getClsId(),
+			$prefs['sortcol'] => $colId,
+			$prefs['ordcol'] => $ascDesc,
 		]);
 	}
 
