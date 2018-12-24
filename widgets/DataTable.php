@@ -98,6 +98,9 @@ class DataTable extends BaseWidget {
 	 */
 	protected $_sfilter = [];
 
+	/** The default order [ id, ORDER_ASC|ORDER_DESC ] or null */
+	protected $_defaultOrder = null;
+
 	/** The parent page, populated at init time */
 	protected $_page;
 
@@ -187,6 +190,12 @@ class DataTable extends BaseWidget {
 	 * @return [ colid, ascdesc ] or [ colidx, ascdesc ]
 	 */
 	protected function _getDefaultOrder(bool $asIdx = false): array {
+		if( $this->_defaultOrder ) {
+			list($cid, $ord) = $this->_defaultOrder;
+			$c = $this->_cols[$cid];
+			return [ $asIdx ? $this->colIdToIdx($c->id) : $c->id, $ord ];
+		}
+
 		foreach( $this->_cols as $c )
 			if( $c->visible )
 				return [ $asIdx ? $this->colIdToIdx($c->id) : $c->id, self::ORDER_ASC ];
