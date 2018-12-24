@@ -110,7 +110,7 @@
 				{{/if}}
 				{{if $type=='asyncFile'}}
 					<input id="{{$id}}_txt" type="text" class="form-control">
-					<input id="{{$id}}_hid" name="{{$name|htmlentities}}" type="hidden" value="">
+					<input id="{{$id}}_hid" name="{{$name|htmlentities}}" type="hidden" class="ag-asyncupl-hid-fld" value="">
 					<span class="input-group-btn">
 						<button id="{{$id}}_btn" type="button" class="btn btn-secondary ag-calender-button">
 							Seleziona
@@ -225,7 +225,7 @@
 							$('#{{$id}}').click();
 						});
 						$('#{{$id}}').change(function() {
-							
+
 							// check if upload input is inside a sheetList_form_section
 							// and get linked doc ID
 							var sheetID=0;
@@ -236,8 +236,8 @@
 									sheetID=formID;
 								}
 							}
-							
-							
+
+
 							$('#{{$id}}_txt').val( $(this).val() );
 
 							$(".ag-prog-itm_{{$id}}").css("display","flex");
@@ -320,7 +320,7 @@
 												var perc= parseInt((e.loaded / e.total) * 100);
 												$(".ag-progress_{{$id}}").css("width",perc+"%");
 												$(".ag-progress_{{$id}}").text(perc+"%");
-												
+
 												// if current upload field is linked to doc_sheet object,
 												// updates the doc_sheet upload_progress_bar
 												if(sheetID){
