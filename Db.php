@@ -326,7 +326,12 @@ class Db {
 	* @return string: The ID of the last inserted row
 	*/
 	public function lastInsertId() {
-		return $this->_pdo->lastInsertId();
+		$lid = $this->_pdo->lastInsertId();
+		if( is_int($lid) )
+			return $lid;
+		if( is_numeric($lid) )
+			return (int)$lid;
+		return $lid;
 	}
 
 	/**
