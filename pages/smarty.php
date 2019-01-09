@@ -69,6 +69,7 @@ trait SmartyFunctionalities {
 
 		// Init custom plugins
 		$this->_smarty->registerPlugin('block', 'mstrip', ['dophp\SmartyFunctionalities','mStrip']);
+		$this->_smarty->registerPlugin('modifier', 'diedump', ['dophp\SmartyFunctionalities','dieDump']);
 
 		// Assign utility variables
 		$this->_smarty->assign('this', $this);
@@ -105,6 +106,15 @@ trait SmartyFunctionalities {
 			throw new \Exception('Error in estrip block');
 
 		return $out;
+	}
+
+	/**
+	 * Smarty plugin
+	 *
+	 * Debug die and dump variable
+	 */
+	public static function dieDump($var) {
+		die(var_dump($var));
 	}
 
 }

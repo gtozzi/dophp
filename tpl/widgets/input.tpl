@@ -51,18 +51,35 @@
 
 	{{$vfeedback=$field->getVFeedback()}}
 
-	{{* Include options *}}
+	{{* Include/display options *}}
+	{{$dopts=$field->getDisplayOptions()}}
 	{{if ! isset($colw)}}
-		{{$colw=10}}
+		{{if isset($dopts['colw'])}}
+			{{$colw=$dopts['colw']}}
+		{{else}}
+			{{$colw=10}}
+		{{/if}}
 	{{/if}}
 	{{if ! isset($labelw)}}
-		{{$labelw=2}}
+		{{if isset($dopts['labelw'])}}
+			{{$labelw=$dopts['labelw']}}
+		{{else}}
+			{{$labelw=2}}
+		{{/if}}
 	{{/if}}
 	{{if ! isset($nolabel)}}
-		{{$nolabel=false}}
+		{{if isset($dopts['nolabel'])}}
+			{{$nolabel=$dopts['nolabel']}}
+		{{else}}
+			{{$nolabel=false}}
+		{{/if}}
 	{{/if}}
 	{{if ! isset($norow)}}
-		{{$norow=false}}
+		{{if isset($dopts['norow'])}}
+			{{$norow=$dopts['norow']}}
+		{{else}}
+			{{$norow=false}}
+		{{/if}}
 	{{/if}}
 
 	{{$required=$field->isRequired()}}
@@ -82,7 +99,6 @@
 	{{else}}
 		{{$linkurl=$field->getLinkUrl()}}
 	{{/if}}
-
 {{/strip}}
 {{if $type=='hidden'}}
 	<input type="hidden" id="{{$id}}" name="{{$name|htmlentities}}" value="{{$value|htmlentities}}">
