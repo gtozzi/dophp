@@ -213,7 +213,7 @@ class Db {
 		else {
 			$r = $st->fetch();
 			if( ! $r )
-				throw new \Exception('Failed to retrieve id');
+				throw new DbException('Failed to retrieve id');
 			return $r['id'];
 		}
 	}
@@ -285,7 +285,7 @@ class Db {
 			return false;
 
 		if( ! $this->_pdo->beginTransaction() )
-			throw new \Exception('Error opening transaction');
+			throw new DbException('Error opening transaction');
 
 		return true;
 	}
@@ -306,7 +306,7 @@ class Db {
 	*/
 	public function commit() {
 		if( ! $this->_pdo->commit() )
-			throw new \Exception('Commit error');
+			throw new DbException('Commit error');
 	}
 
 	/**
@@ -316,7 +316,7 @@ class Db {
 	*/
 	public function rollBack() {
 		if( ! $this->_pdo->rollBack() )
-			throw new \Exception('Rollback error');
+			throw new DbException('Rollback error');
 	}
 
 	/**
@@ -345,7 +345,7 @@ class Db {
 	public function quote($param, $ptype = \PDO::PARAM_STR) {
 		$quoted = $this->_pdo->quote($param, $ptype);
 		if( $quoted === false )
-			throw new \Exception('Error during quoting');
+			throw new DbQuoteException('Error during quoting');
 		return $quoted;
 	}
 
@@ -376,7 +376,7 @@ class Db {
 		case 'ansi':
 			return "\"$name\"";
 		default:
-			throw new \Exception("Type \"$type\" not implemented");
+			throw new NotImplementedException("Type \"$type\" not implemented");
 		}
 	}
 
@@ -395,7 +395,7 @@ class Db {
 			$reppat = '[$1]';
 			break;
 		default:
-			throw new \Exception('Not Implemented');
+			throw new NotImplementedException('Not Implemented');
 		}
 
 		return preg_replace($spat, $reppat, $query);
@@ -424,7 +424,7 @@ class Db {
 			$ins = false;
 			break;
 		default:
-			throw new \Exception("Unknown type $type");
+			throw new NotImplementedException("Unknown type $type");
 		}
 
 		$q .= ' ' . $this->quoteObj($table);
@@ -471,7 +471,7 @@ class Db {
 			$sqlCol = self::quoteObjFor($k, $type);
 			if( is_array($v) ) {
 				if( count($v) != 2 || ! array_key_exists(0,$v) || ! array_key_exists(1,$v) )
-					throw new \Exception('Invalid number of array components');
+					throw new \InvalidArgumentException('Invalid number of array components');
 				if( is_array($v[0]) ) {
 					$f = $v[1];
 					foreach( $v[0] as $n => $vv ) {
@@ -619,7 +619,7 @@ class ResultCol {
 	 * @throws \Exception
 	 */
 	public function __set($name, $value) {
-		throw new \Exception('Readonly class');
+		throw new \LogicException('Readonly class');
 	}
 }
 
@@ -674,7 +674,7 @@ class Result implements \Iterator {
 			// Cached value not found, generate it
 			$meta = $this->_st->getColumnMeta( $idx );
 			if( ! $meta )
-				throw new \Exception("No meta for column $idx");
+				throw new \InvalidArgumentException("No meta for column $idx");
 
 			if( isset($this->_types[$meta['name']]) )
 				$type = $this->_types[$meta['name']];
@@ -749,9 +749,9 @@ class Result implements \Iterator {
 
 				// Get column info on first loop
 				if( count($v) < 1 )
-					throw new \Exception('Columns not found');
+					throw new \LogicException('Columns not found');
 				elseif( count($v) > 1 )
-					throw new \Exception('The query returned multiple columns');
+					throw new \LogicException('The query returned multiple columns');
 
 				$cname = $this->getColumnInfo(0)->name;
 			}
@@ -766,7 +766,7 @@ class Result implements \Iterator {
 	 */
 	public function rewind() {
 		if( $this->_key != self::INIT_KEY )
-			throw new \Exception('The result has already been fetched');
+			throw new \LogicException('The result has already been fetched');
 		$this->next();
 	}
 
@@ -840,9 +840,9 @@ class Table {
 		if( $name )
 			$this->_name = $name;
 		if( ! $this->_db instanceof Db )
-			throw new \Exception('Db must be a valid dophp\Db instance');
+			throw new \LogicException('Db must be a valid dophp\Db instance');
 		if( ! $this->_name || gettype($this->_name) !== 'string' )
-			throw new \Exception('Invalid table name');
+			throw new \InvalidArgumentException('Invalid table name');
 
 		// Determine the object to use to refer to "self" db
 		switch( $this->_db->type() ) {
@@ -857,7 +857,7 @@ class Table {
 			$hasReferences = false;
 			break;
 		default:
-			throw new \Exception('Not Implemented');
+			throw new NotImplementedException('Not Implemented');
 		}
 
 		// Makes sure that table exists
@@ -869,7 +869,7 @@ class Table {
 				AND "TABLE_NAME" = ?
 		';
 		if( ! $this->_db->run($this->_db->quoteConv($q), array($this->_name))->fetch() )
-			throw new \Exception("Table {$this->_name} not found");
+			throw new \LogicException("Table {$this->_name} not found");
 
 		// Read and cache table structure
 		$q = '
@@ -891,7 +891,7 @@ class Table {
 		';
 		foreach( $this->_db->run($this->_db->quoteConv($q), array($this->_name))->fetchAll() as $c ) {
 			if( isset($this->_cols['COLUMN_NAME']) )
-				throw new \Exception("Duplicate definition found for column {$c['COLUMN_NAME']}");
+				throw new \LogicException("Duplicate definition found for column {$c['COLUMN_NAME']}");
 
 			$this->_cols[$c['COLUMN_NAME']] = $c;
 
@@ -960,7 +960,7 @@ class Table {
 			';
 		foreach( $this->_db->run($this->_db->quoteConv($q), array($this->_name))->fetchAll() as $c ) {
 			if( isset($this->_refs['COLUMN_NAME']) )
-				throw new \Exception("More than one reference detected for column {$c['COLUMN_NAME']}");
+				throw new \LogicException("More than one reference detected for column {$c['COLUMN_NAME']}");
 			$this->_refs[$c['COLUMN_NAME']] = $c;
 		}
 
@@ -983,7 +983,7 @@ class Table {
 		if( ! $res )
 			return null;
 		if( count($res) != 1 )
-			throw new \Exception('Multiple rows for get. This should never happen');
+			throw new \LogicException('Multiple rows for get. This should never happen');
 
 		return $res[0];
 	}
@@ -1087,7 +1087,7 @@ class Table {
 	*/
 	public function getColumnType($col) {
 		if( ! array_key_exists($col, $this->_cols) )
-			throw new \Exception("Column $col does not exist in table {$this->_name}");
+			throw new \LogicException("Column $col does not exist in table {$this->_name}");
 
 		$dtype = strtoupper($this->_cols[$col]['DATA_TYPE']);
 		$nprec = (int)$this->_cols[$col]['NUMERIC_PRECISION'];
@@ -1155,7 +1155,7 @@ class Table {
 			return self::DATA_TYPE_TIME;
 		}
 
-		throw new \Exception("Unsupported column type $dtype");
+		throw new NotImplementedException("Unsupported column type $dtype");
 	}
 
 	/**
@@ -1166,7 +1166,7 @@ class Table {
 	 */
 	public function isColumnNullable($col) {
 		if( ! array_key_exists($col, $this->_cols) )
-			throw new \Exception("Column $col does not exist");
+			throw new \LogicException("Column $col does not exist");
 
 		switch( strtoupper($this->_cols[$col]['IS_NULLABLE']) ) {
 		case 'YES':
@@ -1174,7 +1174,7 @@ class Table {
 		case 'NO':
 			return false;
 		default:
-			throw new \Exception("Unsupported nullable value {$this->_cols[$col]['IS_NULLABLE']}");
+			throw new NotImplementedException("Unsupported nullable value {$this->_cols[$col]['IS_NULLABLE']}");
 		}
 	}
 
@@ -1206,9 +1206,9 @@ class Table {
 							break;
 						}
 				if( ! $type )
-					throw new \Exception("Unknown join column $matches[2] in table $matches[1]");
+					throw new \LogicException("Unknown join column $matches[2] in table $matches[1]");
 			} else
-				throw new \Exception("Unknown column $k");
+				throw new \LogicException("Unknown column $k");
 
 			$ret[$k] = self::castVal($v, $type);
 		}
@@ -1249,7 +1249,7 @@ class Table {
 			return new Time($val);
 		}
 
-		throw new \Exception("Unsupported data type $type");
+		throw new NotImplementedException("Unsupported data type $type");
 	}
 
 	/**
@@ -1312,11 +1312,11 @@ class Table {
 	public function parsePkArgs($pk) {
 		// Check parameters
 		if( ! $this->_pk )
-			throw new \Exception('Table doesn\'t have a Primary Key');
+			throw new \LogicException('Table doesn\'t have a Primary Key');
 		if( ! is_array($pk) )
 			$pk = array($pk);
 		if( count($this->_pk) != count($pk) )
-			throw new \Exception('Number of columns in Primary Key doesn\'t match');
+			throw new \LogicException('Number of columns in Primary Key doesn\'t match');
 
 		// Match arguments, replace numeric with associative array elements
 		foreach( $pk as $k => $v )
@@ -1325,7 +1325,7 @@ class Table {
 				unset($pk[$k]);
 			} else
 				if( ! in_array($k, $this->_pk) )
-					throw new \Exception("Unknown column name in PK: $k");
+					throw new \LogicException("Unknown column name in PK: $k");
 
 		return $pk;
 	}
@@ -1361,7 +1361,7 @@ class Table {
 			static $first = true;
 
 			if( ! in_array($name, $table->getCols()) )
-				throw new \Exception("Unknown column name: $name in table " . $table->getName());
+				throw new \LogicException("Unknown column name: $name in table " . $table->getName());
 
 			if( $first )
 				$first = false;
@@ -1395,7 +1395,21 @@ class Table {
 
 
 /**
- * An error occurred where parsing a Select Query string
+ * Generic DoPhp Db exception
+ */
+class DbException extends \Exception {
+}
+
+
+/**
+ * Exception thrown during quoting
+ */
+class QuoteException extends \Exception {
+}
+
+
+/**
+ * An error occurred while parsing a Select Query string
  */
 class SelectQueryStringParseException extends \Exception {
 	/** The queryb being parsed */
@@ -1454,7 +1468,7 @@ class SelectQuery {
 		elseif( is_string($query) )
 			$this->_constructFromString($query);
 		else
-			throw new \Exception('Invalid argument type: must be array or string');
+			throw new \InvalidArgumentException('Invalid argument type: must be array or string');
 	}
 
 	/** Constructs a query from an array of parameters
@@ -1477,12 +1491,12 @@ class SelectQuery {
 	 */
 	protected function _constructFromArray(array $query) {
 		if( ! is_array($query) )
-			throw new \Exception('Query definition must be an array');
+			throw new \InvalidArgumentException('Query definition must be an array');
 
 		if( ! isset($query['cols']) )
-			throw new \Exception('Columns definitions are mandatory');
+			throw new \InvalidArgumentException('Columns definitions are mandatory');
 		if( ! is_array($query['cols']) )
-			throw new \Exception('Columns definitions must be an array');
+			throw new \InvalidArgumentException('Columns definitions must be an array');
 
 		$this->_cols = $query['cols'];
 		foreach( $this->_cols as &$col ) {
@@ -1492,36 +1506,36 @@ class SelectQuery {
 			}
 
 			if( ! is_array($col) )
-				throw new \Exception('Column must be an array');
+				throw new \InvalidArgumentException('Column must be an array');
 			if( ! isset($col['qname']) )
-				throw new \Exception('Column must define qname');
+				throw new \InvalidArgumentException('Column must define qname');
 		}
 		unset($col);
 
 		if( ! isset($query['from']) )
-			throw new \Exception('From part is mandatory');
+			throw new \InvalidArgumentException('From part is mandatory');
 		if( ! is_string($query['from']) )
-			throw new \Exception('From must be a string');
+			throw new \InvalidArgumentException('From must be a string');
 
 		$this->_from = $query['from'];
 
 		if( isset($query['where']) ) {
 			if( ! is_string($query['where']) )
-				throw new \Exception('Where must be a string');
+				throw new \InvalidArgumentException('Where must be a string');
 
 			$this->_where = $query['where'];
 		}
 
 		if( isset($query['groupBy']) ) {
 			if( ! is_string($query['groupBy']) )
-				throw new \Exception('Group BY must be a string');
+				throw new \InvalidArgumentException('Group BY must be a string');
 
 			$this->_where = $query['groupBy'];
 		}
 
 		if( isset($query['orderBy']) ) {
 			if( ! is_string($query['orderBy']) )
-				throw new \Exception('Order BY must be a string');
+				throw new \InvalidArgumentException('Order BY must be a string');
 
 			$this->_orderBy = $query['orderBy'];
 		}
@@ -1615,7 +1629,7 @@ class SelectQuery {
 			$matches = [];
 			$r = preg_match($colRe, $cd, $matches);
 			if( ! $r )
-				throw new \Exception("Unparsable column definition: \"$cd\"");
+				throw new \InvalidArgumentException("Unparsable column definition: \"$cd\"");
 
 			$parsed = self::__parseColName($matches[1]);
 			end($parsed);
@@ -1626,7 +1640,7 @@ class SelectQuery {
 			$colk = isset($matches[2]) ? $matches[2] : $parsed[$lk];
 
 			if( array_key_exists($colk, $cols) )
-				throw new \Exception("Duplicate column alias \"$colk\"");
+				throw new \InvalidArgumentException("Duplicate column alias \"$colk\"");
 			$cols[$colk] = $col;
 		}
 		return $cols;
@@ -1667,7 +1681,7 @@ class SelectQuery {
 	 */
 	public function col(string $ck): array {
 		if( ! isset($this->_cols[$ck]) )
-			throw new \Exception("Unknown column \"$ck\"");
+			throw new \InvalidArgumentException("Unknown column \"$ck\"");
 		return $this->_cols[$ck];
 	}
 
@@ -1708,7 +1722,7 @@ class SelectQuery {
 	 */
 	public function addWhere(string $where, string $op='AND') {
 		if( $op != 'AND' && $op != 'OR' )
-			throw new \Exception("Unknown operator $op");
+			throw new \InvalidArgumentException("Unknown operator $op");
 
 		if( $this->_where === null ) {
 			$this->_where = $where;
@@ -1786,7 +1800,7 @@ class Where {
 						}
 					}
 					if( ! $nn )
-						throw new \Exception("Couldn't find a new unique name for $n");
+						throw new \LogicException("Couldn't find a new unique name for $n");
 
 					$params[$nn] = $params[$n];
 					unset($params[$n]);
@@ -1824,12 +1838,12 @@ class Where {
 						}
 					}
 					if( ! $nn )
-						throw new \Exception("Couldn't find a new unique name for $n");
+						throw new \LogicException("Couldn't find a new unique name for $n");
 					$this->_params[$nn] = $v;
 					$count = null;
 					$this->_cond = preg_replace('/\\?/', ":$nn", $this->_cond, 1, $count);
 					if( $count != 1 )
-						throw new \Exception("Error $count replacing argument");
+						throw new \LogicException("Error $count replacing argument");
 				}
 	}
 
@@ -1910,7 +1924,7 @@ class Join {
 			}
 
 		if( ! $refs )
-			throw new \Exception('Unable to parse reference for join');
+			throw new \InvalidArgumentException('Unable to parse reference for join');
 
 		return $sql;
 	}
@@ -1941,7 +1955,7 @@ class Join {
 	*/
 	public function getAlias() {
 		if( $this->_alias === null )
-			throw new \Exception('No alias assigned');
+			throw new \InvalidArgumentException('No alias assigned');
 		return $this->_alias;
 	}
 
@@ -1970,14 +1984,14 @@ class Decimal {
 			$parts = explode('.', $val);
 
 			if( count($parts) > 2 )
-				throw new \Exception("Malformed decimal $val");
+				throw new \InvalidArgumentException("Malformed decimal $val");
 
 			if( ! isset($parts[1]) )
 				$parts[1] = null;
 
 			foreach( $parts as $p )
 				if( ! is_numeric($p) && $p !== null )
-					throw new \Exception("Non-numeric decimal $val");
+					throw new \InvalidArgumentException("Non-numeric decimal $val");
 
 			list($this->__int, $this->__dec) = $parts;
 		}

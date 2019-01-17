@@ -38,7 +38,7 @@ class Utils {
 
 		# Check number of resulting parts
 		if( count($parts) > 3 || count($parts) < 1)
-			throw new \Exception("Unvalid number of parts: " . count($parts));
+			throw new \InvalidArgumentException("Unvalid number of parts: " . count($parts));
 
 		# Convert each part to a number and pad it back again
 		foreach($parts as &$p)
@@ -183,7 +183,7 @@ class Utils {
 		elseif( $type == 'double' )
 			$val = self::formatNumber($value, null, $lc['decimal_point'], $lc['thousands_sep']);
 		else
-			throw new \Exception("Unsupported type $type class " . get_class($value));
+			throw new NotImplementedException("Unsupported type $type class " . get_class($value));
 
 		return $val;
 	}
@@ -295,7 +295,7 @@ class Utils {
 		case null:
 			return null;
 		default:
-			throw new \Exception("Uknown type $t");
+			throw new NotImplementedException("Uknown type $t");
 		}
 	}
 
@@ -499,7 +499,7 @@ class Utils {
 		$headers = self::headers();
 
 		if ( ! isset($headers['Content-Type']) )
-			throw new \Exception('Missing Content-Type header');
+			throw new \UnexpectedValueException('Missing Content-Type header');
 
 		$parts = explode(';', $headers['Content-Type']);
 		$ctype = trim($parts[0]);
@@ -514,7 +514,7 @@ class Utils {
 			return $_POST;
 		}
 
-		throw new \Exception("Unsupported Content-Type \"$ctype\"");
+		throw new NotImplementedException("Unsupported Content-Type \"$ctype\"");
 	}
 
 }
