@@ -194,7 +194,7 @@ abstract class BaseField extends BaseFormWidget implements Field {
 	 */
 	public function format($value) {
 		if( is_array($value) )
-			throw new \Exception('Value is array ' . print_r($value, true));
+			throw new \InvalidArgumentException('Value is array ' . print_r($value, true));
 		return (string)$value;
 	}
 

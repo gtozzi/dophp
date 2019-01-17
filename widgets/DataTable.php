@@ -795,6 +795,7 @@ class DataTable extends BaseWidget {
 		$type=false;
 
 
+		//TODO: this needs to be rewritten
 		if((trim($string))!=""){
 
 			switch(true){

@@ -446,7 +446,7 @@ class Utils {
 				$matches = [];
 				$m = preg_match('/^\s*q=([0-9.]+)\s*$/', $aspl[1], $matches);
 				if( ! $m )
-					throw new \Exception("Could not decode Accept params: \"$aspl[1]\"");
+					throw new \UnexpectedValueException("Could not decode Accept params: \"$aspl[1]\"");
 				$pri = (double)$matches[1];
 			} else
 				$pri = 1;

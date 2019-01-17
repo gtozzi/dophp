@@ -137,7 +137,7 @@ class DoPhp {
 
 		// Don't allow multiple instances of this class
 		if( self::$__instance )
-			throw new Exception('DoPhp is already instantiated');
+			throw new \LogicException('DoPhp is already instantiated');
 		self::$__instance = $this;
 		$this->__start = $start;
 
@@ -248,7 +248,7 @@ class DoPhp {
 		if( $auth ) {
 			$this->__auth = new $auth($this->__conf, $this->__db, $sess);
 			if( ! $this->__auth instanceof dophp\AuthInterface )
-				throw new Exception('Wrong auth interface');
+				throw new \LogicException('Wrong auth interface');
 			$this->__auth->login();
 		}
 
@@ -686,8 +686,8 @@ class DoPhp {
 		}
 
 		try {
-			throw new \Exception("$et $errno: '$errstr' in '$errfile', $errline");
-		} catch (Exception $e) {
+			throw new \dophp\PHPErrorException("$et $errno: '$errstr' in '$errfile', $errline");
+		} catch (\dophp\PHPErrorException $e) {
 			$this->__printException($e);
 		}
 		exit();

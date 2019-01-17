@@ -426,6 +426,7 @@ abstract class FormPage extends \dophp\PageSmarty {
 		switch( $_SERVER['REQUEST_METHOD'] ) {
 		case 'POST':
 			$posted = true;
+			// intentional no-break
 		case 'PATCH':
 			// POST sends full form data, while PATCH updates just some fields
 			// for validation

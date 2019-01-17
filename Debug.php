@@ -29,7 +29,7 @@ abstract class Debug {
 	 */
 	public static function instance() {
 		if ( ! self::$__instance )
-			throw new \Exception('Debug has not been instantiated');
+			throw new \LogicException('Debug has not been instantiated');
 
 		return self::$__instance;
 	}
@@ -39,7 +39,7 @@ abstract class Debug {
 	 */
 	protected static function _init(Debug $inst) {
 		if ( self::$__instance )
-			throw new \Exception('Can\'t init twice');
+			throw new \LogicException('Can\'t init twice');
 
 		self::$__instance = $inst;
 	}
