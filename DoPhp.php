@@ -7,6 +7,7 @@
 * @brief Main DoPhp framework class
 */
 
+require_once(__DIR__ . '/Exceptions.php');
 require_once(__DIR__ . '/Url.php');
 require_once(__DIR__ . '/Debug.php');
 require_once(__DIR__ . '/Lang.php');
@@ -22,6 +23,7 @@ require_once(__DIR__ . '/Widgets.php');
 require_once(__DIR__ . '/Model.php');
 require_once(__DIR__ . '/smarty/libs/Smarty.class.php');
 
+
 /**
 * The main framework class, only one instance is possible
 */
@@ -35,9 +37,6 @@ class DoPhp {
 	const MODEL_PREFIX = 'm';
 	/** The is the key used to store alerts in $_SESSION */
 	const SESS_ALERTS = 'DoPhp::Alerts';
-
-	/** The exception message when usign a static method without instance */
-	const INSTANCE_ERROR = 'Must instatiate DoPhp first';
 
 	/** Stores the current instance */
 	private static $__instance = null;
@@ -493,7 +492,7 @@ class DoPhp {
 	*/
 	public static function conf() {
 		if( ! self::$__instance )
-			throw new Exception(self::INSTANCE_ERROR);
+			throw new \dophp\DoPhpNotInitedException();
 		return self::$__instance->__conf;
 	}
 
@@ -504,7 +503,7 @@ class DoPhp {
 	*/
 	public static function db() {
 		if( ! self::$__instance )
-			throw new Exception(self::INSTANCE_ERROR);
+			throw new \dophp\DoPhpNotInitedException();
 		return self::$__instance->__db;
 	}
 
@@ -515,7 +514,7 @@ class DoPhp {
 	*/
 	public static function auth() {
 		if( ! self::$__instance )
-			throw new Exception(self::INSTANCE_ERROR);
+			throw new \dophp\DoPhpNotInitedException();
 		return self::$__instance->__auth;
 	}
 
@@ -526,7 +525,7 @@ class DoPhp {
 	*/
 	public static function lang() {
 		if( ! self::$__instance )
-			throw new Exception(self::INSTANCE_ERROR);
+			throw new \dophp\DoPhpNotInitedException();
 		return self::$__instance->__lang;
 	}
 
@@ -537,7 +536,7 @@ class DoPhp {
 	*/
 	public static function cache() {
 		if( ! self::$__instance )
-			throw new Exception(self::INSTANCE_ERROR);
+			throw new \dophp\DoPhpNotInitedException();
 		return self::$__instance->__cache;
 	}
 
@@ -549,7 +548,7 @@ class DoPhp {
 	*/
 	public static function model($name) {
 		if( ! self::$__instance )
-			throw new Exception(self::INSTANCE_ERROR);
+			throw new \dophp\DoPhpNotInitedException();
 		if( ! $name )
 			throw new Exception('Must give a model name');
 
@@ -576,7 +575,7 @@ class DoPhp {
 	*/
 	public static function duration() {
 		if( ! self::$__instance )
-			throw new Exception(self::INSTANCE_ERROR);
+			throw new \dophp\DoPhpNotInitedException();
 
 		return microtime(true) - self::$__instance->__start;
 	}
@@ -589,7 +588,7 @@ class DoPhp {
 	 */
 	public static function addAlert(dophp\Alert $alert) {
 		if( ! self::$__instance )
-			throw new Exception(self::INSTANCE_ERROR);
+			throw new \dophp\DoPhpNotInitedException();
 		if( session_status() !== PHP_SESSION_ACTIVE )
 			return;
 
@@ -605,7 +604,7 @@ class DoPhp {
 	 */
 	public static function getAlerts() {
 		if( ! self::$__instance )
-			throw new Exception(self::INSTANCE_ERROR);
+			throw new \dophp\DoPhpNotInitedException();
 		if( session_status() !== PHP_SESSION_ACTIVE )
 			return [];
 		if( ! isset($_SESSION[self::SESS_ALERTS]) )
@@ -625,7 +624,7 @@ class DoPhp {
 	 */
 	public static function peekAlerts() {
 		if( ! self::$__instance )
-			throw new Exception(self::INSTANCE_ERROR);
+			throw new \dophp\DoPhpNotInitedException();
 		if( session_status() !== PHP_SESSION_ACTIVE )
 			return [];
 		if( ! isset($_SESSION[self::SESS_ALERTS]) )
@@ -644,7 +643,7 @@ class DoPhp {
 	 */
 	public static function setCustomExceptionPrinter( $callable ) {
 		if( ! self::$__instance )
-			throw new Exception(self::INSTANCE_ERROR);
+			throw new \dophp\DoPhpNotInitedException();
 
 		if( ! is_callable($callable) )
 			throw new \Exception('Custom exception printer must be callable');

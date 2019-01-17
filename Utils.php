@@ -9,6 +9,10 @@
 
 namespace dophp;
 
+
+require_once 'Exceptions.php';
+
+
 class Utils {
 
 	/** Formatted version of NULL, for internal usage */
@@ -133,7 +137,7 @@ class Utils {
 		// Add extra useful information
 		try {
 			$db = \DoPhp::db();
-		} catch( \Exception $e ) {
+		} catch( DoPhpNotInitedException $e ) {
 			$db = null;
 		}
 
