@@ -1965,7 +1965,7 @@ class Join {
 /**
 * Represents a Decimal, since PHP doesn't really support it
 */
-class Decimal {
+class Decimal implements \JsonSerializable {
 	/** String value, to maintain precision, integer part */
 	private $__int;
 	/** String value, to maintain precision, decimal part */
@@ -2008,6 +2008,10 @@ class Decimal {
 
 	public function toDouble() {
 		return (double)($this->__int . '.' . $this->__dec);
+	}
+
+	public function jsonSerialize() {
+		return $this->toDouble();
 	}
 
 	/**

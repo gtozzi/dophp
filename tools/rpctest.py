@@ -113,7 +113,7 @@ class RpcTest:
 				headers['X-Auth-User'] = self.user
 				headers['X-Auth-Pass'] = self.pwd
 
-		self.log.info("Sending request to %s", url)
+		self.log.info("Sending request to %s://%s%s", self.baseUrl.scheme, self.baseUrl.netloc, url)
 		self.log.debug("HEADERS:\n%s", headers)
 		self.log.debug("BODY:\n%s", body)
 
