@@ -33,6 +33,7 @@
 	{{if $type=='number' || $type=='currency'}}
 		{{$min=$field->getMin()}}
 		{{$max=$field->getMax()}}
+		{{$step=$field->getStep()}}
 	{{/if}}
 
 	{{if $field->getVStatus() == \dophp\widgets\Field::V_SUCCESS}}
@@ -163,8 +164,9 @@
 						{{if isset($placeholder)}}placeholder="{{$placeholder|htmlentities}}"{{/if}}
 					{{/if}}
 					{{if $type=='number'}}
-						{{if isset($min)}}min="{{$min|htmlentities}}"{{/if}}
-						{{if isset($max)}}max="{{$min|htmlentities}}"{{/if}}
+						{{if isset($min)}}min="{{$min|formatCFloat}}"{{/if}}
+						{{if isset($max)}}max="{{$min|formatCFloat}}"{{/if}}
+						{{if isset($step)}}step="{{$step|formatCFloat}}"{{/if}}
 					{{/if}}
 					{{if $type=='checkbox'}}
 						{{if $value}}checked{{/if}}
@@ -225,7 +227,7 @@
 							$('#{{$id}}').click();
 						});
 						$('#{{$id}}').change(function() {
-							
+
 							// check if upload input is inside a sheetList_form_section
 							// and get linked doc ID
 							var sheetID=0;
@@ -236,8 +238,8 @@
 									sheetID=formID;
 								}
 							}
-							
-							
+
+
 							$('#{{$id}}_txt').val( $(this).val() );
 
 							$(".ag-prog-itm_{{$id}}").css("display","flex");
@@ -320,7 +322,7 @@
 												var perc= parseInt((e.loaded / e.total) * 100);
 												$(".ag-progress_{{$id}}").css("width",perc+"%");
 												$(".ag-progress_{{$id}}").text(perc+"%");
-												
+
 												// if current upload field is linked to doc_sheet object,
 												// updates the doc_sheet upload_progress_bar
 												if(sheetID){

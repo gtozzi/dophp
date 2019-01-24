@@ -280,6 +280,7 @@ class string_validator extends base_validator {
 *
 * Custom validation rules: 'min'=>val, Number must be greater or equal than value
 *                          'max'=>val, Number must be lesser or equal than value
+*                          'step'=>val, Number must be a multiple of value
 *                          'decsep'=>char, Decimal separator used
 *                                          The default (null) accepts both '.' and ','
 *                          'thosep'=>char, Thousands separator used
@@ -294,6 +295,9 @@ abstract class number_validator extends base_validator {
 		if( isset($o['max']) )
 			if( $err = $this->check_max($v, $o['max']) )
 				return $err;
+		if( isset($o['step']) )
+			if( $err = $this->check_step($v, $o['step']) )
+				return $err;
 	}
 	protected function check_min($val, $min) {
 		if( $val === null || $val >= $min )
@@ -304,6 +308,11 @@ abstract class number_validator extends base_validator {
 		if( $val === null || $val <= $max )
 			return false;
 		return str_replace('{number}', $this->format_number($max), _('Number must not be bigger than {number}')) . '.';
+	}
+	protected function check_step($val, $step) {
+		if( $val === null || $val == 0 || fmod($val, $step) == 0 )
+			return false;
+		return str_replace('{number}', $this->format_number($step), _('Number must be a multiple of {number}')) . '.';
 	}
 
 	/**
@@ -355,7 +364,7 @@ class int_validator extends number_validator {
 class double_validator extends number_validator {
 
 	protected function do_clean($val, $opt) {
-		return (int)$this->do_number_clean($val, $opt, 'double');
+		return (double)$this->do_number_clean($val, $opt, 'double');
 	}
 }
 

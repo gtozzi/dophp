@@ -226,7 +226,7 @@ class Utils {
 		$headers = array();
 		foreach( $_SERVER as $name => $value )
 			if( substr($name,0,5) == 'HTTP_' ) {
-				$h = str_replace(' ','-',ucwords(strtolower(str_replace('_',' ',substr($name,5))))); 
+				$h = str_replace(' ','-',ucwords(strtolower(str_replace('_',' ',substr($name,5)))));
 				$headers[$h] = $value;
 			} else if( $name == 'CONTENT_TYPE' )
 				$headers['Content-Type'] = $value;
@@ -513,4 +513,10 @@ class Utils {
 		throw new \Exception("Unsupported Content-Type \"$ctype\"");
 	}
 
+	/**
+	 * Converts a float to string non locale-aware
+	 */
+	public static function formatCFloat($float) {
+		return sprintf('%F', $float);
+	}
 }

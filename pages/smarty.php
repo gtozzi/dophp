@@ -53,6 +53,7 @@ trait SmartyFunctionalities {
 		$smarty->registerPlugin('modifier', 'formatTime', 'dophp\Utils::formatTime');
 		$smarty->registerPlugin('modifier', 'formatNumber', 'dophp\Utils::formatNumber');
 		$smarty->registerPlugin('modifier', 'formatCurrency', 'dophp\Utils::formatCurrency');
+		$smarty->registerPlugin('modifier', 'formatCFloat', 'dophp\Utils::formatCFloat');
 		$smarty->registerPlugin('modifier', 'escapeJsTpl', 'dophp\Utils::escapeJsTpl');
 
 		$smarty->assign('config', $config);

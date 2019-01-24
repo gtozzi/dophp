@@ -428,8 +428,11 @@ class NumberField extends TextField {
 	protected $_min = null;
 	/** The allowed maximum value */
 	protected $_max = null;
+	/** The allowed step (null = any) */
+	protected $_step = null;
 
 	protected $_type = 'number';
+	/** @see self::_afterConstruct */
 	protected $_vtype = 'int';
 
 	public function getMin() {
@@ -440,12 +443,25 @@ class NumberField extends TextField {
 		return $this->_max;
 	}
 
+	public function getStep() {
+		return $this->_step;
+	}
+
+	protected function _afterConstruct() {
+		if( is_float($this->_min) || is_float($this->_max) || is_float($this->_step) )
+			$this->_vtype = 'double';
+
+		parent::_afterConstruct();
+	}
+
 	protected function _getValidationOptions(): array {
 		$vo = parent::_getValidationOptions();
 		if( $this->_min !== null )
 			$vo['min'] = $this->_min;
 		if( $this->_max !== null )
 			$vo['max'] = $this->_max;
+		if( $this->_step !== null )
+			$vo['step'] = $this->_step;
 		return $vo;
 	}
 }
@@ -458,6 +474,7 @@ class CurrencyField extends NumberField {
 
 	protected $_type = 'currency';
 	protected $_vtype = 'double';
+	protected $_step = 0.01;
 
 	/** The used currency symbol */
 	protected $_curSymbol = '€';
