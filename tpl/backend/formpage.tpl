@@ -51,19 +51,12 @@
 							{{$fg->getLabel()|htmlentities}}
 						</h5>
 						<div id="{{$fg->getId()|htmlentities}}_fieldDiv" class="collapse show">
-							{{foreach $fg->fields() as $f}}
-								{{include file=$f->getTemplate() field=$f}}
-							{{/foreach}}
+							{{include file='backend/formpage.fields.tpl' container=$fg ungroupedOnly=false}}
 						</div>
 					{{/foreach}}
 
 					{{* Ungrouped fields *}}
-					{{foreach $form->fields() as $f}}
-						{{if $f->getGroup()}}
-							{{continue}}
-						{{/if}}
-						{{include file=$f->getTemplate() field=$f}}
-					{{/foreach}}
+					{{include file='backend/formpage.fields.tpl' container=$form ungroupedOnly=true}}
 				{{/block}}
 
 				{{block name='bottombuttons'}}

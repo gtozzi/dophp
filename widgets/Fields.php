@@ -76,6 +76,9 @@ interface Field extends FormWidget {
 	 * @param $status boool: The new readonly status
 	 */
 	public function setReadOnly(bool $status);
+
+	/** Returns display options for the field */
+	public function getDisplayOptions(): array;
 }
 
 
@@ -106,6 +109,9 @@ abstract class BaseField extends BaseFormWidget implements Field {
 	protected $_vstatus = Field::V_NOTNEEDED;
 	/** The field's validtaion feedback text */
 	protected $_vfeedback = null;
+
+	/** Display options */
+	protected $_dopts = [];
 
 	public function setGroup(FieldGroup $group) {
 		$this->_group = $group;
@@ -188,7 +194,7 @@ abstract class BaseField extends BaseFormWidget implements Field {
 	 */
 	public function format($value) {
 		if( is_array($value) )
-			throw new \Exception('Value is array ' . print_r($value, true));
+			throw new \InvalidArgumentException('Value is array ' . print_r($value, true));
 		return (string)$value;
 	}
 
@@ -240,6 +246,10 @@ abstract class BaseField extends BaseFormWidget implements Field {
 			return true;
 
 		return null;
+	}
+
+	public function getDisplayOptions(): array {
+		return $this->_dopts;
 	}
 }
 

@@ -103,22 +103,22 @@ class Lang {
 			$this->_supported = array();
 			$pk = $this->_langTable->getPk();
 			if( count($pk) != 1 )
-				throw new \Exception('Language table must have a single PK');
+				throw new LangDbTableException('Language table must have a single PK');
 			$pk = $pk[0];
 			foreach( $this->_langTable->select(null,true) as $r )
 				$this->_supported[] = $r[$pk];
 
 			// Check the other tables
 			if( count($this->_idxTable->getPk()) != 1 )
-				throw new \Exception('Index table must have a single PK');
+				throw new LangDbTableException('Index table must have a single PK');
 			if( count($this->_txtTable->getPk()) != 2 )
-				throw new \Exception('Index table must have a composed PK');
+				throw new LangDbTableException('Index table must have a composed PK');
 			if( ! in_array(self::TEXT_COL, $this->_txtTable->getCols()) )
-				throw new \Exception('Text table must have a '.self::TEXT_COL.' column');
+				throw new LangDbTableException('Text table must have a '.self::TEXT_COL.' column');
 		}
 
 		if( ! $this->_supported )
-			throw new \Exception('Must support at least one language');
+			throw new \LogicException('Must support at least one language');
 
 		// Sets the initial locale
 		$this->autoLanguage();
@@ -258,7 +258,7 @@ class Lang {
 	*/
 	public function restoreDomain() {
 		if( ! $this->_oldDomain )
-			throw new \Exception('No domain to restore');
+			throw new \LogicException('No domain to restore');
 		textdomain($this->_oldDomain);
 	}
 
@@ -272,7 +272,7 @@ class Lang {
 	public function setLanguage($lang, $save=true) {
 		$locale = $this->getLocaleName($lang);
 		if( ! setlocale(LC_ALL, $locale) )
-			throw new \Exception("Unable to set locale $locale");
+			throw new SetLocaleException("Unable to set locale $locale");
 		$this->_lang = $lang;
 
 		if( $save ) {
@@ -349,17 +349,18 @@ class Lang {
 	 *
 	 * @see self::popLocale
 	 * @param $category int: the locale category, as in builtin setlocale()
+	 * @throws SetLocaleException
 	 */
 	public static function pushLocale($category) {
 		if( self::$_pushedLocale !== null || self::$_pushedLocaleCategory !== null )
-			throw new \Exception('Locale is already pushed, can\'t push twice');
+			throw new \LogicException('Locale is already pushed, can\'t push twice');
 
 		self::$_pushedLocaleCategory = $category;
 		self::$_pushedLocale = setlocale(self::$_pushedLocaleCategory, 0);
 		if( ! self::$_pushedLocale )
-			throw new \Exception('Couldn\'t read current locale');
+			throw new SetLocaleException('Couldn\'t read current locale');
 		if( ! setlocale(self::$_pushedLocaleCategory, 'C') )
-			throw new \Exception('Couldn\'t set C locale');
+			throw new SetLocaleException('Couldn\'t set C locale');
 	}
 
 	/**
@@ -369,12 +370,25 @@ class Lang {
 	 */
 	public static function popLocale() {
 		if( ! self::$_pushedLocale || ! self::$_pushedLocaleCategory )
-			throw new \Exception('Locale is already pushed, can\'t push twice');
+			throw new \LogicException('Locale is already pushed, can\'t push twice');
 
 		if( ! setlocale(self::$_pushedLocaleCategory, self::$_pushedLocale) )
-			throw new \Exception('Couldn\'t restore previous locale');
+			throw new SetLocaleException('Couldn\'t restore previous locale');
 		self::$_pushedLocaleCategory = null;
 		self::$_pushedLocale = null;
 	}
 
+}
+
+
+/**
+ * Exception thrown when something is wrong in a db table
+ */
+class LangDbTableException extends \Exception {
+}
+
+/**
+ * Exception thrown when failing to set locale
+ */
+class SetLocaleException extends \RuntimeException {
 }

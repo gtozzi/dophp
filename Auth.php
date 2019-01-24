@@ -89,7 +89,7 @@ abstract class AuthBase implements AuthInterface {
 	 */
 	protected function _beforeLogin() {
 		if( $this->_uid )
-			throw new \Exception('Must logout first');
+			throw new \LogicException('Must logout first');
 	}
 
 	/**
