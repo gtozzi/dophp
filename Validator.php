@@ -310,7 +310,12 @@ abstract class number_validator extends base_validator {
 		return str_replace('{number}', $this->format_number($max), _('Number must not be bigger than {number}')) . '.';
 	}
 	protected function check_step($val, $step) {
-		if( $val === null || $val == 0 || fmod($val, $step) == 0 )
+		if( $val === null || $val == 0 )
+			return false;
+		$ratio = $val / $step;
+		$diff = $ratio - round($ratio);
+		// 1.19e-7f is FLT_EPSILON in C, should be the maximun relative float error
+		if( $diff < .000000119 )
 			return false;
 		return str_replace('{number}', $this->format_number($step), _('Number must be a multiple of {number}')) . '.';
 	}
