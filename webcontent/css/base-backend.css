@@ -8,3 +8,17 @@
 .navbar-brand img.logo {
 	max-height: 35px;
 }
+
+/** Forms */
+.ag-checkbx-cust {
+	padding-left: 0px;
+	cursor: pointer;
+}
+
+.ag-checkbx-cust input {
+	position: relative;
+	opacity: 1;
+	margin-right: 10px;
+	cursor: pointer;
+	z-index:0;
+}
