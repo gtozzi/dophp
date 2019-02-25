@@ -675,9 +675,28 @@
 
 	}
 
-
 	function wpHideDateWidget(){
 		$(".wp-date-filter-cont").addClass("do-hide");
+	}
+
+	/**
+	 * Asks for an element deletion confirmation
+	 */
+	function confirmAndDelete(id, url) {
+		if( ! confirm("Confermi la cancellazione?") )
+			return;
+
+		$.ajax({
+			url: url,
+			type: 'DELETE',
+			success: function(result) {
+				window.location.reload();
+			},
+			error: function(result) {
+				console.error(result);
+				window.alert('errore');
+			},
+		});
 	}
 
 </script>

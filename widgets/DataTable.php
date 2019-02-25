@@ -1332,7 +1332,7 @@ class DataTableButton {
 	 * @param $id string: The unique button's ID
 	 * @param $opt array of options, associative
 	 *        - label string: The button's description
-	 *        - url string; The button's URL (see geturl())
+	 *        - url string: The button's URL (see geturl())
 	 *        - icon string: The button's icon name
 	 * @param $params array of replaceable url params, associative, some are
 	 *        include dby default:
@@ -1344,7 +1344,7 @@ class DataTableButton {
 
 		foreach( $opt as $k => $v ) {
 			if( ! property_exists($this, $k) )
-				throw new Exception("Invalid property $k");
+				throw new \Exception("Invalid property $k");
 			$this->$k = $v;
 		}
 
