@@ -129,6 +129,7 @@ interface field_validator {
 *               'default'=>specify a default value to be used in place of null
 *               'process'=>lambda($value)
 *                   Lambda function to post-proces the final value after validation
+* Custom validation options MUST start with '_'
 */
 abstract class base_validator implements field_validator {
 
@@ -160,6 +161,10 @@ abstract class base_validator implements field_validator {
 
 	public function clean() {
 		return $this->__cleaned;
+	}
+
+	public function options() {
+		return $this->__options;
 	}
 
 	public function validate() {
