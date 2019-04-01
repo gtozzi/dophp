@@ -9,6 +9,7 @@
 	{{/block}}
 
 	{{block name='favicon'}}
+		<link rel="manifest" href="{{$med}}/manifest.json">
 		<link rel="shortcut icon" href="{{$med}}/img/favicon.ico" type="image/x-icon"/>
 	{{/block}}
 
