@@ -445,9 +445,13 @@ class Utils {
 			if( isset($aspl[1]) ) {
 				$matches = [];
 				$m = preg_match('/^\s*q=([0-9.]+)\s*$/', $aspl[1], $matches);
-				if( ! $m )
-					throw new \UnexpectedValueException("Could not decode Accept params: \"$aspl[1]\"");
-				$pri = (double)$matches[1];
+				if( $m )
+					$pri = (double)$matches[1];
+				else {
+					//TODO: Issue a DoPhp warning when implemented?
+					error_log("Could not decode Accept params: \"$aspl[1]\" in \"{$_SERVER['HTTP_ACCEPT']}\"");
+					$pri = 1;
+				}
 			} else
 				$pri = 1;
 
