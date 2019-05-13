@@ -134,7 +134,9 @@
 							if( data.includes({{$name|json_encode}}) ) {
 								let url = {{$btn->getUrl()|json_encode}};
 								url = url.replace("{{'{{id}}'}}", row.id);
-								html += '<a class="fa {{$btn->icon}}" href="' + url + '"></a>';
+								html += '<a class="fa ' + {{$btn->icon|htmlentities|json_encode}}
+									+ '" href="' + url + '" title="' + {{$btn->label|htmlentities|json_encode}}
+									+ '"></a>';
 							}
 						{{/foreach}}
 						return html;
