@@ -18,7 +18,12 @@
 						<a
 							class="nav-link {{if $tab->isActive()}}active{{/if}}"
 							href="{{$tab->getUrl()|htmlentities}}&amp;id={{$id}}{{foreach $getArgs as $k=>$v}}&amp;{{$k|urlencode}}={{$v|urlencode}}{{/foreach}}"
-						>{{$tab->getLabel()|htmlentities}}</a>
+						>
+							{{$tab->getLabel()|htmlentities}}
+							{{foreach $tab->getBadges() as $badge}}
+								<span class="badge badge-pill badge-{{$badge->getClass()}}">{{$badge->getLabel()}}</span>
+							{{/foreach}}
+						</a>
 					</li>
 				{{/foreach}}
 			</ul>
