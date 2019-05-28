@@ -170,13 +170,21 @@
 					<!-- Breadcrumb -->
 					{{if $pageTitle}}
 						<ol class="breadcrumb">
-							<li class="breadcrumb-item"><a href="?do=home">Home</a></li>
+							<li class="breadcrumb-item">
+								<div class="bc-text"><a href="?do=home">Home</a></div>
+								<img class="bc-arrow" src="{{$med}}/img/bc_arrow.png" alt="arrow"/>
+							</li>
 							{{if isset($breadcrumb)}}
 								{{foreach $breadcrumb as $url => $descr}}
-									<li class="breadcrumb-item"><a href="{{$url|htmlentities}}">{{$descr|htmlentities}}</a></li>
+									<li class="breadcrumb-item">
+										<div class="bc-text"><a href="{{$url|htmlentities}}">{{$descr|htmlentities}}</a></div>
+										<img class="bc-arrow" src="{{$med}}/img/bc_arrow.png" alt="arrow"/>
+									</li>
 								{{/foreach}}
 							{{/if}}
-							<li class="breadcrumb-item active">{{$pageTitle|htmlentities}}{{block name='breadbadges'}}{{/block}}</li>
+							<div class="bc-text active">
+								<li class="breadcrumb-item active">{{$pageTitle|htmlentities}}{{block name='breadbadges'}}{{/block}}</li>
+							</div>
 						</ol>
 					{{/if}}
 				{{/block}}
