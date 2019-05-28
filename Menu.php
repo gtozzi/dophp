@@ -37,6 +37,11 @@ interface MenuInterface {
 	public function getChilds();
 
 	/**
+	 * Returns the item's badges
+	 */
+	public function getBadges();
+
+	/**
 	* Returns an array containing the current active path.
 	*
 	* @param $url string: Url to get the breadcrumb for (use current URL if missing)
@@ -52,6 +57,27 @@ interface MenuInterface {
 	* @return boolean True if active, False otherwise
 	*/
 	public function isActive($url=null);
+}
+
+/**
+* Interface for every menu badge
+*/
+interface BadgeInterface {
+
+	/**
+	* Returns the item's label
+	*/
+	public function getLabel();
+
+	/**
+	* Returns the item's url
+	*/
+	public function getUrl();
+
+	/**
+	* Returns the item's HTML class
+	*/
+	public function getClass();
 }
 
 /**
@@ -166,6 +192,10 @@ class Menu implements MenuInterface {
 		return $this->_currentUrl;
 	}
 
+	public function getBadges() {
+		return $this->_root->getBadges();
+	}
+
 }
 
 /**
@@ -183,6 +213,8 @@ class MenuItem implements MenuInterface {
 	protected $_alt;
 	/** The name of the icon to be displayed */
 	protected $_icon;
+	/** List of badges */
+	protected $_badges = [];
 
 	/**
 	* Creates a new menu item
@@ -204,6 +236,17 @@ class MenuItem implements MenuInterface {
 		$this->_childs[] = $item;
 	}
 
+	public function appendBadge(BadgeInterface $badge) {
+		$this->_badges[] = $badge;
+	}
+
+	/**
+	 * Deletes all badges
+	 */
+	public function clearBadges() {
+		$this->_badges = [];
+	}
+
 	public function getLabel() {
 		return $this->_label;
 	}
@@ -218,6 +261,10 @@ class MenuItem implements MenuInterface {
 
 	public function getChilds() {
 		return $this->_childs;
+	}
+
+	public function getBadges() {
+		return $this->_badges;
 	}
 
 	public function getBreadcrumb($url=null) {
@@ -268,4 +315,43 @@ class MenuItem implements MenuInterface {
 		return false;
 	}
 
+}
+
+
+/**
+ * A simple badge
+ */
+class Badge implements BadgeInterface {
+
+	/** User-friendly label */
+	protected $_label;
+	/** Destination url */
+	protected $_url;
+	/** The HTML class */
+	protected $_class;
+
+	/**
+	* Creates a new menu item badge
+	*
+	* @param $label string: The user-friendly label
+	* @param $class string: The HTML class, defaults to 'secondary'
+	* @param $url string: The url, if clickable
+	*/
+	public function __construct($label, $class='secondary', $url=null) {
+		$this->_label = $label;
+		$this->_class = $class;
+		$this->_url = $url;
+	}
+
+	public function getLabel() {
+		return $this->_label;
+	}
+
+	public function getClass() {
+		return $this->_class;
+	}
+
+	public function getUrl() {
+		return $this->_url;
+	}
 }
