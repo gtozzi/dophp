@@ -210,4 +210,45 @@ class Url {
 		return (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http")
 			. "://$_SERVER[HTTP_HOST]$_SERVER[REQUEST_URI]";
 	}
+
+	/**
+	 * Transforms a $_GET array into an URL string
+	 *
+	 * @param $get array: The GET array, usually $_GET
+	 * @return The URL params string (starting with '?')
+	 */
+	public static function getToStr($get) {
+		if( ! $get )
+			return '';
+
+		$ret = [];
+
+		foreach( $get as $n => $v )
+			if( is_array($v) )
+				$ret = array_merge($ret, self::__getArrayArgToString([$n,], $v));
+			else
+				$ret[] = urlencode($n) . '=' . urlencode($v);
+
+		if( ! $ret )
+			return '';
+
+		return '?' . implode('&', $ret);
+	}
+
+	private static function __getArrayArgToString($namespace, $v) {
+		$ret = [];
+		foreach($v as $nn => $vv)
+			if( is_array($vv) )
+				$ret = array_merge($ret, self::__getArrayArgToString(array_merge($namespace, [$nn, ]), $vv));
+			else{
+				$key = '';
+				foreach( $namespace as $n )
+					if( ! strlen($key) )
+						$key .= $n;
+					else
+						$key .= "[$n]";
+				$ret[] = urlencode($key) . '=' . urlencode($vv);
+			}
+		return $ret;
+	}
 }

@@ -172,11 +172,7 @@ abstract class TablePage extends \dophp\HybridRpcMethod {
 	 * Builds the Smarty page data
 	 */
 	protected function _buildSmarty() {
-		$this->_ajaxURL = '';
-		foreach( $_GET as $n => $v ) {
-			$this->_ajaxURL .= $this->_ajaxURL ? '&' : '?';
-			$this->_ajaxURL .= urlencode($n) . '=' . urlencode($v);
-		}
+		$this->_ajaxURL = \dophp\Url::getToStr($_GET);
 
 		$this->_pageTitle = $this->title ?? _('List') . ' ' .  ucwords($this->_what);
 
