@@ -86,6 +86,9 @@
 		<!-- DoPhp utils -->
 		<link rel="stylesheet" type="text/css" href="{{$config['dophp']['url']}}/webcontent/css/base-backend.css"/>
 		<script src="{{$config['dophp']['url']}}/webcontent/js/form.js"></script>
+
+		<!-- DoPhp font -->		
+		<link rel="stylesheet" type="text/css" href="{{$config['dophp']['url']}}/webcontent/css/mgmt-glyph.css"/>
 	{{/block}}
 
 	{{block name='head'}}{{/block}}
@@ -172,13 +175,13 @@
 						<ol class="breadcrumb">
 							<li class="breadcrumb-item">
 								<div class="bc-text"><a href="?do=home">Home</a></div>
-								<img class="bc-arrow" src="{{$med}}/img/bc_arrow.png" alt="arrow"/>
+								<div class="bc-arrow mgmt-icon mgmt-arrow"></div>
 							</li>
 							{{if isset($breadcrumb)}}
 								{{foreach $breadcrumb as $url => $descr}}
 									<li class="breadcrumb-item">
 										<div class="bc-text"><a href="{{$url|htmlentities}}">{{$descr|htmlentities}}</a></div>
-										<img class="bc-arrow" src="{{$med}}/img/bc_arrow.png" alt="arrow"/>
+										<div class="bc-arrow mgmt-icon mgmt-arrow"></div>
 									</li>
 								{{/foreach}}
 							{{/if}}
