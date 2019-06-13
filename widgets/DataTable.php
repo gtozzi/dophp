@@ -335,11 +335,7 @@ class DataTable extends BaseWidget {
 		$this->_name = $this->_page->name();
 		$this->_initSmarty();
 
-		$this->_ajaxURL = '';
-		foreach( $_GET as $n => $v ) {
-			$this->_ajaxURL .= $this->_ajaxURL ? '&' : '?';
-			$this->_ajaxURL .= urlencode($n) . '=' . urlencode($v);
-		}
+		$this->_ajaxURL = \dophp\Url::getToStr($_GET);
 
 		// By default, use the generic "admin" template
 		$this->_template = 'widgets/dataTable.tpl';

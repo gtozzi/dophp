@@ -219,7 +219,7 @@
 			{{block name='after-input'}}
 				{{if $linkurl}}
 						<span class="input-group-append">
-							<button class="btn btn-info" type="button" onclick="window.location.href={{$linkurl|json_encode|htmlentities}}"><span class="fa fa-external-link-square"></span></button>
+							<button class="btn btn-info" type="button" onclick="window.location.href={{$linkurl|json_encode|htmlentities}}" title="Apri"><span class="fa fa-external-link-square"></span></button>
 						</span>
 					</div><!-- input group end -->
 				{{/if}}
