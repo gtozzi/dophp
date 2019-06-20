@@ -297,16 +297,14 @@ class MenuItem implements MenuInterface {
 		if( $this->_url ) {
 			$reqUrl = Url::parseUrl($url);
 			$myUrl = Url::parseUrl($this->_url);
-			if(
-				( ! isset($myUrl['path']) || $myUrl['path'] == $reqUrl['path'] )
-				&&
-				(
-					( ! isset($myUrl['query']) && ! isset($reqUrl['query']) )
-					||
-					( isset($myUrl['query']) && isset($reqUrl['query']) && ! array_diff($myUrl['query'], $reqUrl['query']) )
-				)
-			)
-				return true;
+
+			if( ! isset($myUrl['path']) || $myUrl['path'] == $reqUrl['path'] ) {
+				if( ! isset($myUrl['query']) && ! isset($reqUrl['query']) )
+					return true;
+
+				if( isset($myUrl['query']) && isset($reqUrl['query']) && $myUrl['query'] === $reqUrl['query'] )
+					return true;
+			}
 		}
 
 		if( $this->_alt && preg_match($this->_alt, Url::fullUrl($url)) )
