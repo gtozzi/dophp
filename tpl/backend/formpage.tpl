@@ -31,90 +31,27 @@
 	{{/block}}
 
 	{{block name='tab'}}
-		{{if ! $form->isValid()}}
-			<div class="alert alert-danger" role="alert">
-				<strong>Errore.</strong> Correggi i campi evidenziati e riprova.
-				<br>
-				<small>{{strip}}(
-					{{foreach $form->invalidFields() as $fn}}
-						{{$fn->getLabel()|htmlentities}}
-						{{if ! $fn@last}}
-							,{{' '}}
-						{{/if}}
-						<!-- {{$fn->getName()|htmlentities}} -->
-					{{/foreach}}
-				){{/strip}}</small>
-			</div>
-		{{/if}}
+		{{block name='alerts'}}
+			{{if ! $form->isValid()}}
+				<div class="alert alert-danger" role="alert">
+					<strong>Errore.</strong> Correggi i campi evidenziati e riprova.
+					<br>
+					<small>{{strip}}(
+						{{foreach $form->invalidFields() as $fn}}
+							{{$fn->getLabel()|htmlentities}}
+							{{if ! $fn@last}}
+								,{{' '}}
+							{{/if}}
+							<!-- {{$fn->getName()|htmlentities}} -->
+						{{/foreach}}
+					){{/strip}}</small>
+				</div>
+			{{/if}}
+		{{/block}}
+
 		<div class="container ag-form-container">
-			<div class="ag-resume-cont">
-				<style type="text/css">
-					.ag-resume-cont .ag-info {
-					    background: #2b76b6;
-					    padding: 7px 13px;
-					    border-radius: 3px;
-					    color: #fff;
-					    font-size: 21px;
-					    cursor: pointer;
-					}
-					
-					.ag-resume-cont .ag-content {
-					    width: 280px;
-					    background: #2b76b6;
-					    margin-top: 10px;
-					    position: absolute;
-					    display: none;
-					    z-index: 100;
-					}
-					
-					.ag-resume-cont .ag-content.ag-active{
-						display: block;
-					}
-					.ag-resume-cont .ag-content .ag-header {
-					    color: #fff;
-					    text-align: center;
-					}
-					.ag-resume-cont .ag-content .ag-header,
-					.ag-resume-cont .ag-content .ag-body{
-						padding: 10px 15px;
-					}
-					.ag-resume-cont .ag-content .ag-body {
-					    background: #d1ecf1;
-					}
-					.ag-resume-cont .ag-content .ag-body>div {
-					    line-height: 30px;
-					}					
-				</style>
-				<script>
-					$(document).ready(function(){
-						$(".ag-resume-cont .ag-info").click(function(){
-							var quotInfo=$(this).next();
-							if(quotInfo.hasClass("ag-active")){
-								quotInfo.removeClass("ag-active");
-							}
-							else{
-								quotInfo.addClass("ag-active");
-							}
-						});					
-					});
-				</script>
-				<div class="ag-info fa fa-info"></div>
-				<div class="ag-content">
-					<div class="ag-header">DATI PREVENTIVO</div>
-					<div class="ag-body">
-					    <div>Euribor/IRS: 0</div>
-					    <div>Spread: 1,85</div>
-					    <div>TAN: 1,85</div>
-					    <div>LTV: 5 (da 0 a 50)</div>
-					    <div>Rata: € 498,00</div>
-					    <div>Imposta Sostitutiva: € 250,00</div>
-					    <div>Istruttoria: € 1.000,00</div>
-						<div>Retrocessione: € 1.100,00</div>
-					    <div>Perizia: € 300,00</div>
-					    <div>Informazioni mutuo: Mirò +0.35</div>
-					</div>
-				</div>				
-			</div>
+			{{block name='beforeform'}}{{/block}}
+
 			<form id="mainForm" method="post" action="{{$form->action()->asString()|htmlentities}}">
 				<input type="hidden" name="{{$formkey|htmlentities}}" value="{{$form->getId()|htmlentities}}">
 				{{block name='form'}}
@@ -144,6 +81,8 @@
 					</div>
 				{{/block}}
 			</form>
+
+			{{block name='afterform'}}{{/block}}
 		</div>
 
 		<!-- Saving… modal -->
