@@ -209,7 +209,7 @@ class MenuItem implements MenuInterface {
 	protected $_url;
 	/** List of childs */
 	protected $_childs = array();
-	/** Alternative URL regex */
+	/** Alternative regex for determing when this element is active, to me tahced against full URL */
 	protected $_alt;
 	/** The name of the icon to be displayed */
 	protected $_icon;
@@ -294,23 +294,47 @@ class MenuItem implements MenuInterface {
 		if( ! ( $this->_url || $this->_alt ) )
 			return false;
 
+		if( $this->_alt )
+			return preg_match($this->_alt, Url::fullUrl($url));
+
 		if( $this->_url ) {
 			$reqUrl = Url::parseUrl($url);
 			$myUrl = Url::parseUrl($this->_url);
+			if( $this->__recursiveArrayCompare($myUrl, $reqUrl) )
+				return true;
+		}
 
-			if( ! isset($myUrl['path']) || $myUrl['path'] == $reqUrl['path'] ) {
-				if( ! isset($myUrl['query']) && ! isset($reqUrl['query']) )
-					return true;
+		return false;
+	}
 
-				if( isset($myUrl['query']) && isset($reqUrl['query']) && $myUrl['query'] === $reqUrl['query'] )
-					return true;
+	/**
+	 * Recursively compare all key/values in $search array against $base array
+	 *
+	 * For internal usage only.
+	 */
+	private function __recursiveArrayCompare($search, $base) {
+		foreach( $search as $k => $v ) {
+			if( ! array_key_exists($k, $base) )
+				return false;
+
+			$bv = $base[$k];
+
+			if( is_array($v) ) {
+				if( ! is_array($bv) )
+					return false;
+
+				if( ! $this->__recursiveArrayCompare($v, $bv) )
+					return false;
+			} else {
+				if( is_array($bv) )
+					return false;
+
+				if( $bv != $v )
+					return false;
 			}
 		}
 
-		if( $this->_alt && preg_match($this->_alt, Url::fullUrl($url)) )
-			return true;
-
-		return false;
+		return true;
 	}
 
 }
