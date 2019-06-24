@@ -4,7 +4,7 @@
 
 	{{block name='buttonbar'}}
 		<div class="form-group ag-quick-btn-bar" style="margin-top:5px; margin-left: 20px;">
-			{{include file='backend/formpage.buttons.tpl' text=false btnForm='mainForm'}}
+			{{include file='backend/formpage.buttons.tpl' text=true size='sm' btnForm='mainForm'}}
 		</div>
 	{{/block}}
 

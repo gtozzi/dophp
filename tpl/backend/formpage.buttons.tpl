@@ -2,7 +2,7 @@
 	{{if $btn->hidden}}
 		{{continue}}
 	{{/if}}
-	<button type="{{$btn->type}}" class="{{$btn->id}}-button btn {{$btn->class}} btnc-{{$btn->phpclass()}}"
+	<button type="{{$btn->type}}" class="{{$btn->id}}-button btn {{$btn->class}} btnc-{{$btn->phpclass()}} {{if isset($size) && $size}}btn-{{$size}}{{/if}}"
 		{{if ! $btn->enabled}}disabled{{/if}}
 		{{foreach $btn->htmldata() as $k => $v}}
 			data-{{$k}}="{{htmlentities($v)}}"
