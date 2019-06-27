@@ -131,8 +131,10 @@ class Form extends BaseWidget {
 
 	/**
 	 * Adds a field
+	 *
+	 * @return Field: The just-added field
 	 */
-	public function addField(Field $field, string $groupName = null) {
+	public function addField(Field $field, string $groupName = null): Field {
 		if( array_key_exists($field->getName(), $this->_fields) )
 			throw new \Exception('Duplicate field ' . $field->getName());
 		if( $field->getForm() )
@@ -146,6 +148,31 @@ class Form extends BaseWidget {
 
 		if( $groupName )
 			$this->_fieldGroups[$groupName]->addField($field);
+
+		return $field;
+	}
+
+	/**
+	 * Instantiates a new field from given array definition and adds it to the form
+	 *
+	 * @param $name string: The field's unique name
+	 * @param $def array: Field definition array
+	 * @return Field: The just-added field
+	 */
+	public function addFieldFromArray(string $name, array $def): Field {
+		if( isset($def['group']) ) {
+			$group = $def['group'];
+			unset($def['group']);
+		} else
+			$group = $this->_defaultFieldGroup;
+
+		if( ! isset($def['type']) )
+			throw new \Exception("Missing field type for field \"$name\"");
+		$cls = '\\dophp\\widgets\\' . ucfirst($def['type']) . 'Field';
+		unset($def['type']);
+
+		$field = new $cls($name, $this->_namespace, $def);
+		return $this->addField($field, $group);
 	}
 
 	/**
@@ -180,6 +207,7 @@ class Form extends BaseWidget {
 	 * Parses given field array structures and ensures all fields are converted
 	 * into objects
 	 *
+	 * @see self::_fieldFromArray()
 	 * @param $fields: array of fields, associative, in the form name => field
 	 *                 every field must be a Field instance or an array
 	 */
@@ -193,19 +221,7 @@ class Form extends BaseWidget {
 			if( ! is_array($f) )
 				throw new \Exception("Invalid field \"$name\" definition");
 
-			if( isset($f['group']) ) {
-				$group = $f['group'];
-				unset($f['group']);
-			} else
-				$group = $this->_defaultFieldGroup;
-
-			if( ! isset($f['type']) )
-				throw new \Exception("Missing field type for field \"$name\"");
-			$cls = '\\dophp\\widgets\\' . ucfirst($f['type']) . 'Field';
-			unset($f['type']);
-
-			$f = new $cls($name, $this->_namespace, $f);
-			$this->addField($f, $group);
+			$this->addFieldFromArray($name, $f);
 		}
 	}
 
