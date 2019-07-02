@@ -177,6 +177,17 @@
 				{{/foreach}}
 			],
 
+			// Initial search values
+			searchCols: [
+				{{foreach $cols as $c}}
+					{{if $c->search}}
+						{ search: {{$c->search|json_encode}}, regex: {{$c->regex|json_encode}}, },
+					{{else}}
+						null,
+					{{/if}}
+				{{/foreach}}
+			],
+
 			// Callback for custom selection
 			createdRow: function( row, data, dataIndex ) {
 				// Keeps selection display on redraw
@@ -861,17 +872,18 @@
 			<th style="width: 20px" class="data-table-filter"><a href="#" class="fa fa-columns" onclick="selectColumns('{{$id}}');return false;"></a></th>
 			{{foreach $cols as $c}}
 				<th class="data-table-filter">
-					{{if $c->type==$customDateFilt}}
-						<input class="data-table-filter ag-dt-dtFilt" type="text" placeholder="filtra - cerca"
-						onkeyup="filterChanged(this);" onchange="filterChanged(this);" onclick="filterShowDate(this);"
-						data-lastval="" data-timer="" data-coln="{{$c@index}}" data-seltab="" id="ag-dt-dtFilt-{{$c@index}}"
-						/>
-					{{else}}
-						<input class="data-table-filter" type="text" placeholder="filtra - cerca"
-						onkeyup="filterChanged(this);" onchange="filterChanged(this);"
+					<input class="data-table-filter {{if $c->type==$customDateFilt}}ag-dt-dtFilt{{/if}}"
+						type="text" placeholder="filtra - cerca" onkeyup="filterChanged(this);" onchange="filterChanged(this);"
 						data-lastval="" data-timer="" data-coln="{{$c@index}}"
-						/>
-					{{/if}}
+						{{if $c->type==$customDateFilt}}
+							onclick="filterShowDate(this);"
+							data-seltab=""
+							id="ag-dt-dtFilt-{{$c@index}}"
+						{{/if}}
+						{{if $c->search}}
+							value="{{$c->search|htmlentities}}"
+						{{/if}}
+					/>
 				</th>
 			{{/foreach}}
 		</tr>

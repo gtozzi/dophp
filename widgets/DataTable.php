@@ -321,6 +321,26 @@ class DataTable extends BaseWidget {
 	}
 
 	/**
+	 * Sets the initial params (filter/search) from $_GET array
+	 *
+	 * @param $pars: array of parameters, associative
+	 * @see https://datatables.net/manual/server-side
+	 */
+	public function setGParams(array $params) {
+		if( isset($params['columns']) && is_array($params['columns']) ) {
+			foreach( $params['columns'] as $col => $def ) {
+				if( ! array_key_exists($col, $this->_cols) )
+					continue;
+
+				if( is_array($def) && isset($def['search']) && is_array($def['search']) && $def['search']['value'] ) {
+					$this->_cols[$col]->search = $def['search']['value'];
+					$this->_cols[$col]->regex = isset($def['search']['regex']) ? (bool)$def['search']['regex'] : false;
+				}
+			}
+		}
+	}
+
+	/**
 	 * Returns the containing page
 	 */
 	public function getPage(): \dophp\PageInterface {
@@ -1243,6 +1263,10 @@ class DataTableBaseColumn {
 	public $sort = true;
 	/** Whether this column is visible */
 	public $visible = true;
+	/** Current search value */
+	public $search = null;
+	/** Is search regex? */
+	public $regex = false;
 
 	/**
 	 * Creates the column definition

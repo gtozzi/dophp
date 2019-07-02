@@ -138,8 +138,14 @@ abstract class TablePage extends \dophp\HybridRpcMethod {
 		$this->_table = $this->_initTable();
 
 		// Parses the super filter
-		if( $_SERVER['REQUEST_METHOD'] == 'POST' )
+		switch( $_SERVER['REQUEST_METHOD'] ) {
+		case 'POST':
 			$this->_table->setSFilter($_POST);
+			break;
+		case 'GET':
+			$this->_table->setGParams($_GET);
+			break;
+		}
 
 		if( \dophp\Utils::isAcceptedEncoding('application/json') ) {
 			// Returning JSON data
