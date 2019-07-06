@@ -49,6 +49,9 @@ interface Field extends FormWidget {
 	/** Sets the new field's value from display value, resets error status */
 	public function setInternalValue($value);
 
+	/** Sets field's soft required status */
+	public function setSoftRequired(bool $value);
+
 	/** Returns field's smarty template name */
 	public function getTemplate(): string;
 
@@ -68,7 +71,10 @@ interface Field extends FormWidget {
 	public function isReadOnly(): bool;
 
 	/** Tells whether this field is required (may return null if unknown) */
-	public function isRequired();
+	public function isRequired(): ?bool;
+
+	/** Tells whether this field is required in special cases (may return null if unknown ) */
+	public function isSoftRequired(): ?bool;
 
 	/**
 	 * Sets/unsets the field's readonly status
@@ -100,6 +106,8 @@ abstract class BaseField extends BaseFormWidget implements Field {
 	protected $_type = 'text';
 	/** The field's readonly status */
 	protected $_readonly = false;
+	/** Marks this field as required in special cases */
+	protected $_softrequired = false;
 
 	/** Validation options */
 	protected $_vopts = [];
@@ -233,7 +241,7 @@ abstract class BaseField extends BaseFormWidget implements Field {
 		$this->_readonly = $status;
 	}
 
-	public function isRequired() {
+	public function isRequired(): ?bool {
 		if( ! isset($this->_vopts['required']) || ! $this->_vopts['required'] )
 			return false;
 
@@ -246,6 +254,14 @@ abstract class BaseField extends BaseFormWidget implements Field {
 			return true;
 
 		return null;
+	}
+
+	public function isSoftRequired(): ?bool {
+		return $this->_softrequired;
+	}
+
+	public function setSoftRequired(bool $value) {
+		$this->_softrequired = $value;
 	}
 
 	public function getDisplayOptions(): array {

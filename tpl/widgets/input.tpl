@@ -84,8 +84,11 @@
 	{{/if}}
 
 	{{$required=$field->isRequired()}}
+	{{$softrequired=$field->isSoftRequired()}}
 	{{if $required===true}}
 		{{$reqCls='required'}}
+	{{elseif $softrequired===true}}
+		{{$reqCls='softrequired'}}
 	{{else}}
 		{{$reqCls=''}}
 	{{/if}}
