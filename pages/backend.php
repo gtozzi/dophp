@@ -636,6 +636,7 @@ abstract class FormPage extends \dophp\PageSmarty {
 	 * Process the "insert" action
 	 *
 	 * @param $posted bool: Whether data has been posted
+	 * @throws \dophp\UrlRedirect
 	 */
 	protected function _buildInsert(bool $posted) {
 		// User submitted valid data
@@ -643,11 +644,7 @@ abstract class FormPage extends \dophp\PageSmarty {
 			$id = $this->_insDbData($this->_form->getInternalValues());
 
 			// Redirect to edit
-			$location = $this->_getInsertRedirectUrl($id);
-			$this->_headers['Location'] = $location;
-			$this->_smarty->assign('location', $location);
-			$this->_template = 'redirect.tpl';
-			return;
+			$this->_redirectAfterInsert($id);
 		} elseif( ! $posted ) {
 			$this->_form->setInternalValues($this->_defDbData(), false);
 		}
@@ -665,18 +662,50 @@ abstract class FormPage extends \dophp\PageSmarty {
 	}
 
 	/**
+	 * Redirects after an isert
+	 */
+	protected function _redirectAfterInsert($id) {
+		$location = $this->_getInsertRedirectUrl($id);
+		throw new \dophp\UrlRedirect($location);
+	}
+
+	/**
 	 * Process the "edit" action
 	 *
 	 * @param $id mixed: The ID of the element being edited
 	 * @param $posted bool: Whether data has been posted
+	 * @throws \dophp\UrlRedirect
 	 */
 	protected function _buildEdit($id, bool $posted) {
 		// User submitted valid data
-		if( $posted && $this->_form->isValid() )
+		if( $posted && $this->_form->isValid() ) {
 			$this->_updDbData($id, $this->_form->getInternalValues());
+
+			// Page needs to be reloaded since data has changed
+			$this->_redirectAfterEdit($id);
+		}
 
 		if( ! $posted || $this->_form->isValid() )
 			$this->_form->setInternalValues($this->_selDbData($id), false);
+	}
+
+	/**
+	 * Returns redirect URL after edit, overridable in child
+	 *
+	 * @param $id mixed: ID of the edited element
+	 */
+	protected function _getEditRedirectUrl($id) {
+		$url = clone $this->_formAction;
+		$url->args['id'] = $id;
+		return $url->asString();
+	}
+
+	/**
+	 * Redirects after an edit
+	 */
+	protected function _redirectAfterEdit($id) {
+		$location = $this->_getEditRedirectUrl($id);
+		throw new \dophp\UrlRedirect($location);
 	}
 
 	/**
