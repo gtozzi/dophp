@@ -240,6 +240,36 @@ class LinkButton extends Button {
 
 
 /**
+ * A button to open a link and POST to it
+ */
+class PostButton extends LinkButton {
+
+	/** POST data array */
+	public $post;
+
+	/**
+	 * @param $url string: The url to send the user to
+	 * @param $post array: Post data array
+	 * @param $options array: Array of options:
+	 *        - newtab: If true, opens the url in new tab
+	 */
+	public function __construct(string $id, string $label, string $icon, string $url, array $post=[], array $options=[]) {
+		parent::__construct($id, $label, $icon, $url, $options);
+
+		$this->post = $post;
+	}
+
+	public function htmldata(): array {
+		$data = parent::htmldata();
+
+		$data['post'] = json_encode($this->post);
+
+		return $data;
+	}
+}
+
+
+/**
  * A button handled by custom javascript in template code
  */
 class JsButton extends Button {
