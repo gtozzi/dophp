@@ -182,8 +182,8 @@ abstract class TablePage extends \dophp\HybridRpcMethod {
 
 		$this->_pageTitle = $this->title ?? _('List') . ' ' .  ucwords($this->_what);
 
-		// By default, use the generic "admin" template
-		$this->_template = 'backend/tablepage.tpl';
+		// If custom template does not exist, use the generic one
+		$this->_templateFallback('backend/tablepage.tpl');
 
 		$this->_smarty->assignByRef('baseTpl', $this->_baseTpl);
 		$this->_smarty->assign('table', $this->_table);
@@ -410,15 +410,8 @@ abstract class FormPage extends \dophp\PageSmarty {
 		$this->_smarty->assignByRef('savemessage', $this->_saveMessage);
 		$this->_smarty->assignByRef('cancelmessage', $this->_cancelMessage);
 
-		// If template does not exist, use the generic "mod" template
-		$tplFound = false;
-		foreach( $this->_smarty->getTemplateDir() as $td )
-			if( file_exists($td . '/' . $this->_template) ) {
-				$tplFound = true;
-				break;
-			}
-		if( ! $tplFound )
-			$this->_template = 'backend/formpage.tpl';
+		// If custom template does not exist, use the generic one
+		$this->_templateFallback('backend/formpage.tpl');
 
 		// Child init tasks, if any
 		$this->_initChild($id);

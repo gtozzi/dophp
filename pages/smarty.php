@@ -94,6 +94,20 @@ trait SmartyFunctionalities {
 	}
 
 	/**
+	 * Searches for current template and falls back to given one if not found
+	 *
+	 * @param $fbtpl string: Fallback template
+	 */
+	protected function _templateFallback($fbtpl) {
+		if( isset($this->_template) && $this->_template )
+			foreach( $this->_smarty->getTemplateDir() as $td )
+				if( file_exists($td . '/' . $this->_template) )
+					return;
+
+		$this->_template = $fbtpl;
+	}
+
+	/**
 	 * Smarty plugin
 	 *
 	 * Leaves only one space where multiple spaces are found
