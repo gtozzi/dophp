@@ -31,23 +31,25 @@
 	{{/block}}
 
 	{{block name='tab'}}
-		{{block name='alerts'}}
-			{{if ! $form->isValid()}}
-				<div class="alert alert-danger" role="alert">
-					<strong>Errore.</strong> Correggi i campi evidenziati e riprova.
-					<br>
-					<small>{{strip}}(
-						{{foreach $form->invalidFields() as $fn}}
-							{{$fn->getLabel()|htmlentities}}
-							{{if ! $fn@last}}
-								,{{' '}}
-							{{/if}}
-							<!-- {{$fn->getName()|htmlentities}} -->
-						{{/foreach}}
-					){{/strip}}</small>
-				</div>
-			{{/if}}
-		{{/block}}
+		<div class="container ag-alerts-tab-cont">
+			{{block name='alerts'}}
+				{{if ! $form->isValid()}}
+					<div class="alert alert-danger" role="alert">
+						<strong>Errore.</strong> Correggi i campi evidenziati e riprova.
+						<br>
+						<small>{{strip}}(
+							{{foreach $form->invalidFields() as $fn}}
+								{{$fn->getLabel()|htmlentities}}
+								{{if ! $fn@last}}
+									,{{' '}}
+								{{/if}}
+								<!-- {{$fn->getName()|htmlentities}} -->
+							{{/foreach}}
+						){{/strip}}</small>
+					</div>
+				{{/if}}
+			{{/block}}
+		</div>
 
 		<div class="container ag-form-container">
 			{{block name='beforeform'}}{{/block}}
