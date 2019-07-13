@@ -451,7 +451,7 @@ abstract class FormPage extends \dophp\PageSmarty {
 				break;
 			}
 			if( $data[self::POST_FORM_KEY] != $this->_form->getId() )
-				throw new \Exception('Form ID mismatch');
+				throw new \Exception('Form ID mismatch; expected ' . $this->_form->getId() . ', got ' . $data[self::POST_FORM_KEY]);
 
 			// Update the form
 			if( ! isset($data[self::POST_DATA_KEY]) )
