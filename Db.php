@@ -1535,7 +1535,7 @@ class SelectQuery {
 			if( ! is_string($query['groupBy']) )
 				throw new \InvalidArgumentException('Group BY must be a string');
 
-			$this->_where = $query['groupBy'];
+			$this->_groupBy = $query['groupBy'];
 		}
 
 		if( isset($query['orderBy']) ) {
@@ -1543,6 +1543,13 @@ class SelectQuery {
 				throw new \InvalidArgumentException('Order BY must be a string');
 
 			$this->_orderBy = $query['orderBy'];
+		}
+
+		if( isset($query['limit']) ) {
+			if( ! is_int($query['limit']) )
+				throw new \InvalidArgumentException('Limit must be an integer');
+
+			$this->_limit = $query['limit'];
 		}
 	}
 
