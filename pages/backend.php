@@ -487,8 +487,12 @@ abstract class FormPage extends \dophp\PageSmarty {
 		default:
 			throw new \Exception("Unsupported method {$_SERVER['REQUEST_METHOD']}");
 		}
-		$this->_form->action( $this->_formAction );
-		$this->_smarty->assignByRef('form', $this->_form);
+
+		if($_SERVER['REQUEST_METHOD'] != 'DELETE')
+		{
+			$this->_form->action( $this->_formAction );
+			$this->_smarty->assignByRef('form', $this->_form);
+		}
 
 		// Assign useful smarty variables
 		$this->_smarty->assignByRef('baseTpl', $this->_baseTpl);

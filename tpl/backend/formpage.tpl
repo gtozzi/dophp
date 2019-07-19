@@ -165,14 +165,25 @@
 
 			function confirmDelete() {
 				{{$letter=($whatGender=='f')?'a':'o'}}
-				if( window.confirm('Confermi di voler eliminare definitivamente quest{{$letter}} '+{{$what|json_encode}}+'?') )
-				$.ajax({
-					url: {{$form->action()->asString()|json_encode}},
-					type: 'DELETE',
-					success: function(result) {
-						console.log(result);
-				 	}
-				});
+				if( window.confirm('Confermi di voler eliminare definitivamente quest{{$letter}} '+{{$what|json_encode}}+'?'))
+				{
+					
+					$.ajax({
+						url: {{$form->action()->asString()|json_encode}},
+						type: "DELETE",
+						success: function(result) {
+							window.confirm(result);
+							console.log(result);
+
+							//actionURL = {{$form->action()->asString()|json_encode}};
+							var res = {{$form->action()->asString()|json_encode}}.split(".");
+							redirectURL = res[0]+".admin";
+							redirectTarget = {"redirect":true,"redirect_url":redirectURL}
+							window.location.href = redirectTarget.redirect_url;
+					 	}
+					});
+					
+				}
 			}
 
 			$(".save-button").click(function() {
