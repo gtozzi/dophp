@@ -695,7 +695,8 @@
 	/**
 	 * Asks for an element deletion confirmation
 	 */
-	function confirmAndDelete(id, url) {
+	//function confirmAndDelete(id, url) {
+	function confirmAndDelete(url) {
 		if( ! confirm("Confermi la cancellazione?") )
 			return;
 
