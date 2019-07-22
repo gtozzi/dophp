@@ -1493,6 +1493,7 @@ class SelectQuery {
 	 *                   keyword
 	 *        - orderBy: The ORDER BY part of the query, without the ORDER BY
 	 *                   keyword
+	 *        - limit: The LIMIT part of the query, without the LIMIT keyword
 	 */
 	protected function _constructFromArray(array $query) {
 		if( ! is_array($query) )
@@ -1546,10 +1547,10 @@ class SelectQuery {
 		}
 
 		if( isset($query['limit']) ) {
-			if( ! is_int($query['limit']) )
-				throw new \InvalidArgumentException('Limit must be an integer');
+			if( ! is_int($query['limit']) && ! is_string($query['limit']) )
+				throw new \InvalidArgumentException('Limit must be a string or int');
 
-			$this->_limit = $query['limit'];
+			$this->_limit = (string)$query['limit'];
 		}
 	}
 
