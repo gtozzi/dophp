@@ -1109,7 +1109,7 @@ class Table {
 	 *                 DateTime, Time (see DATA_TYPE_* constants)
 	 */
 	public static function getType($dtype, $len) {
-		switch($dtype) {
+		switch(strtoupper($dtype)) {
 		case 'SMALLINT':
 		case 'MEDIUMINT':
 		case 'INT':
