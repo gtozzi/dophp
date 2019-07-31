@@ -381,12 +381,12 @@ abstract class FormPage extends \dophp\PageSmarty {
 			break;
 		case self::ACT_EDIT:
 			if( $this->_disableEdit )
-				throw new \Exception('Insert is disabled');
+				throw new \Exception('Edit is disabled');
 			$perm = [ self::PERM_EDIT, self::PERM_VIEW ];
 			break;
 		case self::ACT_DEL:
 			if( $this->_disableDelete )
-				throw new \Exception('Insert is disabled');
+				throw new \Exception('Delete is disabled');
 			$perm = self::PERM_DEL;
 			break;
 		default:
@@ -552,16 +552,22 @@ abstract class FormPage extends \dophp\PageSmarty {
 	 * @param $id mixed: The element id
 	 */
 	protected function _addButtons($id) {
-		$this->_buttons->add(new \dophp\buttons\SaveButton());
-		$this->_buttons->add(new \dophp\buttons\CancelButton());
-		$this->_buttons->add(new \dophp\buttons\DeleteButton());
+		if( ! $this->_disableInsert || ! $this->_disableEdit ) {
+			$this->_buttons->add(new \dophp\buttons\SaveButton());
+			$this->_buttons->add(new \dophp\buttons\CancelButton());
 
-		if( $this->hasPerm(self::PERM_EDIT) ) {
-			$this->_buttons->enable(\dophp\buttons\SaveButton::DEFAULT_ID);
-			$this->_buttons->enable(\dophp\buttons\CancelButton::DEFAULT_ID);
+			if( $this->hasPerm(self::PERM_EDIT) ) {
+				$this->_buttons->enable(\dophp\buttons\SaveButton::DEFAULT_ID);
+				$this->_buttons->enable(\dophp\buttons\CancelButton::DEFAULT_ID);
+			}
 		}
-		if( $this->hasPerm(self::PERM_DEL) )
-			$this->_buttons->enable(\dophp\buttons\DeleteButton::DEFAULT_ID);
+
+		if( ! $this->_disableDelete ) {
+			$this->_buttons->add(new \dophp\buttons\DeleteButton());
+
+			if( $this->hasPerm(self::PERM_DEL) )
+				$this->_buttons->enable(\dophp\buttons\DeleteButton::DEFAULT_ID);
+		}
 	}
 
 	/**
