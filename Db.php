@@ -152,24 +152,6 @@ class Db {
 			elseif( $p instanceof \DateTime )
 				$p = $p->format('Y-m-d H:i:s');
 
-		// Fix compatibilità MSSQL SERVER
-		if($this->_type == self::TYPE_MSSQL)
-		{
-			// Fix compatibilitò MS SLQ Server, rimozione simbolo ` non supportato
-			$query = str_replace('`', '', $query);
-			// $params = str_replace('`', '', $params);
-
-			// Fix compatibilitò MS SLQ Server, sosituzione LIMIT con OFFSET e FETCH
-			$limitPos = strpos($query, "LIMIT");
-			if(isset($limitPos) && $limitPos != 0)
-			{
-				$limitValue = substr($query, $limitPos+6); // Recupero il valore di LIMIT
-				$query = substr($query, 0, $limitPos); // Tronco la quesry eliminandoi la clausola LIMIT
-				$lvalueList = preg_split("/([,])/", $limitValue);
-				$query .= "OFFSET ".$lvalueList[0]." ROWS FETCH NEXT ".$lvalueList[1]." ROWS ONLY";
-			}
-		}
-
 		if( $dbgquery )
 			$dbgquery->built($query, $params);
 
@@ -1563,6 +1545,7 @@ class SelectQuery {
 			$this->_orderBy = $query['orderBy'];
 		}
 
+		// TO DO: Modify type check. Use is_string instead of is_int, because $query['limit'] could be (val_1, val_2)
 		if( isset($query['limit']) ) {
 			if( ! is_int($query['limit']) )
 				throw new \InvalidArgumentException('Limit must be an integer');

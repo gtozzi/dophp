@@ -481,6 +481,9 @@ class DataTable extends BaseWidget {
 			$pars = array_merge($pars, $apars);
 		}
 
+		if( $this->_db->type() == $this->_db::TYPE_MSSQL)
+			$q = str_replace( '`', '', $q);
+
 		return [ $q, $where, $pars, $this->_groupBy ];
 	}
 
@@ -594,8 +597,12 @@ class DataTable extends BaseWidget {
 
 		// Filter by limit, if given
 		if( isset($pars['length']) && $pars['length'] > 0 )
-			$q .= "\nLIMIT " . ( (int)$pars['start'] ) . ',' . $pars['length'];
-
+		{
+			if( $this->_db->type() == $this->_db::TYPE_MSSQL)
+				$q .= "\nOFFSET ". ( (int)$pars['start'] ) . ' ROWS FETCH NEXT ' . $pars['length'].' ROWS ONLY';
+			else
+				$q .= "\nLIMIT " . ( (int)$pars['start'] ) . ',' . $pars['length'];
+		}
 
 		// If no where, do not calculate found rows
 		if ( ! $where )
