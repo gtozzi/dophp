@@ -1109,7 +1109,7 @@ class Table {
 	 *                 DateTime, Time (see DATA_TYPE_* constants)
 	 */
 	public static function getType($dtype, $len) {
-		switch($dtype) {
+		switch(strtoupper($dtype)) {
 		case 'SMALLINT':
 		case 'MEDIUMINT':
 		case 'INT':
@@ -1545,6 +1545,7 @@ class SelectQuery {
 			$this->_orderBy = $query['orderBy'];
 		}
 
+		// TO DO: Modify type check. Use is_string instead of is_int, because $query['limit'] could be (val_1, val_2)
 		if( isset($query['limit']) ) {
 			if( ! is_int($query['limit']) )
 				throw new \InvalidArgumentException('Limit must be an integer');
