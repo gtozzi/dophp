@@ -318,9 +318,10 @@ abstract class FormPage extends \dophp\PageSmarty {
 	/** Disables delete */
 	protected $_disableDelete = false;
 
-	/** When true, always adds the save button
-	 *  When false, never adds it
-	 *  When null (default) try to autodetect it
+	/**
+	 * When true, always adds the save button
+	 * When false, never adds it
+	 * When null (default) try to autodetect it
 	 */
 	protected $_addSaveButton = null;
 
