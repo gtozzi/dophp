@@ -720,7 +720,7 @@ class DataTable extends BaseWidget {
 	 * Generate and return the ajax handler
 	 */
 	public function ajaxMethod(): \dophp\PageInterface {
-		$method = new DataTableMethod($this->_config, $this->_db, $this->_page->user(), $this->_page->name(), $this->_page->path());
+		$method = new \dophp\DataTableMethod($this->_config, $this->_db, $this->_page->user(), $this->_page->name(), $this->_page->path());
 		$method->setTable($this);
 		return $method;
 	}
