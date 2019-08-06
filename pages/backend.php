@@ -318,6 +318,12 @@ abstract class FormPage extends \dophp\PageSmarty {
 	/** Disables delete */
 	protected $_disableDelete = false;
 
+	/** When true, always adds the save button
+	 *  When false, never adds it
+	 *  When null (default) try to autodetect it
+	 */
+	protected $_addSaveButton = null;
+
 	/**
 	 * Inits $this->_form
 	 */
@@ -552,7 +558,9 @@ abstract class FormPage extends \dophp\PageSmarty {
 	 * @param $id mixed: The element id
 	 */
 	protected function _addButtons($id) {
-		if( ! $this->_disableInsert || ! $this->_disableEdit ) {
+		if( $this->_addSaveButton || (
+			$this->_addSaveButton == null && ( ! $this->_disableInsert || ! $this->_disableEdit )
+		)) {
 			$this->_buttons->add(new \dophp\buttons\SaveButton());
 			$this->_buttons->add(new \dophp\buttons\CancelButton());
 
