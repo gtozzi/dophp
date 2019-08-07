@@ -736,7 +736,8 @@ abstract class FormPage extends \dophp\PageSmarty {
 	 * @param $id mixed: ID of the deleted element
 	 */
 	public function getDeleteRedirectUrl($id) {
-		$name = preg_replace('/\.mod(\.|$)/', '.admin$1', $this->name());
+		$name = $this->name();
+		$name = substr($name, 0, strpos($name, '.mod')).'.admin';
 		return \dophp\Url::fullPageUrl($name);
 	}
 
