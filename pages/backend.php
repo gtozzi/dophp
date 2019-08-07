@@ -319,6 +319,13 @@ abstract class FormPage extends \dophp\PageSmarty {
 	protected $_disableDelete = false;
 
 	/**
+	 * When true, always adds the save button
+	 * When false, never adds it
+	 * When null (default) try to autodetect it
+	 */
+	protected $_addSaveButton = null;
+
+	/**
 	 * Inits $this->_form
 	 */
 	protected function _initForm($id) {
@@ -381,12 +388,12 @@ abstract class FormPage extends \dophp\PageSmarty {
 			break;
 		case self::ACT_EDIT:
 			if( $this->_disableEdit )
-				throw new \Exception('Insert is disabled');
+				throw new \Exception('Edit is disabled');
 			$perm = [ self::PERM_EDIT, self::PERM_VIEW ];
 			break;
 		case self::ACT_DEL:
 			if( $this->_disableDelete )
-				throw new \Exception('Insert is disabled');
+				throw new \Exception('Delete is disabled');
 			$perm = self::PERM_DEL;
 			break;
 		default:
@@ -488,8 +495,8 @@ abstract class FormPage extends \dophp\PageSmarty {
 			throw new \Exception("Unsupported method {$_SERVER['REQUEST_METHOD']}");
 		}
 
-		if($_SERVER['REQUEST_METHOD'] != 'DELETE')
-		{
+		if( isset($this->_form) ) {
+			// Form is not set on DELETE
 			$this->_form->action( $this->_formAction );
 			$this->_smarty->assignByRef('form', $this->_form);
 		}
@@ -552,16 +559,24 @@ abstract class FormPage extends \dophp\PageSmarty {
 	 * @param $id mixed: The element id
 	 */
 	protected function _addButtons($id) {
-		$this->_buttons->add(new \dophp\buttons\SaveButton());
-		$this->_buttons->add(new \dophp\buttons\CancelButton());
-		$this->_buttons->add(new \dophp\buttons\DeleteButton());
+		if( $this->_addSaveButton || (
+			$this->_addSaveButton == null && ( ! $this->_disableInsert || ! $this->_disableEdit )
+		)) {
+			$this->_buttons->add(new \dophp\buttons\SaveButton());
+			$this->_buttons->add(new \dophp\buttons\CancelButton());
 
-		if( $this->hasPerm(self::PERM_EDIT) ) {
-			$this->_buttons->enable(\dophp\buttons\SaveButton::DEFAULT_ID);
-			$this->_buttons->enable(\dophp\buttons\CancelButton::DEFAULT_ID);
+			if( $this->hasPerm(self::PERM_EDIT) ) {
+				$this->_buttons->enable(\dophp\buttons\SaveButton::DEFAULT_ID);
+				$this->_buttons->enable(\dophp\buttons\CancelButton::DEFAULT_ID);
+			}
 		}
-		if( $this->hasPerm(self::PERM_DEL) )
-			$this->_buttons->enable(\dophp\buttons\DeleteButton::DEFAULT_ID);
+
+		if( ! $this->_disableDelete ) {
+			$this->_buttons->add(new \dophp\buttons\DeleteButton());
+
+			if( $this->hasPerm(self::PERM_DEL) )
+				$this->_buttons->enable(\dophp\buttons\DeleteButton::DEFAULT_ID);
+		}
 	}
 
 	/**
@@ -652,7 +667,7 @@ abstract class FormPage extends \dophp\PageSmarty {
 	 *
 	 * @param $id mixed: ID of the inserted element
 	 */
-	protected function _getInsertRedirectUrl($id) {
+	public function getInsertRedirectUrl($id) {
 		$url = clone $this->_formAction;
 		$url->args['id'] = $id;
 		return $url->asString();
@@ -662,7 +677,7 @@ abstract class FormPage extends \dophp\PageSmarty {
 	 * Redirects after an isert
 	 */
 	protected function _redirectAfterInsert($id) {
-		$location = $this->_getInsertRedirectUrl($id);
+		$location = $this->getInsertRedirectUrl($id);
 		throw new \dophp\UrlRedirect($location);
 	}
 
@@ -691,7 +706,7 @@ abstract class FormPage extends \dophp\PageSmarty {
 	 *
 	 * @param $id mixed: ID of the edited element
 	 */
-	protected function _getEditRedirectUrl($id) {
+	public function getEditRedirectUrl($id) {
 		$url = clone $this->_formAction;
 		$url->args['id'] = $id;
 		return $url->asString();
@@ -701,7 +716,7 @@ abstract class FormPage extends \dophp\PageSmarty {
 	 * Redirects after an edit
 	 */
 	protected function _redirectAfterEdit($id) {
-		$location = $this->_getEditRedirectUrl($id);
+		$location = $this->getEditRedirectUrl($id);
 		throw new \dophp\UrlRedirect($location);
 	}
 
@@ -713,6 +728,16 @@ abstract class FormPage extends \dophp\PageSmarty {
 	protected function _buildDelete($id) {
 		$this->_delDbData($id);
 		return _('Delete succesful');
+	}
+
+	/**
+	 * Returns redirect URL after delete, overridable in child
+	 *
+	 * @param $id mixed: ID of the deleted element
+	 */
+	public function getDeleteRedirectUrl($id) {
+		$name = preg_replace('/\.mod(\.|$)/', '.admin$1', $this->name());
+		return \dophp\Url::fullPageUrl($name);
 	}
 
 	/**
