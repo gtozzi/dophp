@@ -447,6 +447,26 @@ class Db {
 	}
 
 	/**
+	 * Utility function to build an IN() clause
+	 *
+	 * @param $params array: list of paramaters
+	 * @param $emptyok bool: If true, accepts an empty params array instead of
+	 *                       throwing and exception
+	 * @return string: The in statement, or empty string if no params
+	 * @throws \InvalidArgumentException
+	 */
+	public static function buildInStatement($params, $emptyok=false) {
+		if( ! $params ) {
+			if( $emptyok )
+				return '';
+
+			throw new \InvalidArgumentException('Empty list of params received and emptyok is not set');
+		}
+
+		return 'IN(' . implode(',', array_fill(0, count($params), '?')) . ')';
+	}
+
+	/**
 	* Processes an associative array of parameters into an array of SQL-ready
 	* elements
 	*
