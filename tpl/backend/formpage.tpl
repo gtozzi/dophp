@@ -178,7 +178,10 @@
 						},
 						error: function(jqXHR, textStatus, errorThrown) {
 							console.error('Delete error', textStatus, errorThrown);
-							window.alert('Errore durante la cancellazione');
+							if(jqXHR.getResponseHeader("errorMessage") == null || jqXHR.getResponseHeader("errorMessage") == "")
+								window.alert('Errore durante la cancellazione');
+							else
+								window.alert(jqXHR.getResponseHeader("errorMessage"));
 						}
 					});
 				}
