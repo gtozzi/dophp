@@ -519,7 +519,13 @@ abstract class FormPage extends \dophp\PageSmarty {
 			$res = $this->_buildEdit($id, $posted);
 			break;
 		case self::ACT_DEL:
-			$res = $this->_buildDelete($id);
+			$this->_headers['Content-Type'] = 'text/plain';
+			try {
+				$res = $this->_buildDelete($id);
+			} catch( FormPageDeleteConstraintError $e ) {
+				header("HTTP/1.0 409 Conflict");
+				$res = $e->getMessage();
+			}
 			break;
 		default:
 			throw new \Exception("Action $action not supported");
@@ -724,9 +730,19 @@ abstract class FormPage extends \dophp\PageSmarty {
 	 * Process the "delete" action
 	 *
 	 * @param $id mixed: The ID of the element to be deleted
+	 * @return The delete message on success
+	 * @throws FormPageDeleteConstraintError
 	 */
 	protected function _buildDelete($id) {
-		$this->_delDbData($id);
+		try {
+			$this->_delDbData($id);
+		} catch( \PDOException $e ) {
+			if( $e->getCode() != 23000 )
+				throw $e;
+
+			$ce = new FormPageDeleteConstraintError($e->getMessage(), $e->getCode(), $e);
+			throw $ce;
+		}
 		return _('Delete succesful');
 	}
 
@@ -837,4 +853,12 @@ abstract class FormPage extends \dophp\PageSmarty {
 			];
 		return $ret;
 	}
+}
+
+
+/**
+ * Exception thrown in FormPage when a delete operation fails
+ * because of a constraint
+ */
+class FormPageDeleteConstraintError extends \Exception {
 }

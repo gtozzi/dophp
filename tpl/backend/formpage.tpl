@@ -170,18 +170,25 @@
 					$.ajax({
 						url: {{$form->action()->asString()|json_encode}},
 						type: "DELETE",
+						dataType: "text",
 						success: function(result) {
 							window.confirm(result);
-							console.log(result);
+							console.log('Delete success', result);
 							let url = {{$this->getDeleteRedirectUrl($id)|json_encode}};
 							window.location.href = url;
 						},
 						error: function(jqXHR, textStatus, errorThrown) {
-							console.error('Delete error', textStatus, errorThrown);
-							if(jqXHR.getResponseHeader("errorMessage") == null || jqXHR.getResponseHeader("errorMessage") == "")
-								window.alert('Errore durante la cancellazione');
-							else
-								window.alert(jqXHR.getResponseHeader("errorMessage"));
+							let message;
+							if( jqXHR.status == 409 ) {
+								// Constraint failed
+								console.log('Delete constraint failed', jqXHR.responseText);
+								message = 'Impossibile cancellare: ' + {{$what|json_encode}} + ' in uso.';
+							} else {
+								// Any other error
+								console.error('Delete error', textStatus, errorThrown, jqXHR);
+								message = 'Errore durante la cancellazione';
+							}
+							window.alert(message);
 						}
 					});
 				}
