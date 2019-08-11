@@ -737,6 +737,9 @@ abstract class FormPage extends \dophp\PageSmarty {
 		try {
 			$this->_delDbData($id);
 		} catch( \PDOException $e ) {
+			if( $this->_db->inTransaction() )
+				$this->_db->rollback();
+
 			if( $e->getCode() != 23000 )
 				throw $e;
 
