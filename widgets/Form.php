@@ -168,7 +168,12 @@ class Form extends BaseWidget {
 
 		if( ! isset($def['type']) )
 			throw new \Exception("Missing field type for field \"$name\"");
-		$cls = '\\dophp\\widgets\\' . ucfirst($def['type']) . 'Field';
+
+		$cn = ucfirst($def['type']);
+		$cls = '\\widgets\\' . $cn . 'Field';
+		if( ! class_exists($cls) )
+			$cls = '\\dophp\\widgets\\' . $cn . 'Field';
+
 		unset($def['type']);
 
 		$field = new $cls($name, $this->_namespace, $def);
