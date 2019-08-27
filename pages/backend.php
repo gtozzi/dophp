@@ -566,7 +566,7 @@ abstract class FormPage extends \dophp\PageSmarty {
 	 */
 	protected function _addButtons($id) {
 		if( $this->_addSaveButton || (
-			$this->_addSaveButton == null && ( ! $this->_disableInsert || ! $this->_disableEdit )
+			$this->_addSaveButton === null && ( ! $this->_disableInsert || ! $this->_disableEdit )
 		)) {
 			$this->_buttons->add(new \dophp\buttons\SaveButton());
 			$this->_buttons->add(new \dophp\buttons\CancelButton());
