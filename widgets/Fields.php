@@ -610,8 +610,22 @@ class SelectField extends InputField {
 
 	protected $_type = 'select';
 	protected $_vtype = 'string';
+
+	/** Array list or SelectQuery of currently selectable options */
 	protected $_options;
+	/**
+	 * Array list or SelectQuery to recover the description of a selected but
+	 * no longer selectable option
+	 * @see self::_addCurOpt
+	 */
+	protected $_wideOptions = null;
+	/** If true, will add an empty option */
 	protected $_addNullOpt = true;
+	/**
+	 * If true, will add an option for the currently selected element if not available
+	 * @see self::_wideOptions
+	 */
+	protected $_addCurOpt = true;
 	/** Parameters for the options query */
 	protected $_optParams = [];
 	/** Enables AJAX (with select2)
@@ -658,8 +672,10 @@ class SelectField extends InputField {
 		// Returns raw options from builtin array
 		if( is_array($this->_options) ) {
 			$yieldCount = 0;
+			$foundSelected = false;
 			foreach( $this->_options as $id => $descr ) {
 				$selected = ( $id == $this->_iv );
+				$foundSelected = $foundSelected || $selected;
 
 				$option = new SelectOption($id, $selected, $descr);
 
@@ -688,6 +704,9 @@ class SelectField extends InputField {
 					continue;
 				}
 			}
+
+			if( $this->_iv && ! $foundSelected && $this->_addCurOpt )
+				yield $this->__genSelectedOption();
 			return;
 		}
 
@@ -718,10 +737,12 @@ class SelectField extends InputField {
 				}
 			}
 
+			$foundSelected = false;
 			foreach( \DoPhp::db()->xrun($query, $params) as $r ) {
 				$id = $r[$idk];
 				$descr = (string)$r[$desck];
 				$selected = ( $id == $this->_iv );
+				$foundSelected = $foundSelected || $selected;
 				$option = new SelectOption($id, $selected, $descr);
 
 				// Custom ajax filter
@@ -731,10 +752,27 @@ class SelectField extends InputField {
 
 				yield $option;
 			}
+
+			if( $this->_iv && ! $foundSelected && $this->_addCurOpt )
+				yield $this->__genSelectedOption();
 			return;
 		}
 
 		throw new \Exception('Should not reach this point');
+	}
+
+	private function __genSelectedOption(): SelectOption {
+		$descr = "({$this->_iv})";
+
+		if( $this->_wideOptions ) {
+			if( ! is_array($this->_wideOptions) )
+				throw new \dophp\NotImplementedException('Only array wideoptions are supported so far');
+
+			if( isset($this->_wideOptions[$this->_iv]) )
+				$descr = $this->_wideOptions[$this->_iv];
+		}
+
+		return new SelectOption($this->_iv, true, $descr);
 	}
 
 	/** Adds an unique param, internal usage */
