@@ -122,8 +122,8 @@
 										class="nav-link {{if $childs}}dropdown-toggle{{else}}menu-link{{/if}}"
 											href="{{$m->getUrl()}}"
 										data-label={{$m->getLabel()|json_encode}}
+										id="{{$m->getId()|htmlentities}}_a"
 										{{if $childs}}
-											id="navbarDropdownMenuLink{{$m@iteration}}"
 											data-toggle="dropdown"
 											aria-haspopup="true"
 											aria-expanded="false"
@@ -133,7 +133,7 @@
 										{{$m->getLabel()|htmlentities}}
 									</a>
 									{{if $childs}}
-										<div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink{{$m@iteration}}">
+										<div class="dropdown-menu" aria-labelledby="{{$m->getId()|htmlentities}}_a">
 											{{foreach $childs as $c}}
 												<a class="dropdown-item menu-link" href="{{$c->getUrl()}}"
 													data-label={{$m->getLabel()|json_encode}}
