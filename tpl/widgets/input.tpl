@@ -130,7 +130,7 @@
 				{{/if}}
 				{{if $type=='asyncFile'}}
 					<input id="{{$id}}_txt" type="text" class="form-control">
-					<input id="{{$id}}_hid" name="{{$name|htmlentities}}" type="hidden" class="ag-asyncupl-hid-fld" value="">
+					<input id="{{$id}}_hid" name="{{$name|htmlentities}}" type="hidden" class="ag-asyncupl-hid-fld" value="{{$value|htmlentities}}">
 					<span class="input-group-btn">
 						<button id="{{$id}}_btn" type="button" class="btn btn-secondary ag-calender-button">
 							Seleziona
