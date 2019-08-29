@@ -697,10 +697,10 @@ abstract class FormPage extends \dophp\PageSmarty {
 	protected function _buildEdit($id, bool $posted) {
 		// User submitted valid data
 		if( $posted && $this->_form->isValid() ) {
-			$this->_updDbData($id, $this->_form->getInternalValues());
+			$newid = $this->_updDbData($id, $this->_form->getInternalValues());
 
 			// Page needs to be reloaded since data has changed
-			$this->_redirectAfterEdit($id);
+			$this->_redirectAfterEdit($newid ?? $id);
 		}
 
 		if( ! $posted || $this->_form->isValid() )
@@ -816,6 +816,7 @@ abstract class FormPage extends \dophp\PageSmarty {
 	 *
 	 * @param $id mixed: The element's ID
 	 * @param $data array: associative array of data
+	 * @return mixed: May return a new ID, if changed (null means unchanged)
 	 */
 	protected function _updDbData($id, array $data) {
 		$t = $this->__getTable();
