@@ -1774,6 +1774,29 @@ class SelectQuery {
 	public function setLimit($limit) {
 		$this->_limit = (string)$limit;
 	}
+
+	/**
+	 * Prepends an order by condition to the current one
+	 *
+	 * @param $orderBy string: The clause to prepend, wihout ORDER BY keyword
+	 */
+	public function prependOrderBy(string $orderBy) {
+		if( $this->_orderBy == null ) {
+			$this->_orderBy = $orderBy;
+			return;
+		}
+
+		$this->_orderBy = "$orderBy, {$this->_orderBy}";
+	}
+
+	/**
+	 * Sets a new order by condition
+	 *
+	 * @param $orderBy string: The new clause, wihout ORDER BY keyword
+	 */
+	public function setOrderBy(string $orderBy) {
+		$this->_orderBy = $orderBy;
+	}
 }
 
 

@@ -705,7 +705,7 @@ class SelectField extends InputField {
 				}
 			}
 
-			if( $this->_iv && ! $foundSelected && $this->_addCurOpt )
+			if( $this->_iv && ! $foundSelected && $this->_addCurOpt && ! $this->isAjax() )
 				yield $this->__genSelectedOption();
 			return;
 		}
@@ -725,8 +725,12 @@ class SelectField extends InputField {
 				if( strlen($ajax['term']) ) {
 					$pt = "%{$ajax['term']}%";
 					$ajaxparam = self::__addParam($params, 'term', $pt);
-					$where = $query->col($desck)['qname'] . " LIKE :$ajaxparam";
+					$qcol = $query->col($desck)['qname'];
+					$where = "$qcol LIKE :$ajaxparam";
 					$query->addWhere($where);
+
+					// Show exact match first
+					$query->prependOrderBy("LENGTH($qcol) ASC");
 				}
 			} else {
 				// Small trick: when readonly or ajax, only send the selected one
@@ -753,7 +757,7 @@ class SelectField extends InputField {
 				yield $option;
 			}
 
-			if( $this->_iv && ! $foundSelected && $this->_addCurOpt )
+			if( $this->_iv && ! $foundSelected && $this->_addCurOpt && ! $this->isAjax() )
 				yield $this->__genSelectedOption();
 			return;
 		}
