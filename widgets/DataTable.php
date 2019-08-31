@@ -702,7 +702,8 @@ class DataTable extends BaseWidget {
 		if( $this->_enableCountCache ) {
 			$cache = \DoPhp::cache();
 			$ccfcv = $this->_getCountCacheFreshnessCheckVal();
-			$cacheKey = self::MEMCACHE_KEY_BASE . sha1($ccfcv) . '-' . sha1($query);
+			$ch = sha1(sha1($ccfcv) . sha1($query) . sha1(serialize($params)));
+			$cacheKey = self::MEMCACHE_KEY_BASE . 'count::' . $ch;
 		}
 
 		if( $this->_enableCountCache && $cache ) {
