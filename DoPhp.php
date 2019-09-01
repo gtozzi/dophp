@@ -638,6 +638,8 @@ class DoPhp {
 	 *
 	 * @param $callable callable: A callable, the following parameters are passed:
 	 *                  - exception: The raised exception
+	 *                  - code: A fairly unique code to better find the exception
+	 *                          in log files and identify it
 	 *                  If may return true to also trigger the default exception
 	 *                  printing
 	 */
@@ -708,14 +710,23 @@ class DoPhp {
 	 * @param $e Exception
 	 */
 	private function __printException( $e ) {
+		// Assigns a faily unique ID to the exception so it can be easily found
+		// in logs
+		$code = str_pad(rand(0, 99999), 5, '0', STR_PAD_LEFT);
+		$user = $this->__auth ? $this->__auth->getUid() : '-';
+		$url = \dophp\Url::myUrl();
+		$method = isset($_SERVER['REQUEST_METHOD']) ? $_SERVER['REQUEST_METHOD'] : '-';
+		error_log("DoPhp Catched Exception $code, user $user, method $method, url \"$url\": "
+			. dophp\Utils::formatException($e, false));
+
 		if( $this->__customExceptionPrinter && is_callable($this->__customExceptionPrinter))
-			$print = ($this->__customExceptionPrinter)($e);
+			$print = ($this->__customExceptionPrinter)($e, $code);
 		else
 			$print = true;
 
 		if( $print ) {
 			if( $this->__conf['debug'] ) {
-				$title = 'DoPhp Catched Exception';
+				$title = "DoPhp Catched Exception $code";
 				if( dophp\Utils::isAcceptedEncoding('text/html') )
 					echo "<html><h1>$title</h1>\n"
 						. dophp\Utils::formatException($e, true)
@@ -725,7 +736,5 @@ class DoPhp {
 			} else
 				echo _('Internal Server Error, please contact support or try again later') . '.';
 		}
-
-		error_log('DoPhp Catched Exception: ' . dophp\Utils::formatException($e, false));
 	}
 }
