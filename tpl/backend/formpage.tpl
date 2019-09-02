@@ -209,6 +209,13 @@
 			});
 			$(".delete-button").click(confirmDelete);
 		});
+
+		$('.select2-selection.select2-selection--single').on("keydown", function(e) {
+			if (e.keyCode != 9 && e.keyCode != 13 && e.keyCode != 16) {
+				$(this).closest(".select2-container").siblings('select:enabled').select2('open');
+			}
+		});
+
 	</script>
 	{{block name='finalscripts'}}{{/block}}
 {{/block}}
