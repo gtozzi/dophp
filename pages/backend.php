@@ -337,13 +337,13 @@ abstract class FormPage extends \dophp\PageSmarty {
 	 *
 	 * By default, it does nothing
 	 */
-	protected function _initFields() {
+	protected function _initFields($id) {
 	}
 
 	/**
 	 * Called as first init action, overridable in child
 	 */
-	protected function _initEarly() {
+	protected function _initEarly($id) {
 	}
 
 	protected function _build() {
@@ -359,10 +359,6 @@ abstract class FormPage extends \dophp\PageSmarty {
 		if( ! array_key_exists($this->_sesskey, $_SESSION) || ! is_array($_SESSION[$this->_sesskey]) )
 			$_SESSION[$this->_sesskey] = [];
 
-		$this->_initBackendComponent();
-		$this->_initEarly();
-		$this->_initFields();
-
 		// Determine if editing or inserting
 		$id = isset($_REQUEST['id']) && $_REQUEST['id'] ? $_REQUEST['id'] : null;
 		$this->_smarty->assign('id', $id);
@@ -371,6 +367,10 @@ abstract class FormPage extends \dophp\PageSmarty {
 			if( isset($_GET[$v]) )
 				$this->_getArgs[$v] = $_GET[$v];
 		$this->_smarty->assignByRef('getArgs', $this->_getArgs);
+
+		$this->_initBackendComponent();
+		$this->_initEarly($id);
+		$this->_initFields($id);
 
 		// Determine action
 		if( $id )

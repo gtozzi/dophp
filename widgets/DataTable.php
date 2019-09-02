@@ -44,6 +44,11 @@ class DataTable extends BaseWidget {
 
 	const CUSTOM_DATE_FILT = "custom-date";
 
+	const MEMCACHE_KEY_BASE = 'DoPhp::DataTable::';
+
+	/** Expire time for _count cache entries */
+	const COUNT_CACHE_EXPIRE = 60 * 60;
+
 	/**
 	 * The FROM part of the query to be executed to get data for the table,
 	 * without the "FROM" keyword, must be defined in child
@@ -115,6 +120,22 @@ class DataTable extends BaseWidget {
 
 	/** Tells whether elements in this table can be selected */
 	public $selectable = false;
+
+	/**
+	 * Provides the query for the cache freshness check default implementation
+	 * must be defined in child and return only a row and col
+	 *
+	 * @example SELECT MAX(last_updated) FROM table
+	 * @see self::_getCountCacheFreshnessCheckVal()
+	 */
+	protected $_countCacheFreshQuery = null;
+
+	/**
+	 * Enables the caching of _count results
+	 *
+	 * @see self::_count()
+	 */
+	protected $_enableCountCache = false;
 
 	/**
 	 * Inits some props at runtime, overridable in child
@@ -432,24 +453,23 @@ class DataTable extends BaseWidget {
 	 * Returns the base query to be executed, with the super filter and
 	 * the access filter, no limit, no order
 	 *
-	 * @param $cnt boolean: id true, build the COUNT(*) query
+	 * @param $cnt boolean: id true, build a query for the COUNT(*)
 	 * @todo Caching
 	 * @return [ $query, $where and array, $params array, $groupBy condition (may be null) ]
 	 */
 	protected function _buildBaseQuery($cnt=false) {
 		if( $cnt )
-			$q = "SELECT COUNT(*) AS `cnt`\n";
-		else {
+			$q = "SELECT\n";
+		else
 			$q = "SELECT SQL_CALC_FOUND_ROWS\n";
 
-			$cols = [];
-			foreach( $this->_cols as $c )
-				if( $c->qname )
-					$cols[] = "\t{$c->qname} AS `{$c->id}`";
-				else
-					$cols[] = "\t`{$c->id}`";
-			$q .= implode(",\n", $cols) . "\n";
-		}
+		$cols = [];
+		foreach( $this->_cols as $c )
+			if( $c->qname )
+				$cols[] = "\t{$c->qname} AS `{$c->id}`";
+			else
+				$cols[] = "\t`{$c->id}`";
+		$q .= implode(",\n", $cols) . "\n";
 
 		$q .= "FROM {$this->_from}\n";
 		$where = [];
@@ -604,10 +624,6 @@ class DataTable extends BaseWidget {
 				$q .= "\nLIMIT " . ( (int)$pars['start'] ) . ',' . $pars['length'];
 		}
 
-		// If no where, do not calculate found rows
-		if ( ! $where )
-			$q = str_replace('SQL_CALC_FOUND_ROWS', '', $q);
-
 		// Retrieve data
 		$rbtnsl = array_keys($this->_rbtns);
 		$data = $this->_db->xrun($q, $p, $types)->fetchAll();
@@ -615,8 +631,7 @@ class DataTable extends BaseWidget {
 			$d[self::BTN_KEY] = $rbtnsl;
 		unset($d);
 
-		// If no where, found must be = tot
-		$found = $where ? $this->_db->foundRows() : $tot;
+		$found = $this->_db->foundRows();
 
 		if( $trx )
 			$this->_db->commit();
@@ -670,17 +685,58 @@ class DataTable extends BaseWidget {
 	}
 
 	/**
-	 * Counts unfiltered results
-	 *
-	 * @TODO: Use a (mem)cache
+	 * Counts unfiltered results, uses memcache if possible
 	 */
-	protected function _count() {
+	protected function _count(): int {
 		list($query, $where, $params, $groupBy) = $this->_buildBaseQuery(true);
 		if( $where )
 			$query .= "\nWHERE " . implode(' AND ', $where);
 		if( $groupBy )
 			$query .= "\nGROUP BY $groupBy";
-		return (int)$this->_db->run($query, $params)->fetch()['cnt'];
+
+		$query = "SELECT COUNT(*) AS `cnt` FROM ( $query ) AS `q`";
+
+		$trans = $this->_db->beginTransaction(true);
+
+		// Try to use the cache
+		if( $this->_enableCountCache ) {
+			$cache = \DoPhp::cache();
+			$ccfcv = $this->_getCountCacheFreshnessCheckVal();
+			$ch = sha1(sha1($ccfcv) . sha1($query) . sha1(serialize($params)));
+			$cacheKey = self::MEMCACHE_KEY_BASE . 'count::' . $ch;
+		}
+
+		if( $this->_enableCountCache && $cache ) {
+			$cnt = $cache->get($cacheKey);
+			if( $cnt !== false && is_int($cnt) )
+				return $cnt;
+		}
+
+		// No hit in cache, run the query
+		$cnt = (int)$this->_db->run($query, $params)->fetch()['cnt'];
+
+		if( $trans )
+			$this->_db->commit();
+
+		// Try to save the new value in cache
+		if( $this->_enableCountCache && $cache )
+			$cache->set($cacheKey, $cnt, 0, static::COUNT_CACHE_EXPIRE);
+
+		return $cnt;
+	}
+
+	/**
+	 * Returns a value to be used to check if _count cache is still fresh
+	 *
+	 * @see self::_count
+	 * @see self::_countCacheFreshQuery
+	 */
+	protected function _getCountCacheFreshnessCheckVal(): string {
+		if( ! $this->_countCacheFreshQuery )
+			throw new \Exception('Cache fresh query is not defined');
+
+		$r = $this->_db->run($this->_countCacheFreshQuery)->fetch();
+		return (string)array_shift($r);
 	}
 
 	/**
