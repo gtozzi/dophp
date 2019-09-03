@@ -6,11 +6,11 @@
 * @brief Main entry point
 */
 
-require 'lib/dophp/DoPhp.php';
-require 'lib/Db.php';
-require 'lib/Auth.php';
-require 'lib/Menu.php';
-require 'lib/Page.php';
+require_once 'lib/dophp/DoPhp.php';
+require_once 'lib/Db.php';
+require_once 'lib/Auth.php';
+require_once 'lib/Menu.php';
+require_once 'lib/Page.php';
 
 require 'config.php';
 
