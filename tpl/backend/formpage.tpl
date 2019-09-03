@@ -210,14 +210,6 @@
 			$(".delete-button").click(confirmDelete);
 		});
 
-		$('.select2-selection.select2-selection--single').on("keydown", function(e) {
-			var key = e.keyCode;
-			if (key != 9 && key != 13 && key != 16) {
-				$(this).closest(".select2-container").siblings('select:enabled').select2('open');
-				$(".select2-search__field").focus();
-			}
-		});
-
 	</script>
 	{{block name='finalscripts'}}{{/block}}
 {{/block}}
