@@ -280,8 +280,13 @@ class DoPhp {
 		}
 
 		// Check for existing include page file
-		$inc_file = dophp\Utils::pagePath($this->__conf, $page);
-		if( ! file_exists($inc_file) ) {
+		$pagefound = false;
+		foreach( $this->__pagePaths($this->__conf, $page) as $inc_file )
+			if( file_exists($inc_file) ) {
+				$pagefound = true;
+				break;
+			}
+		if( ! $pagefound ) {
 			header("HTTP/1.1 404 Not Found");
 			echo('Page Not Found');
 			return;
@@ -413,6 +418,47 @@ class DoPhp {
 		foreach( $headers as $k=>$v )
 			header("$k: $v");
 		echo $out;
+	}
+
+	/**
+	* Generates the possible file names for a given page to be included
+	*
+	* @param $conf array: The configuration variable
+	* @param $page string: The page name
+	* @yields possible paths to search for
+	*/
+	private function __pagePaths($conf, $page) {
+		if( strpos('/', $page) !== false || strpos('\\', $page) !== false )
+			throw new \Exception('Page name can\'t include slashes');
+
+		$base_file = basename($_SERVER['PHP_SELF'], '.php');
+		$base_name = "$base_file.$page";
+		foreach( $this->__pageNameCombos($base_name) as $name )
+			yield "{$conf['paths']['inc']}/$name.php";
+	}
+
+	/**
+	 * Generates possible page name combinations
+	 *
+	 * @param $page string: The input page name
+	 * @example 'a.b.c' generates [ 'a.b.c', 'a/b.c', 'a.b/c', 'a/b/c' ]
+	 * @yields string
+	 */
+	private function __pageNameCombos($page) {
+		yield $page;
+
+		$dots = [];
+		foreach( str_split($page) as $pos => $char )
+			if( $char == '.' )
+				$dots[] = $pos;
+
+		for( $n = 1; $n <= count($dots); $n++ )
+			foreach( \dophp\Utils::combinations($dots, $n) as $c ) {
+				$ret = $page;
+				foreach( $c as $pos )
+					$ret = substr_replace($ret, '/', $pos, 1);
+				yield $ret;
+			}
 	}
 
 	/**

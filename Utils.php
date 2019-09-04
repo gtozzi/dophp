@@ -26,6 +26,61 @@ class Utils {
 	);
 
 	/**
+	 * Returns all possible combinations of the given length from array values
+	 *
+	 * @example Utils::combinations(['A','B','C'], 2) = ['A','B'], ['A','C'], ['B','C']
+	 * @param $in mixed: Input to make combinations of (array or string)
+	 * @param $num int: number of elements per combinations
+	 * @yields combined elements
+	 */
+	public static function combinations($in, $num) {
+		if( is_array($in) )
+			$in = array_values($in);
+		else
+			$in = str_split($in);
+		$ilen = count($in);
+
+		if( $num < 1 || $num > $ilen )
+			throw new \InvalidArgumentException('num must be > 1 and < count($in)');
+
+		$makeComb = function($keys) use ($in) {
+			$ret = [];
+			foreach( $keys as $k )
+				$ret[] = $in[$k];
+			return $ret;
+		};
+
+		// Initial combination
+		$keys = [];
+		for( $i = 0; $i < $num; $i++ )
+			$keys[$i] = $i;
+		yield $makeComb($keys);
+
+		while( true ) {
+			$k = $num - 1;
+			$keys[$k]++;
+
+			while( $k > 0 && $keys[$k] >= $ilen - $num + 1 + $k ) {
+				$k--;
+				$keys[$k]++;
+			}
+
+			if ($keys[0] > $ilen - $num) {
+				// Combination (n-k, n-k+1, ..., n) reached
+				// No more combinations can be generated
+				break;
+			}
+
+			// comb now looks like (..., x, n, n, n, ..., n).
+			// Turn it into (..., x, x + 1, x + 2, ...)
+			for( $k = $k + 1; $k < $num; $k++ )
+				$keys[$k] = $keys[$k - 1] + 1;
+
+			yield $makeComb($keys);
+		}
+	}
+
+	/**
 	* Tries to process a time string intelligently
 	*
 	* @param  $str string: The time to be processed
@@ -206,18 +261,6 @@ class Utils {
 			return 0;
 
 		return strlen($numStr) - $dot - 1;
-	}
-
-	/**
-	* Returns the file name for a given page to be included
-	*
-	* @param $conf array: The configuration variable
-	* @param $page string: The page name
-	* @return string: The path
-	*/
-	public static function pagePath($conf, $page) {
-		$base_file = basename($_SERVER['PHP_SELF'], '.php');
-		return "{$conf['paths']['inc']}/$base_file.$page.php";
 	}
 
 	/**
