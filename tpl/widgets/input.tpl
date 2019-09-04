@@ -229,7 +229,7 @@
 
 				{{if $type=='date'}}
 					<span class="input-group-btn">
-						<button class="btn btn-secondary ag-calender-button" type="button" onclick="$('#{{$id}}').datepicker('show')" {{if $readonly}}disabled{{/if}}><span class="fa fa-calendar"></span></button>
+						<button class="btn btn-secondary ag-calender-button" type="button" tabindex="-1" onclick="$('#{{$id}}').datepicker('show')" {{if $readonly}}disabled{{/if}}><span class="fa fa-calendar"></span></button>
 					</span>
 				</div><!-- Input group end -->
 					<script>
@@ -431,13 +431,13 @@
 								},
 							{{/if}}
 						});
-				$('#select2-{{$id}}-container').parent().on("keydown", function(e) {
-					var key = e.keyCode;
-					if (key != 9 && key != 13 && key != 16) {
-						$(this).closest(".select2-container").siblings('select:enabled').select2('open');
-						$(".select2-search__field").focus();
-					}
-				});
+						$('#select2-{{$id}}-container').parent().on("keydown", function(e) {
+							var key = e.keyCode;
+							if (key != 9 && key != 13 && key != 16) {
+								$(this).closest(".select2-container").siblings('select:enabled').select2('open');
+								$(".select2-search__field").focus();
+							}
+						});
 					</script>
 				{{elseif $type=='currency'}}
 					</div><!-- Input group end -->
