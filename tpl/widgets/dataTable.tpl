@@ -84,6 +84,27 @@
 		return '[err:norepr]';
 	}
 
+	/**
+	 * Parses a number into a nicely formatted currency value
+	 */
+	function getCurrencyRepr(data) {
+		let decimals = 2;
+
+		// Determine decimal separator… a bit tricky, can be done better?
+		let n = 1.1;
+		let decsep = n.toLocaleString().substring(1, 2);
+
+		let formatted = data.toLocaleString();
+		let parts = formatted.split(decsep);
+		if( parts.length > 1 && parts[1].length )
+			if( parts[1].length >= 2 )
+				return formatted;
+			else
+				return formatted + '0'.repeat(decimals - parts[1].length);
+
+		return formatted + decsep + '00';
+	}
+
 	// Sets up the table
 	$(document).ready(function() {
 		// Create the table
@@ -158,9 +179,9 @@
 								return '-';
 							}
 
-							let d;
+							let format = {{if $c->format}}{{$c->format|json_encode}}{{else}}typeof data{{/if}};
 
-							switch( typeof data ) {
+							switch( format ) {
 							case 'string':
 								return data;
 							case 'boolean':
@@ -169,10 +190,15 @@
 							case 'undefined':
 							case 'object':
 								return getObjectRepr(data);
+							case 'currency':
+								return getCurrencyRepr(data);
 							default:
 								return data;
 							}
-						}
+						},
+						{{if $c->format=='number' || $c->format=='currency'}}
+							className: 'dt-body-right',
+						{{/if}}
 					},
 				{{/foreach}}
 			],

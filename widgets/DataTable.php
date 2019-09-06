@@ -501,9 +501,6 @@ class DataTable extends BaseWidget {
 			$pars = array_merge($pars, $apars);
 		}
 
-		if( $this->_db->type() == $this->_db::TYPE_MSSQL)
-			$q = str_replace( '`', '', $q);
-
 		return [ $q, $where, $pars, $this->_groupBy ];
 	}
 
@@ -1316,7 +1313,7 @@ class DataTable extends BaseWidget {
 /**
  * Defines a column to be displayed in an "admin" table
  */
-class DataTableBaseColumn {
+abstract class DataTableBaseColumn {
 
 	/** The column's unique ID */
 	public $id;
@@ -1348,12 +1345,22 @@ class DataTableBaseColumn {
  */
 class DataTableColumn extends DataTableBaseColumn {
 
+	const FORMAT_STRING = 'string';
+	const FORMAT_BOOLEAN = 'boolean';
+	const FORMAT_NUMBER = 'number';
+	const FORMAT_OBJECT = 'object';
+
+	const FORMAT_CURRENCY = 'currency';
+
+
 	/** The user-friendly description */
 	public $descr;
 	/** The name of the column inside the query */
 	public $qname;
-	/** The column explicit type, if given */
-	public $type;
+	/** The column explicit data type, if given */
+	public $type = null;
+	/** The column explicit display format type, if given */
+	public $format = null;
 	/** Whether this column is part of the PK */
 	public $pk = false;
 
@@ -1369,6 +1376,7 @@ class DataTableColumn extends DataTableBaseColumn {
 	 *                      quotes
 	 *             - type:  Explicit data type, one of \dophp\Table::DATA_TYPE_*
 	 *                      constants. May be omitted.
+	 *             - format: Explicit display format, one of self::FORMAT_* consts
 	 *             - visible: Default visibility, boolean.
 	 *             - pk:    Tells if this column is part of the PK,
 	 *                      default: false
@@ -1377,7 +1385,10 @@ class DataTableColumn extends DataTableBaseColumn {
 		parent::__construct($id);
 		$this->descr = isset($opt['descr']) ? $opt['descr'] : str_replace('_',' ',ucfirst($this->id));
 		$this->qname = isset($opt['qname']) ? $opt['qname'] : \Dophp::db()->quoteObj($this->id);
-		$this->type = isset($opt['type']) ? $opt['type'] : null;
+		if( isset($opt['type']) && $opt['type'] )
+			$this->type = $opt['type'];
+		if( isset($opt['format']) && $opt['format'] )
+			$this->format = $opt['format'];
 		if( isset($opt['visible']) )
 			$this->visible = (bool)$opt['visible'];
 		if( isset($opt['pk']) )
