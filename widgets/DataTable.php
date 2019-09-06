@@ -202,6 +202,22 @@ class DataTable extends BaseWidget {
 
 		// Makes sure PK is valid
 		$this->_getPkName();
+
+		// Init buttons
+		foreach( $this->_btns as $k => &$button ) {
+			if( $button instanceof DataTableButton )
+				continue;
+			$button = new DataTableButton($this, $k, $button, $this->params);
+		}
+		unset($button);
+
+		// Init row buttons
+		foreach( $this->_rbtns as $k => &$button ) {
+			if( $button instanceof DataTableRowButton )
+				continue;
+			$button = new DataTableRowButton($this, $k, $button, $this->params);
+		}
+		unset($button);
 	}
 
 	/**
@@ -380,22 +396,6 @@ class DataTable extends BaseWidget {
 
 		// By default, use the generic "admin" template
 		$this->_template = 'widgets/dataTable.tpl';
-
-		// Init buttons
-		foreach( $this->_btns as $k => &$button ) {
-			if( $button instanceof DataTableButton )
-				continue;
-			$button = new DataTableButton($this, $k, $button, $this->params);
-		}
-		unset($button);
-
-		// Init row buttons
-		foreach( $this->_rbtns as $k => &$button ) {
-			if( $button instanceof DataTableRowButton )
-				continue;
-			$button = new DataTableRowButton($this, $k, $button, $this->params);
-		}
-		unset($button);
 
 		$this->_smarty->assign('id', $this->_id);
 		$this->_smarty->assign('cols', $this->_cols);
@@ -622,10 +622,16 @@ class DataTable extends BaseWidget {
 		}
 
 		// Retrieve data
-		$rbtnsl = array_keys($this->_rbtns);
 		$data = $this->_db->xrun($q, $p, $types)->fetchAll();
-		foreach( $data as &$d )
-			$d[self::BTN_KEY] = $rbtnsl;
+
+		// Add buttons
+		foreach( $data as &$d ) {
+			$d[self::BTN_KEY] = [];
+
+			foreach( $this->_rbtns as $k => $btn )
+				if( $btn->showInRow($d) )
+					$d[self::BTN_KEY][] = $k;
+		}
 		unset($d);
 
 		$found = $this->_db->foundRows();
@@ -1412,9 +1418,11 @@ class DataTableButton {
 	protected $_table;
 	/** The button's label */
 	public $label;
-	/** The buttons' partial url */
+	/** The button's partial url */
 	public $url;
-	/** The buttons' icon */
+	/** The button's POST data array, also, sets the button as POST is not null */
+	public $post = null;
+	/** The button's icon */
 	public $icon;
 	/** The button url's params */
 	protected $_params;
@@ -1427,6 +1435,8 @@ class DataTableButton {
 	 * @param $opt array of options, associative
 	 *        - label string: The button's description
 	 *        - url string: The button's URL (see geturl())
+	 *        - post array: Post data array, sets the button as POST if not null
+	 *                      params are replaced
 	 *        - icon string: The button's icon name
 	 * @param $params array of replaceable url params, associative, some are
 	 *        include dby default:
@@ -1461,6 +1471,30 @@ class DataTableButton {
 		}
 		return str_replace($searches, $replaces, $this->url);
 	}
+
+	/**
+	 * Returns true if button is post
+	 */
+	public function isPost(): bool {
+		return $this->post !== null;
+	}
+
+	/**
+	 * Returns the parsed post data
+	 */
+	public function getPost(): array {
+		$ret = is_array($this->post) ? $this->post : [];
+
+		foreach( $ret as &$v )
+			foreach( $this->_params as $name => $val )
+				if( $v === self::PARAM_START . $name . self::PARAM_END ) {
+					$v = $val;
+					break;
+				}
+		unset($v);
+
+		return $ret;
+	}
 }
 
 
@@ -1469,4 +1503,27 @@ class DataTableButton {
  */
 class DataTableRowButton extends DataTableButton {
 
+	/** Whether to show the button, usually a callable */
+	public $show = true;
+
+	/**
+	 * Creates the button object
+	 *
+	 * @see DataTableButton
+	 * @param $opt array of options, like DataTableButton, extra options:
+	 *        - show mixed: bool or callable($row), tells if the button should be shown
+	 */
+	public function __construct(DataTable $table, string $id, array $opt = [], array $params = []) {
+		parent::__construct($table, $id, $opt, $params);
+	}
+
+	/**
+	 * Tells whether the button should be shown in row
+	 */
+	public function showInRow(array $row): bool {
+		if( is_callable($this->show) )
+			return ($this->show)($row);
+
+		return (bool)$this->show;
+	}
 }
