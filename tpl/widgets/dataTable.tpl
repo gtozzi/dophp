@@ -444,7 +444,6 @@
 			autoclose: true,
 		});
 
-
 		$(".wp-date-filter-cont .wpdf_close, .wp-date-filter-head .wp-close").click(function(){
 			wpHideDateWidget();
 		});
@@ -457,76 +456,6 @@
 				$(".wp-date-filter-cont").addClass("wp-closed");
 			}
 		});
-
-		/**
-		 * Fill data column filter based on the
-		 * choosen data type
-		 *
-		 */
-		$(".wp-date-filter-cont .wpdf_confirm").click(function(){
-			var activeTab = $(".wp-date-filter-tab.wp-active");
-			activeTab = activeTab.attr("id");
-			activeTab = activeTab.replace("tab-","");
-
-			var from="";
-			var to="";
-			var filterString="";
-			var monthsList=[];
-			var yearsList=[];
-
-			// fill filter_string with user input
-			switch(activeTab){
-				// day
-				case "1":
-					from = $("#wp-dfilt-start").val();
-					to = $("#wp-dfilt-end").val();
-					if(to == "")
-						to = from;
-					filterString = from + "{{$dFilterDivider}}" + to;
-				break;
-
-				//month
-				case "2":
-
-					$(".wp-mthUnit.wp-active").each(function(){
-						monthsList.push($(this).data("year-month"));
-						filterString = monthsList.join("{{$dFilterDivider}}");
-					});
-
-				break;
-
-				//year
-				case "3":
-
-					$(".wp-yeaUnit.wp-active").each(function(){
-						yearsList.push($(this).data("year"));
-						filterString = yearsList.join("{{$dFilterDivider}}");
-					});
-
-				break;
-
-			}
-
-
-			// get current colon id
-			var currColNo = $(".wp-date-filter-cont #wp-date-filter-colNo").val();
-			var currFilter = document.getElementById("ag-dt-dtFilt-"+currColNo);
-
-//			var filter=$(".ag-dt-dtFilt[data-coln=0]")[0];
-//			$(filter).val(filterString)
-
-			// fill given date filter with the search_string
-			$("#ag-dt-dtFilt-"+currColNo).val(filterString)
-
-			// store the identifier of the used date_tab for the current used filter
-			//$("#ag-dt-dtFilt-"+currColNo).data("seltab",activeTab);
-			$("#ag-dt-dtFilt-"+currColNo).attr("data-seltab",activeTab);
-
-			updateFilter(currFilter,filterString);
-
-			wpHideDateWidget();
-		})
-
 
 		/**
 		 * Switch date filter active tab and form content
@@ -552,7 +481,7 @@
 			if($(this).hasClass("wp-active")){
 				$(this).removeClass("wp-active");
 			}
-			else{
+			else {
 
 				// check if selected dates are more than one, if so
 				// get the first and last selected items
@@ -573,29 +502,59 @@
 
 
 					// last click is after lastSelection
-					if($(this).prevAll("div#"+lastElemID).length){
+					if($(this).prevAll("div#"+lastElemID).length) {
 						$(firstElem).addClass("wp-active");
-						$(firstElem)
-							.nextUntil("#"+$(this).attr("id"))
-							.addClass("wp-range");
+						$(firstElem).nextUntil("#"+$(this).attr("id")).addClass("wp-range");
 						$(this).addClass("wp-active");
-					}
-					else if($(this).prevAll("div#"+firstElemID).length){
-						$(firstElem).addClass("wp-active");
-						$(firstElem)
-							.nextUntil("#"+$(this).attr("id"))
-							.addClass("wp-range")
-						$(this).addClass("wp-active");
-					}
-					else{
-						$(this).addClass("wp-active");
-						$(this)
-							.nextUntil("#"+lastElemID)
-							.addClass("wp-range")
-						$(lastElem).addClass("wp-active");
-					}
+					} else if($(this).prevAll("div#"+firstElemID).length) {
+							$(firstElem).addClass("wp-active");
+							$(firstElem).nextUntil("#"+$(this).attr("id")).addClass("wp-range");
+							$(this).addClass("wp-active");
+						} else {
+							$(this).addClass("wp-active");
+							$(this).nextUntil("#"+lastElemID).addClass("wp-range")
+							$(lastElem).addClass("wp-active");
+						}
 				}
 			}
+
+			var filterString="";
+			var monthsList=[];
+			var yearsList=[];
+			var activeTab = $(".wp-date-filter-tab.wp-active").attr("id").replace("tab-","");
+
+			// fill filter_string with user input
+			switch(activeTab){
+				//month
+				case "2":
+					$(".wp-mthUnit.wp-active").each(function(){
+						monthsList.push($(this).data("year-month"));
+						filterString = monthsList.join("{{$dFilterDivider}}");
+					});
+				break;
+
+				//year
+				case "3":
+					$(".wp-yeaUnit.wp-active").each(function(){
+						yearsList.push($(this).data("year"));
+						filterString = yearsList.join("{{$dFilterDivider}}");
+					});
+				break;
+
+			}
+
+			// get current colon id
+			var currColNo = $(".wp-date-filter-cont #wp-date-filter-colNo").val();
+			var currFilter = document.getElementById("ag-dt-dtFilt-"+currColNo);
+
+			// fill given date filter with the search_string
+			$("#ag-dt-dtFilt-"+currColNo).val(filterString)
+
+			// store the identifier of the used date_tab for the current used filter
+			$("#ag-dt-dtFilt-"+currColNo).attr("data-seltab",activeTab);
+
+			updateFilter(currFilter,filterString);
+
 		});
 
 		// ./ADDED WP ELEMENTS
@@ -633,6 +592,8 @@
 		el.data('timer', '');
 		let coln = el.data('coln');
 
+		el.val(val);
+
 		console.log('Applying new filter for col', coln, val);
 
 		table.column(coln).search(val).draw();
@@ -640,10 +601,32 @@
 	}
 
 	/**
+	 * Realtime Filter Updater
+	 */
+	function realtimeFilter(input) {
+
+		var newFilter = "";
+		let el =  $('#ag-dt-dtFilt-'+$(input).data('coln'));
+
+		if($('#wp-dfilt-start').val() != "")
+			newFilter = $('#wp-dfilt-start').val();
+		if($('#wp-dfilt-end').val() != "")
+			newFilter = newFilter +"{{$dFilterDivider}}"+ $('#wp-dfilt-end').val();
+
+		// Ignore duplicated changes
+		if( el.data('lastval') == newFilter )
+			return;
+
+		updateFilter(el, newFilter);
+		el.data('lastval', newFilter);
+	}
+
+	/**
 	 * Called when the filter input changed
 	 */
 	function filterChanged(input) {
 
+		// Gestisce i filtri inseriti da tastiera
 		let updDelay = 300;
 
 		let el = $(input);
@@ -700,30 +683,16 @@
 		var currColNo = jQ_formEl.data("coln");
 		$(".wp-date-filter-cont #wp-date-filter-colNo").val(currColNo);
 
+		$('#wp-dfilt-start').data('coln', currColNo);
+		$('#wp-dfilt-end').data('coln', currColNo);
 
 		$(".wp-date-filter-cont .wp-date-filter-form").removeClass("wp-active");
 		$(".wp-date-filter-cont .wp-date-filter-tab").removeClass("wp-active");
-		$("#wp-dfilt-start,#wp-dfilt-end").val("");
 		$(".wp-date-filter-cont .wp-mthUnit,.wp-date-filter-cont .wp-yeaUnit").removeClass("wp-active wp-range");
 
-		// if filter has been used before reopen last choosen tab
-		// otherwise open the default layout
+		// if filter has been used before reopen last choosen tab otherwise open the default layout
 		var usedTab = jQ_formEl.attr("data-seltab");
-
 		restoreFilterData(currColNo,usedTab)
-
-		/*
-		$(".wpdf_y_cck").click(function(){
-			if($(this).prop("checked")){
-				$(this).siblings(".wpdf_month_list")
-						.removeClass("do-hide");
-			}
-			else{
-				$(this).siblings(".wpdf_month_list")
-						.addClass("do-hide");
-			}
-		});
-		*/
 	}
 
 
@@ -900,11 +869,11 @@
 			<div class="wp-date-filter-dpck">
 				<div class="wp-pck-blck">
 					<label>Da</label>
-					<input id="wp-dfilt-start" class="wp-dfilt-dpck" name="wp-dfilt-start" type="text" value="" readonly>
+					<input id="wp-dfilt-start" class="wp-dfilt-dpck" name="wp-dfilt-start" type="text" value="" onchange="realtimeFilter(this);" readonly>
 				</div>
 				<div class="wp-pck-blck">
 					<label>A</label>
-					<input id="wp-dfilt-end" class="wp-dfilt-dpck" name="wp-dfilt-end" type="text" value="" readonly>
+					<input id="wp-dfilt-end" class="wp-dfilt-dpck" name="wp-dfilt-end" type="text" value="" onchange="realtimeFilter(this);" readonly>
 				</div>
 			</div>
 		</div>
@@ -932,10 +901,6 @@
 		</div>
 
 		<input type="hidden" name="wp-date-filter-colNo" id="wp-date-filter-colNo" value="" />
-	</div>
-	<div class="wp-date-filter-foot">
-		<button class="wpdf_close">Annulla</button>
-		<button class="wpdf_confirm">Filtra</button>
 	</div>
 </div>
 
