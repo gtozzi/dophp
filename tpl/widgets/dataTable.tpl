@@ -480,10 +480,9 @@
 				case "1":
 					from = $("#wp-dfilt-start").val();
 					to = $("#wp-dfilt-end").val();
-					filterString = from;
-					if(to!=""){
-						filterString = filterString + "{{$dFilterDivider}}" + to;
-					}
+					if(to == "")
+						to = from;
+					filterString = from + "{{$dFilterDivider}}" + to;
 				break;
 
 				//month
