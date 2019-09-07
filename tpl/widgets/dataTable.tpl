@@ -84,6 +84,83 @@
 		return '[err:norepr]';
 	}
 
+	/**
+	 * Parses a number into a nicely formatted currency value
+	 */
+	function getCurrencyRepr(data) {
+		let decimals = 2;
+
+		// Determine decimal separator… a bit tricky, can be done better?
+		let n = 1.1;
+		let decsep = n.toLocaleString().substring(1, 2);
+
+		let formatted = data.toLocaleString();
+		let parts = formatted.split(decsep);
+		if( parts.length > 1 && parts[1].length )
+			if( parts[1].length >= 2 )
+				return formatted;
+			else
+				return formatted + '0'.repeat(decimals - parts[1].length);
+
+		return formatted + decsep + '00';
+	}
+
+	/**
+	 * Handles a POST row button click
+	 */
+	function onDTPostRowButton(name, rowid) {
+		let url;
+		let data;
+
+		switch(name) {
+		{{foreach $rbtns as $name => $btn}}
+			{{if $btn->isPost()}}
+				case {{$name|json_encode}}:
+					url = {{$btn->getUrl()|json_encode}};
+					data = {{$btn->getPost()|json_encode}};
+					break;
+				default:
+					console.error('URL for ', name, 'not found');
+					return;
+			{{/if}}
+		{{/foreach}}
+		}
+		url = url.replace("{{'{{id}}'}}", rowid);
+		for(let key in data)
+			if( data[key] == "{{'{{id}}'}}" )
+				data[key] = rowid;
+
+		$.post(url, data, function(data) {
+			table.ajax.reload();
+		});
+	}
+
+	/**
+	 * Handles a POST button click
+	 */
+	function onDTPostButton(name) {
+		let url;
+		let data;
+
+		switch(name) {
+		{{foreach $btns as $name => $btn}}
+			{{if $btn->isPost()}}
+				case {{$name|json_encode}}:
+					url = {{$btn->getUrl()|json_encode}};
+					data = {{$btn->getPost()|json_encode}};
+					break;
+				default:
+					console.error('URL for ', name, 'not found');
+					return;
+			{{/if}}
+		{{/foreach}}
+		}
+
+		$.post(url, data, function(data) {
+			table.ajax.reload();
+		});
+	}
+
 	// Sets up the table
 	$(document).ready(function() {
 		// Create the table
@@ -134,14 +211,21 @@
 							if( data.includes({{$name|json_encode}}) ) {
 								let url = {{$btn->getUrl()|json_encode}};
 								url = url.replace("{{'{{id}}'}}", row.id);
+
+								{{if $btn->isPost()}}
+									let href = "javascript:onDTPostRowButton('" + encodeURI({{$name|json_encode}}) + "', " + row.id + ")";
+								{{else}}
+									let href = url;
+								{{/if}}
+
 								html += '<a class="fa ' + {{$btn->icon|htmlentities|json_encode}}
-									+ '" href="' + url + '" title="' + {{$btn->label|htmlentities|json_encode}}
-									+ '"></a>';
+									+ '" href="' + href + '" title="' + {{$btn->label|htmlentities|json_encode}} + '"'
+									+ '></a> '; // Trailing space to separate next
 							}
 						{{/foreach}}
 						return html;
 					},
-					className: 'data-table-bcol',
+					className: 'dt-body-nowrap data-table-bcol',
 				},
 				// Any other column
 				{{foreach $cols as $c}}
@@ -158,9 +242,9 @@
 								return '-';
 							}
 
-							let d;
+							let format = {{if $c->format}}{{$c->format|json_encode}}{{else}}typeof data{{/if}};
 
-							switch( typeof data ) {
+							switch( format ) {
 							case 'string':
 								return data;
 							case 'boolean':
@@ -169,10 +253,15 @@
 							case 'undefined':
 							case 'object':
 								return getObjectRepr(data);
+							case 'currency':
+								return getCurrencyRepr(data);
 							default:
 								return data;
 							}
-						}
+						},
+						{{if $c->format=='number' || $c->format=='currency'}}
+							className: 'dt-body-right',
+						{{/if}}
 					},
 				{{/foreach}}
 			],
@@ -860,8 +949,14 @@
 				{{if $selectable}}
 					<span id="selectAllBox" class="fa fa-square-o selectbox" onclick="onSelectAllBox();"></span>
 				{{/if}}
-				{{foreach $btns as $b}}
-					<a class="fa {{$b->icon}}" href="{{$b->getUrl()}}" title="{{$b->label|htmlentities}}"></a>
+				{{foreach $btns as $name => $b}}
+					<a class="fa {{$b->icon}}" title="{{$b->label|htmlentities}}"
+					{{if $b->isPost()}}
+						href="javascript:onDTPostButton({{$name|json_encode|urlencode}});"
+					{{else}}
+						href="{{$b->getUrl()}}"
+					{{/if}}
+					></a>
 				{{/foreach}}
 			</th>
 			{{foreach $cols as $c}}
