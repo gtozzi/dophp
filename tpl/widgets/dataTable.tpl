@@ -523,7 +523,6 @@
 			//$("#ag-dt-dtFilt-"+currColNo).data("seltab",activeTab);
 			$("#ag-dt-dtFilt-"+currColNo).attr("data-seltab",activeTab);
 
-			activeTab
 			updateFilter(currFilter,filterString);
 
 			wpHideDateWidget();
