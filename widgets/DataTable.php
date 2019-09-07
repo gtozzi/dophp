@@ -42,7 +42,7 @@ class DataTable extends BaseWidget {
 		"ud" => "ud"
 	);
 
-	const CUSTOM_DATE_FILT = "custom-date";
+	const DATA_TYPE_DATE =  \dophp\Table::DATA_TYPE_DATE;
 
 	const MEMCACHE_KEY_BASE = 'DoPhp::DataTable::';
 
@@ -405,7 +405,7 @@ class DataTable extends BaseWidget {
 		$this->_smarty->assign("monthYearList",$this->getMonthYearList());
 		$this->_smarty->assign("yearList",$this->getYearList());
 		$this->_smarty->assign("dFilterDivider",self::DFILTER_DIVIDER);
-		$this->_smarty->assign("customDateFilt",self::CUSTOM_DATE_FILT);
+		$this->_smarty->assign("customDateFilt",self::DATA_TYPE_DATE);
 
 		$this->_smarty->assign('btns', $this->_btns);
 		$this->_smarty->assign('rbtns', $this->_rbtns);
@@ -553,7 +553,7 @@ class DataTable extends BaseWidget {
 
 
 				// checks if filter is a date filter and calculate where clause
-				if($c->type==self::CUSTOM_DATE_FILT){
+				if($c->type==self::DATA_TYPE_DATE){
 
 					$firstElem = $search;
 					$isDateRange = false;
@@ -791,7 +791,7 @@ class DataTable extends BaseWidget {
 	public function getColClass($type=""){
 		$class="";
 		if((trim($type))!=""){
-			if($type==self::CUSTOM_DATE_FILT){
+			if($type==self::DATA_TYPE_DATE){
 				$class="ag-date-flt";
 			}
 		}
