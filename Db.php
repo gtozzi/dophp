@@ -840,6 +840,7 @@ class Table {
 	const DATA_TYPE_DATE     = 'Date';
 	const DATA_TYPE_DATETIME = 'DateTime';
 	const DATA_TYPE_TIME     = 'Time';
+	const DATA_TYPE_NULL     = 'null'; // Rare always null columns
 
 	/** Database table name, may be overridden in sub-class or passed by constructor */
 	protected $_name = null;
@@ -1178,6 +1179,9 @@ class Table {
 			return self::DATA_TYPE_DATETIME;
 		case 'TIME':
 			return self::DATA_TYPE_TIME;
+		case 'NULL':
+			// Rare always-null columns
+			return self::DATA_TYPE_NULL;
 		}
 
 		throw new NotImplementedException("Unsupported column type $dtype");
@@ -1272,6 +1276,8 @@ class Table {
 			return new \DateTime($val);
 		case self::DATA_TYPE_TIME:
 			return new Time($val);
+		case self::DATA_TYPE_NULL:
+			throw new \LogicException('Value should have been null');
 		}
 
 		throw new NotImplementedException("Unsupported data type $type");
