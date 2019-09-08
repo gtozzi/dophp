@@ -600,14 +600,16 @@
 	 */
 	function updateFilter(input, val) {
 
-		console.log("filtering...");
-
 		let el = $(input);
-		el.data('timer', '');
 		let coln = el.data('coln');
 
-		el.val(val);
+		if(coln == undefined)
+			return;
 
+		el.data('timer', '');
+		console.log("filtering...");
+
+		el.val(val);
 		console.log('Applying new filter for col', coln, val);
 
 		table.column(coln).search(val).draw();
