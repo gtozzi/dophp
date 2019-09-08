@@ -635,6 +635,17 @@
 		el.data('lastval', newFilter);
 	}
 
+	function filterKeyUp(event){
+		var code = event.keyCode || event.which;
+		// Avoid key that not have to activate the filter (9 = TAB, 16 = SHIFT, 20 = CAPS LOCK)
+		if (code != '9' && code != '16' && code != '20') 
+		{
+			filterChanged(event.target);
+			wpHideDateWidget();
+		}
+	}
+
+
 	/**
 	 * Called when the filter input changed
 	 */
@@ -759,7 +770,8 @@
 	}
 
 	function wpHideDateWidget(){
-		$(".wp-date-filter-cont").addClass("do-hide");
+		if(!($(".wp-date-filter-cont").hasClass("do-hide")))
+			$(".wp-date-filter-cont").addClass("do-hide");
 	}
 
 	/**
@@ -946,7 +958,7 @@
 			{{foreach $cols as $c}}
 				<th class="data-table-filter">
 					<input class="data-table-filter {{if $c->type==$customDateFilt}}ag-dt-dtFilt{{/if}}"
-						type="text" placeholder="filtra - cerca" onkeyup="filterChanged(this);" onchange="filterChanged(this);"
+						type="text" placeholder="filtra - cerca" onkeyup="filterKeyUp(event);" onchange="filterChanged(this);"
 						data-lastval="" data-timer="" data-coln="{{$c@index}}"
 						{{if $c->type==$customDateFilt}}
 							onfocus="filterShowDate(this);"
