@@ -439,6 +439,18 @@
 			event.stopPropagation();
 		}));
 
+		// Reset month/year selection
+		$('.wp-date-filt-univCont').after($('<button class="deleteicon" id="m-y-deleteicon"></button>').click(function(event) {
+			$('.wp-mthUnit.wp-active').removeClass('wp-active');
+			$('.wp-mthUnit.wp-range').removeClass('wp-range');
+			$('.wp-yeaUnit.wp-active').removeClass('wp-active');
+			$('.wp-yeaUnit.wp-range').removeClass('wp-range');
+
+			var el = $('#ag-dt-dtFilt-'+$('.wp-date-filt-univCont').data('coln'));
+			updateFilter(el, "");
+			el.data('lastval', "");
+		}));
+
 		// block search when the user click on the column filter
 		$(".data-table-filter").click(function(){ return false; })
 
@@ -881,7 +893,7 @@
 		</div>
 
 		<div class="wp-date-filter-form form-2">
-			<div class="wp-date-filt-mthCont wp-date-filt-univCont">
+			<div class="wp-date-filt-mthCont wp-date-filt-univCont" data-coln="{{$c@index}}">
 				{{foreach from=$monthYearList item=myl_list key=myl_year}}
 					<div class="wp-date-monthBlck-title">{{$myl_year}}</div>
 					{{foreach from=$myl_list item=month}}
@@ -892,7 +904,7 @@
 		</div>
 
 		<div class="wp-date-filter-form form-3">
-			<div class="wp-date-filt-yeaCont wp-date-filt-univCont">
+			<div class="wp-date-filt-yeaCont wp-date-filt-univCont" data-coln="{{$c@index}}">
 				{{foreach from=$yearList item=yl_list key=yl_year_range}}
 					<div class="wp-date-yearBlck-title">{{$yl_year_range}}</div>
 					{{foreach from=$yl_list item=year}}
