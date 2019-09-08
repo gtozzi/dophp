@@ -935,9 +935,11 @@
 						type="text" placeholder="filtra - cerca" onkeyup="filterChanged(this);" onchange="filterChanged(this);"
 						data-lastval="" data-timer="" data-coln="{{$c@index}}"
 						{{if $c->type==$customDateFilt}}
-							onclick="filterShowDate(this);"
+							onfocus="filterShowDate(this);"
 							data-seltab=""
 							id="ag-dt-dtFilt-{{$c@index}}"
+						{{else}}
+							onfocus="wpHideDateWidget()" 
 						{{/if}}
 						{{if $c->search}}
 							value="{{$c->search|htmlentities}}"
