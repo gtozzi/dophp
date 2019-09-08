@@ -162,7 +162,7 @@ abstract class AuthBase implements AuthInterface {
 class AuthBasic extends AuthBase {
 
 	/** Standard HTTP Authorization header */
-	const HEAD_HTTP_AUTH = 'HTTP_AUTHORIZATION';
+	const HEAD_HTTP_AUTH = 'AUTHORIZATION';
 
 	/**
 	 * Method the may be called manually by a page script to login an user
@@ -202,8 +202,10 @@ class AuthBasic extends AuthBase {
 	 * @return [$username, $password, $source] or null
 	 */
 	protected function _detectLogin() {
-		if( isset($_SERVER[self::HEAD_HTTP_AUTH]) ) {
-			$parts = explode(' ', $_SERVER[self::HEAD_HTTP_AUTH]);
+		$headers = Utils::headers(true);
+
+		if( isset($headers[self::HEAD_HTTP_AUTH]) ) {
+			$parts = explode(' ', $headers[self::HEAD_HTTP_AUTH]);
 
 			if( count($parts) == 2 ) {
 				$method = strtolower(trim($parts[0]));

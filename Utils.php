@@ -265,10 +265,20 @@ class Utils {
 
 	/**
 	* Returns all request headers as associative array, on any webserver
+	*
+	* @param $upper bool: If true, returns all headers keys as uppercase
 	*/
-	public static function headers() {
-		if( function_exists('apache_request_headers') )
-			return apache_request_headers();
+	public static function headers($upper=false) {
+		if( function_exists('apache_request_headers') ) {
+			$ah = apache_request_headers();
+			if( ! $upper )
+				return $ah;
+
+			$headers = [];
+			foreach( $ah as $k => $h )
+				$headers[strtoupper($k)] = $h;
+			return $headers;
+		}
 
 		$headers = array();
 		foreach( $_SERVER as $name => $value )
