@@ -434,10 +434,13 @@
 
 		// ADDED WP ELEMENTS
 
+		$('.wp-dfilt-dpck').wrap('<span class="deleteicon" />').after($('<span/>').click(function(event) {
+			$(this).prev('input').val('').trigger('change');
+			event.stopPropagation();
+		}));
+
 		// block search when the user click on the column filter
 		$(".data-table-filter").click(function(){ return false; })
-
-
 
 		$(".wp-dfilt-dpck").datepicker({
 			language: "it",
@@ -499,7 +502,6 @@
 
 					$(".wp-date-filt-mthCont .wp-mthUnit, .wp-date-filt-yeaCont .wp-yeaUnit")
 						.removeClass("wp-range wp-active")
-
 
 					// last click is after lastSelection
 					if($(this).prevAll("div#"+lastElemID).length) {
