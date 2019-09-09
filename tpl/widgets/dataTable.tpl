@@ -705,12 +705,12 @@
 		var activeTab = $(".wp-date-filter-tab.wp-active").attr("id").replace("tab-","");
 		var filterValue = $(".ag-dt-dtFilt").val();
 
-		// Leggo il primo anno dalla lista degli anni
+		// Get first year valuie from $yearList
 		{{$firstYearEl = end($yearList)}}
 		const FIRST_YEAR = "{{end($firstYearEl)}}";
 		const FIRST_MONTH = FIRST_YEAR+"-01";
 
-		// Mostro il modal
+		// Show the date filter modal
 		$(".wp-date-filter-cont").removeClass("do-hide");
 		// Rimuovo la precedente selezione
 		$(".wp-date-filter-cont .wp-date-filter-form").removeClass("wp-active");
@@ -718,13 +718,13 @@
 		$(".wp-date-filter-cont .wp-mthUnit,.wp-date-filter-cont .wp-yeaUnit").removeClass("wp-range");
 		$(".wp-date-filter-cont .wp-mthUnit,.wp-date-filter-cont .wp-yeaUnit").removeClass("wp-active");
 
-		// Evidenzio il range selezionato in base al valore del filtro
+		// Show selection based on date search field filter value
 		if(filterValue != "" && activeTab > 1)
 		{
 			var filterStart = "";
 			var filterEnd = "";
 
-			// Ordino le date qualora non lo fossero
+			// Sort the dates
 			var filterArray = filterValue.split('||').sort();
 
 			if(filterArray[0] != undefined && filterArray[0] != "")
@@ -737,7 +737,7 @@
 
 			switch (activeTab){
 				case "2": {
-					// Evidenzio la selezione per i mesi
+					// Show the selection for the months tab
 					if(filterStart == "")
 						filterStart = FIRST_MONTH;
 					$("#mthID-"+filterStart).addClass("wp-active");
@@ -762,8 +762,8 @@
 						yearFilterEnd = filterEnd.split('-')[0];
 					}
 
-					// PRIMO ANNO
-					// Ricavo l'ultimo mese
+					// FIRST YEAR
+					// Calculate the last month of the selection
 					if(yearFilterStart == yearFilterEnd)
 						lastMonthfilterStart = parseInt(monthFilterEnd)-1;
 					for (var month = parseInt(monthFilterStart)+1; month <= parseInt(lastMonthfilterStart); month++)
@@ -773,7 +773,7 @@
 						$("#mthID-"+yearFilterStart+"-"+month).addClass("wp-range");
 					}
 
-					// ANNI RANGE
+					// YEARS RANGE
 					for (var year = parseInt(yearFilterStart)+1; year < parseInt(yearFilterEnd); year++)
 					{
 						for (var month = 1; month <= 12; month++) {
@@ -783,8 +783,8 @@
 						}
 					}
 
-					// ULTIMO ANNO
-					// Ricavo il primo mese
+					// LAST YEAR
+					// calculate first month of the selection
 					if(yearFilterStart == yearFilterEnd)
 						firstMonthFilterEnd = parseInt(monthFilterStart)+1;
 					for (var month =  parseInt(firstMonthFilterEnd); month <= parseInt(monthFilterEnd); month++) {
@@ -795,7 +795,7 @@
 					break;
 				}
 				case "3": {
-					// Evidenzio la selezione per gli anni
+					// Show the selection for the years tab
 					if(filterStart == "")
 						filterStart = FIRST_YEAR;
 					$("#yyID-"+filterStart).addClass("wp-active");
