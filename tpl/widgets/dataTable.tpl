@@ -702,7 +702,112 @@
 
 	function filterShowDate(formEl){
 
+		var activeTab = $(".wp-date-filter-tab.wp-active").attr("id").replace("tab-","");
+		var filterValue = $(".ag-dt-dtFilt").val();
+
+		// Leggo il primo anno dalla lista degli anni
+		{{$firstYearEl = end($yearList)}}
+		const FIRST_YEAR = "{{end($firstYearEl)}}";
+		const FIRST_MONTH = FIRST_YEAR+"-01";
+
+		// Mostro il modal
 		$(".wp-date-filter-cont").removeClass("do-hide");
+		// Rimuovo la precedente selezione
+		$(".wp-date-filter-cont .wp-date-filter-form").removeClass("wp-active");
+		$(".wp-date-filter-cont .wp-date-filter-tab").removeClass("wp-active");
+		$(".wp-date-filter-cont .wp-mthUnit,.wp-date-filter-cont .wp-yeaUnit").removeClass("wp-range");
+		$(".wp-date-filter-cont .wp-mthUnit,.wp-date-filter-cont .wp-yeaUnit").removeClass("wp-active");
+
+		// Evidenzio il range selezionato in base al valore del filtro
+		if(filterValue != "" && activeTab > 1)
+		{
+			var filterStart = "";
+			var filterEnd = "";
+
+			// Ordino le date qualora non lo fossero
+			var filterArray = filterValue.split('||').sort();
+
+			if(filterArray[0] != undefined && filterArray[0] != "")
+				filterStart = filterArray[0];
+
+			if(filterArray[1] != undefined && filterArray[1] != "")
+				filterEnd = filterArray[1];
+			else
+				filterEnd = filterStart;
+
+			switch (activeTab){
+				case "2": {
+					// Evidenzio la selezione per i mesi
+					if(filterStart == "")
+						filterStart = FIRST_MONTH;
+					$("#mthID-"+filterStart).addClass("wp-active");
+					$("#mthID-"+filterEnd).addClass("wp-active");
+
+					var month = "";
+					var firstMonthFilterEnd = "1";
+					var lastMonthfilterStart = "12";
+					var monthFilterStart = "";
+					var monthFilterEnd = "";
+					var yearFilterStart = "";
+					var yearFilterEnd = "";
+
+					if(filterStart != "") {
+						yearFilterStart = filterStart.split('-')[0];
+						monthFilterStart = filterStart.split('-')[1];
+					}
+
+					if(filterEnd != "") {
+						console.log("filterEnd: "+filterEnd);
+						monthFilterEnd = filterEnd.split('-')[1];
+						yearFilterEnd = filterEnd.split('-')[0];
+					}
+
+					// PRIMO ANNO
+					// Ricavo l'ultimo mese
+					if(yearFilterStart == yearFilterEnd)
+						lastMonthfilterStart = parseInt(monthFilterEnd)-1;
+					for (var month = parseInt(monthFilterStart)+1; month <= parseInt(lastMonthfilterStart); month++)
+					{
+						if (month < 10)
+							month = "0"+month;
+						$("#mthID-"+yearFilterStart+"-"+month).addClass("wp-range");
+					}
+
+					// ANNI RANGE
+					for (var year = parseInt(yearFilterStart)+1; year < parseInt(yearFilterEnd); year++)
+					{
+						for (var month = 1; month <= 12; month++) {
+							if (month < 10)
+								month = "0"+month;
+							$("#mthID-"+year+"-"+month).addClass("wp-range");
+						}
+					}
+
+					// ULTIMO ANNO
+					// Ricavo il primo mese
+					if(yearFilterStart == yearFilterEnd)
+						firstMonthFilterEnd = parseInt(monthFilterStart)+1;
+					for (var month =  parseInt(firstMonthFilterEnd); month <= parseInt(monthFilterEnd); month++) {
+						if (month < 10)
+							month = "0"+month;
+						$("#mthID-"+yearFilterEnd+"-"+month).addClass("wp-range");
+					}
+					break;
+				}
+				case "3": {
+					// Evidenzio la selezione per gli anni
+					if(filterStart == "")
+						filterStart = FIRST_YEAR;
+					$("#yyID-"+filterStart).addClass("wp-active");
+					$("#yyID-"+filterEnd).addClass("wp-active");
+					for (var i = parseInt(filterStart)+1; i < parseInt(filterEnd); i++)
+						$("#yyID-"+i).addClass("wp-range");
+					break;
+				}
+			default:
+					break;
+			}
+		}
 
 		var jQ_formEl = $(formEl);
 
@@ -712,10 +817,6 @@
 
 		$('#wp-dfilt-start').data('coln', currColNo);
 		$('#wp-dfilt-end').data('coln', currColNo);
-
-		$(".wp-date-filter-cont .wp-date-filter-form").removeClass("wp-active");
-		$(".wp-date-filter-cont .wp-date-filter-tab").removeClass("wp-active");
-		$(".wp-date-filter-cont .wp-mthUnit,.wp-date-filter-cont .wp-yeaUnit").removeClass("wp-active wp-range");
 
 		// if filter has been used before reopen last choosen tab otherwise open the default layout
 		var usedTab = jQ_formEl.attr("data-seltab");
