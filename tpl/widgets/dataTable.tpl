@@ -609,7 +609,6 @@
 		el.data('timer', '');
 		console.log("filtering...");
 
-		el.val(val);
 		console.log('Applying new filter for col', coln, val);
 
 		table.column(coln).search(val).draw();
@@ -633,8 +632,9 @@
 		if( el.data('lastval') == newFilter )
 			return;
 
-		updateFilter(el, newFilter);
+		el.val(newFilter);
 		el.data('lastval', newFilter);
+		updateFilter(el, newFilter);
 	}
 
 	function filterKeyUp(event){
@@ -652,7 +652,6 @@
 	 * Called when the filter input changed
 	 */
 	function filterChanged(input) {
-
 		// Gestisce i filtri inseriti da tastiera
 		let updDelay = 300;
 
