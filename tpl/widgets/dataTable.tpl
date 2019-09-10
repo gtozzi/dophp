@@ -457,6 +457,8 @@
 		$(".wp-dfilt-dpck").datepicker({
 			language: "it",
 			autoclose: true,
+			dateFormat: "dd.mm.yyyy",
+			format: "dd.mm.yyyy",
 		});
 
 		$(".wp-date-filter-cont .wpdf_close, .wp-date-filter-head .wp-close").click(function(){
