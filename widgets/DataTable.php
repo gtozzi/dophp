@@ -144,6 +144,31 @@ class DataTable extends BaseWidget {
 	}
 
 	/**
+	 * Get field types from the DBMS and set the field type for the Date type
+	 */
+	protected function _earlyRetriveType() {
+
+		$q = 'SELECT ';
+		foreach ($this->_cols as $colName => $colValue)
+			$q .= $colValue['qname'].', ';
+		$q = substr($q, 0, strlen($q)-2);
+
+		$q .= ' FROM '.$this->_from;
+
+		if(isset($this->_groupBy) && $this->_groupBy != '')
+			$q .= ' GROUP BY '.$this->_groupBy.' LIMIT 0';
+
+		$myResult = $this->_db->xrun($q);
+
+		$i = 0;
+		foreach ($this->_cols as $colName => $colValue) {
+			if($myResult->getColumnInfo($i)->type == self::DATA_TYPE_DATE)
+				$this->_cols[$colName]['type'] = self::DATA_TYPE_DATE;
+			++$i;
+		}
+	}
+
+	/**
 	 * Constructs the table object
 	 *
 	 * @param $page PageInterface: the parent page
@@ -187,6 +212,8 @@ class DataTable extends BaseWidget {
 			$field->setInternalValue( $val );
 			$field->filter = $filter;
 		}
+
+		$this->_earlyRetriveType();
 		unset($field);
 
 		// Prepares admin column definitions
