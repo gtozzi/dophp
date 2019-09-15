@@ -49,6 +49,9 @@ class DataTable extends BaseWidget {
 	/** Expire time for _count cache entries */
 	const COUNT_CACHE_EXPIRE = 60 * 60;
 
+	/** Expire time for column type cache entries */
+	const COLTYPES_CACHE_EXPIRE = 60 * 60;
+
 	/**
 	 * The FROM part of the query to be executed to get data for the table,
 	 * without the "FROM" keyword, must be defined in child
@@ -148,22 +151,44 @@ class DataTable extends BaseWidget {
 	 */
 	protected function _earlyRetriveType() {
 
+		$myResult = null;
+		$cache = \DoPhp::cache();
+
+		// Query building
 		$q = 'SELECT ';
 		foreach ($this->_cols as $colName => $colValue)
 			$q .= $colValue['qname'].', ';
+
 		$q = substr($q, 0, strlen($q)-2);
-
 		$q .= ' FROM '.$this->_from;
-
 		if(isset($this->_groupBy) && $this->_groupBy != '')
 			$q .= ' GROUP BY '.$this->_groupBy.' LIMIT 0';
 
-		$myResult = $this->_db->xrun($q);
-
 		$i = 0;
 		foreach ($this->_cols as $colName => $colValue) {
-			if($myResult->getColumnInfo($i)->type == self::DATA_TYPE_DATE)
+
+			// cacheKey for a single column
+			$cacheKey = self::MEMCACHE_KEY_BASE . 'dataTable_resultSet::'.sha1(sha1($q).sha1($colValue['qname']));
+
+			if( $cache )
+				$myResult_Cols = $cache->get($cacheKey);
+
+			if(!isset($myResult_Cols) || $myResult_Cols === false) {
+				// If it isn't in the cache I get it from the DBMS
+				if(!isset($myResult))
+					$myResult = $this->_db->xrun($q);
+
+				$myResult_Cols = $myResult->getColumnInfo($i);
+			}
+
+			// Assign type to _cols, just for 'Date' type
+			if($myResult_Cols->type == self::DATA_TYPE_DATE)
 				$this->_cols[$colName]['type'] = self::DATA_TYPE_DATE;
+
+			// Save the new value in cache
+			if( $cache )
+				$cache->set($cacheKey, $myResult_Cols, 0, static::COLTYPES_CACHE_EXPIRE);
+
 			++$i;
 		}
 	}
