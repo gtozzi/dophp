@@ -197,10 +197,14 @@ class Form extends BaseWidget {
 	 * Deletes a field group and all its fields
 	 *
 	 * @param $name string: The field group's unique name
+	 * @param $missingOk: If true, do not throw when not found
 	 */
-	public function delFieldGroup(string $name) {
+	public function delFieldGroup(string $name, bool $missingOk=false) {
 		if( ! array_key_exists($name, $this->_fieldGroups) )
-			throw new \Exception("Missing field group $name");
+			if( $missingOk )
+				return;
+			else
+				throw new \Exception("Missing field group $name");
 
 		$fg = $this->_fieldGroups[$name];
 		foreach( $fg->fields() as $field )

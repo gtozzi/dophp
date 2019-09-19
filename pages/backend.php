@@ -346,6 +346,13 @@ abstract class FormPage extends \dophp\PageSmarty {
 	protected function _initEarly($id) {
 	}
 
+	/**
+	 * Returns ID from request args, may be null
+	 */
+	public static function getRequestId() {
+		return isset($_REQUEST['id']) && $_REQUEST['id'] ? $_REQUEST['id'] : null;
+	}
+
 	protected function _build() {
 		if( $this->_saveMessage === null )
 			$this->_saveMessage = _('Saving') . '…';
@@ -360,7 +367,7 @@ abstract class FormPage extends \dophp\PageSmarty {
 			$_SESSION[$this->_sesskey] = [];
 
 		// Determine if editing or inserting
-		$id = isset($_REQUEST['id']) && $_REQUEST['id'] ? $_REQUEST['id'] : null;
+		$id = static::getRequestId();
 		$this->_smarty->assign('id', $id);
 
 		foreach( $this->_getKeep as $v )
