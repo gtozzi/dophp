@@ -156,8 +156,12 @@ class DataTable extends BaseWidget {
 
 		// Query building
 		$q = 'SELECT ';
-		foreach ($this->_cols as $colName => $colValue)
-			$q .= $colValue['qname'].', ';
+		foreach ($this->_cols as $colName => $colValue) {
+			if( isset($colValue['qname']))
+				$q .= $colValue['qname'].', ';
+			else
+				$q .= $colName.', ';
+		}
 
 		$q = substr($q, 0, strlen($q)-2);
 		$q .= ' FROM '.$this->_from;
@@ -167,8 +171,14 @@ class DataTable extends BaseWidget {
 		$i = 0;
 		foreach ($this->_cols as $colName => $colValue) {
 
+			$cacheColumnName = null;
+			if( isset($colValue['qname']))
+				$cacheColumnName = $colValue['qname'];
+			else
+				$cacheColumnName = $colName;
+
 			// cacheKey for a single column
-			$cacheKey = self::MEMCACHE_KEY_BASE . 'dataTable_resultSet::'.sha1(sha1($q).sha1($colValue['qname']));
+			$cacheKey = self::MEMCACHE_KEY_BASE . 'dataTable_resultSet::'.sha1(sha1($q).sha1($cacheColumnName));
 
 			if( $cache )
 				$myResult_Cols = $cache->get($cacheKey);
