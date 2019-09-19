@@ -126,7 +126,7 @@ trait SmartyFunctionalities {
 	/**
 	 * Smarty plugin
 	 *
-	 * Debug die and dump variable
+	 * Die and dump variable, useful for debug
 	 */
 	public static function dieDump($var) {
 		die(var_dump($var));

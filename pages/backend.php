@@ -215,6 +215,9 @@ abstract class TablePage extends \dophp\HybridRpcMethod {
  */
 abstract class FormPage extends \dophp\PageSmarty {
 
+	/** When true, force some checks on input id */
+	const ID_IS_INT = true;
+
 	/** Edit permission */
 	const PERM_EDIT = 'edit';
 	/** Insert permission */
@@ -350,7 +353,18 @@ abstract class FormPage extends \dophp\PageSmarty {
 	 * Returns ID from request args, may be null
 	 */
 	public static function getRequestId() {
-		return isset($_REQUEST['id']) && $_REQUEST['id'] ? $_REQUEST['id'] : null;
+		$id = isset($_REQUEST['id']) && $_REQUEST['id'] ? $_REQUEST['id'] : null;
+		if( $id !== null && ! preg_match('/^[a-zA-Z0-9_]+$/', $id) )
+			throw new \dophp\PageError("Invalid id $id");
+
+		// Convert to int or float if numeric
+		if( is_numeric($id) )
+			$id = $id + 0;
+
+		if( $id !== null && static::ID_IS_INT && ! is_int($id) )
+			throw new \dophp\PageError("Non integer id $id");
+
+		return $id;
 	}
 
 	protected function _build() {
