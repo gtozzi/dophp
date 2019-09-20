@@ -8,6 +8,8 @@
 */
 
 require_once(__DIR__ . '/Exceptions.php');
+if( class_exists('Memcache') )
+	require_once(__DIR__ . '/Cache.php');
 require_once(__DIR__ . '/Url.php');
 require_once(__DIR__ . '/Debug.php');
 require_once(__DIR__ . '/Lang.php');
@@ -213,7 +215,7 @@ class DoPhp {
 				$conf['memcache']['port'] = 11211;
 
 			if( class_exists('Memcache') ) {
-				$this->__cache = new Memcache;
+				$this->__cache = new \dophp\cache\Memcache;
 				if( ! $this->__cache->connect($conf['memcache']['host'], $conf['memcache']['port']) ) {
 					$this->__cache = null;
 					error_log("Couldn't connect to memcached at {$conf['memcache']['host']}:{$conf['memcache']['port']}");
