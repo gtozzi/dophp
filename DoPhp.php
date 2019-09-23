@@ -39,6 +39,17 @@ class DoPhp {
 	const MODEL_PREFIX = 'm';
 	/** The is the key used to store alerts in $_SESSION */
 	const SESS_ALERTS = 'DoPhp::Alerts';
+	/** Default values for arguments */
+	const DEFAULT_ARGS = [
+		'conf'   => [],
+		'db'     => 'dophp\\Db',
+		'auth'   => null,
+		'lang'   => 'dophp\\Lang',
+		'sess'   => true,
+		'def'    => 'home',
+		'key'    => self::BASE_KEY,
+		'strict' => false,
+	];
 
 	/** Stores the current instance */
 	private static $__instance = null;
@@ -68,7 +79,8 @@ class DoPhp {
 	* Process request parameters and expect $key to contain the name of the
 	* page to be loaded, then loads <inc_path>/<my_name>.<do>.php
 	*
-	* @param $conf array: Configuration associative array. Keys:
+	* @param $args array: Parameters associative array. Keys:
+	*             'conf' => array( // Configuration associative array. Keys:
 	*                 'paths' => array( //Where files are located, defaults to key name
 	*                     'inc'=> include files (page php files)
 	*                     'mod'=> model files
@@ -123,17 +135,26 @@ class DoPhp {
 	*                 )
 	*                 'debug' => enables debug info, should be false in production servers
 	*                 'strict' => triggers an error on any notice
+	*             ),
 	*
-	* @param $db     string: Name of the class to use for the database connection
-	* @param $auth   string: Name of the class to use for user authentication
-	* @param $lang   string: Name of the class to use for multilanguage handling
-	* @param $sess   boolean: If true, starts the session and uses it
-	* @param $def    string: Default page name, used when received missing or unvalid page
-	* @param $key    string: the key containing the page name
-	* @param $strict string: if true, return a 500 status on ANY error
+	*             'db' =>   name of the class to use for the database connection
+	*                       Default: 'dophp\\Db'
+	*             'auth' => name of the class to use for user authentication
+	*                       Default: null
+	*             'lang' => name of the class to use for multilanguage handling
+	*                       Default: 'dophp\\Lang'
+	*             'sess' => ff true, starts the session and uses it
+	*                       Default: true
+	*             'def' =>  default page name, used when received missing or unvalid page
+	*                       Default: 'home'
+	*             'key' =>  the key containing the page name
+	*                       Default: self::BASE_KEY
+	*             'strict' => if true, return a 500 status on ANY error
+	*                         Default: false
 	*/
-	public function __construct($conf=null, $db='dophp\\Db', $auth=null, $lang='dophp\\Lang',
-			$sess=true, $def='home', $key=self::BASE_KEY, $strict=false) {
+	public function __construct(...$input) {
+		// Uses ...$input for rough backward-compatibility, so it can trigger an
+		// exception when deprecated calling syntax is used
 
 		$start = microtime(true);
 
@@ -142,6 +163,18 @@ class DoPhp {
 			throw new \LogicException('DoPhp is already instantiated');
 		self::$__instance = $this;
 		$this->__start = $start;
+
+		// Build arguments and assign them to local variables for convenience
+		if( count($input) != 1 )
+			throw new \InvalidArgumentException('only a single array argument should be passed');
+		$args = $input[0];
+		if( ! is_array($args) )
+			throw new \InvalidArgumentException('args must be an array');
+		foreach( $args as $k => $v )
+			if( ! array_key_exists($k, self::DEFAULT_ARGS) )
+				throw new \InvalidArgumentException("unknown argument \"$k\"");
+		foreach( self::DEFAULT_ARGS as $k => $v )
+			$$k = array_key_exists($k, $args) ? $args[$k] : $v;
 
 		// Start the session
 		if( isset($conf['session']['name']) )
@@ -152,6 +185,8 @@ class DoPhp {
 		$sesstime = microtime(true);
 
 		// Build default config
+		if( ! is_array($conf) )
+			throw new \InvalidArgumentException('conf must be an array');
 		$this->__conf = $conf;
 		if( ! array_key_exists('paths', $this->__conf) )
 			$this->__conf['paths'] = array();
@@ -160,6 +195,7 @@ class DoPhp {
 				$this->__conf['paths'][$k] = $k;
 		if( ! array_key_exists('lang', $this->__conf) )
 			$this->__conf['lang'] = array();
+
 		if( ! array_key_exists('supported', $this->__conf['lang']) )
 			$this->__conf['lang']['supported'] = array();
 		if( ! array_key_exists('coding', $this->__conf['lang']) )
@@ -168,14 +204,14 @@ class DoPhp {
 			$this->__conf['lang']['texts'] = array();
 		if( ! array_key_exists('tables', $this->__conf['lang']) )
 			$this->__conf['lang']['tables'] = array();
-		if( ! array_key_exists('dophp', $this->__conf) )
-			$this->__conf['dophp'] = array();
+
 		if( ! array_key_exists('dophp', $this->__conf) )
 			$this->__conf['dophp'] = array();
 		if( ! array_key_exists('url', $this->__conf['dophp']) )
 			$this->__conf['dophp']['url'] = preg_replace('/^'.preg_quote($_SERVER['DOCUMENT_ROOT'],'/').'/', '', __DIR__, 1);
 		if( ! array_key_exists('path', $this->__conf['dophp']) )
 			$this->__conf['dophp']['path'] = __DIR__;
+
 		if( ! array_key_exists('cors', $this->__conf) )
 			$this->__conf['cors'] = array();
 		if( ! array_key_exists('origins', $this->__conf['cors']) )
@@ -186,8 +222,10 @@ class DoPhp {
 			$this->__conf['cors']['credentials'] = false;
 		if( ! array_key_exists('maxage', $this->__conf['cors']) )
 			$this->__conf['cors']['maxage'] = 86400;
+
 		if( ! array_key_exists('debug', $this->__conf) )
 			$this->__conf['debug'] = false;
+
 		if( ! array_key_exists('strict', $this->__conf) )
 			$this->__conf['strict'] = false;
 
