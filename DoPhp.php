@@ -648,7 +648,7 @@ class DoPhp {
 	*
 	* @return \dophp\log\Logger: A Logger instance or null
 	*/
-	public static function lof() {
+	public static function log() {
 		if( ! self::$__instance )
 			throw new \dophp\DoPhpNotInitedException();
 		return self::$__instance->__log;
