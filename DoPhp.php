@@ -11,6 +11,7 @@ require_once(__DIR__ . '/Exceptions.php');
 if( class_exists('Memcache') )
 	require_once(__DIR__ . '/Cache.php');
 require_once(__DIR__ . '/Url.php');
+require_once(__DIR__ . '/Log.php');
 require_once(__DIR__ . '/Debug.php');
 require_once(__DIR__ . '/Lang.php');
 require_once(__DIR__ . '/Db.php');
@@ -45,6 +46,7 @@ class DoPhp {
 		'db'     => 'dophp\\Db',
 		'auth'   => null,
 		'lang'   => 'dophp\\Lang',
+		'log'    => null,
 		'sess'   => true,
 		'def'    => 'home',
 		'key'    => self::BASE_KEY,
@@ -62,6 +64,8 @@ class DoPhp {
 	private $__auth = null;
 	/** The Language object instance */
 	private $__lang = null;
+	/** The logger object instance */
+	private $__log = null;
 	/** Stores the execution start time */
 	private $__start = null;
 	/** Models instances cache */
@@ -143,6 +147,8 @@ class DoPhp {
 	*                       Default: null
 	*             'lang' => name of the class to use for multilanguage handling
 	*                       Default: 'dophp\\Lang'
+	*             'log'  => name of the class to use for logging
+	*                       Default: null
 	*             'sess' => ff true, starts the session and uses it
 	*                       Default: true
 	*             'def' =>  default page name, used when received missing or unvalid page
@@ -292,6 +298,13 @@ class DoPhp {
 			$this->__auth->login();
 		}
 
+		// Creates the logger
+		if( $log ) {
+			$this->__log = new $log($start, $this->__conf, $this->__db, $this->__auth);
+			if( ! $this->__log instanceof \dophp\log\Logger )
+				throw new \LogicException('Wrong logger interface');
+		}
+
 		// Calculates the name of the page to be loaded
 		if( array_key_exists($key, $_REQUEST) && $_REQUEST[$key] ) {
 			// Page specified, use it and also explode the sub-path
@@ -331,6 +344,10 @@ class DoPhp {
 			echo('Page Not Found');
 			return;
 		}
+
+		// Logs the request
+		if( $this->__log )
+			$this->__log->logPageRequest($pagefound, $page, $path);
 
 		// List of allowed methods, used later in CORS preflight and OPTIONS
 		// TODO: Do not hardcode it, handle it nicely
@@ -624,6 +641,17 @@ class DoPhp {
 		if( ! self::$__instance )
 			throw new \dophp\DoPhpNotInitedException();
 		return self::$__instance->__cache;
+	}
+
+	/**
+	* Returns Logger instance, if available
+	*
+	* @return \dophp\log\Logger: A Logger instance or null
+	*/
+	public static function lof() {
+		if( ! self::$__instance )
+			throw new \dophp\DoPhpNotInitedException();
+		return self::$__instance->__log;
 	}
 
 	/**
