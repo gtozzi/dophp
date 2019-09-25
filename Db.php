@@ -698,11 +698,9 @@ class Result implements \Iterator {
 
 			if( isset($this->_types[$meta['name']]) )
 				$type = $this->_types[$meta['name']];
-			elseif( ! array_key_exists('native_type', $meta) ) {
-				// Apparently JSON fields have no native_type, assuming string
-				// TODO: use some different detection?
-				error_log('DoPhp: missing native_type, assuming string; meta: ' . print_r($meta,true));
-				$type = Table::DATA_TYPE_STRING;
+			elseif( ! isset($meta['native_type']) ) {
+				// Apparently JSON fields have no native_type
+				throw new \InvalidArgumentException('Missing native_type form column $idx, must declare type explicitly');
 			} else
 				$type = Table::getType($meta['native_type'], $meta['len']);
 
