@@ -30,7 +30,7 @@
 		{{$maxlen=null}}
 	{{/if}}
 
-	{{if $type=='number' || $type=='currency'}}
+	{{if $type=='number' || $type=='currency' || $type=='percentage'}}
 		{{$min=$field->getMin()}}
 		{{$max=$field->getMax()}}
 		{{$step=$field->getStep()}}
@@ -125,7 +125,7 @@
 		{{/block}}
 		<div id="{{$id}}_col" class="inputcol col-sm-{{$colw}} {{$pvclass}}">
 			{{block name='pre-input'}}
-				{{if $type=='date' || $type=='asyncFile' || $type=='currency' || $linkurl}}
+				{{if $type=='date' || $type=='asyncFile' || $type=='currency' || $type=='percentage' || $linkurl}}
 					<div class="input-group">
 				{{/if}}
 				{{if $type=='asyncFile'}}
@@ -136,7 +136,7 @@
 							Seleziona
 						</button>
 					</span>
-				{{elseif $type=='currency'}}
+				{{elseif $type=='currency' || $type=='percentage'}}
 					<div class="input-group-prepend">
 						<span class="input-group-text">{{$field->getCurSymbol()|htmlentities}}</span>
 					</div>
@@ -163,7 +163,7 @@
 					{{/if}}
 					data-name="{{$field->getName()|htmlentities}}"
 					data-namespace="{{$field->getNameSpace()|json_encode|htmlentities}}"
-					{{if $type=='currency'}}
+					{{if $type=='currency' || $type=='percentage'}}
 						data-decsep="{{$field->getDecSep()|htmlentities}}"
 						data-thosep="{{$field->getThoSep()|htmlentities}}"
 						data-decdigits="{{$field->getDecDigits()|htmlentities}}"
@@ -439,7 +439,7 @@
 							}
 						});
 					</script>
-				{{elseif $type=='currency'}}
+				{{elseif $type=='currency' || $type=='percentage'}}
 					</div><!-- Input group end -->
 				{{elseif $type=='checkbox'}}
 					<span class="custom-control-indicator"></span>

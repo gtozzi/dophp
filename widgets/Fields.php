@@ -492,18 +492,14 @@ class NumberField extends TextField {
 	}
 }
 
-
 /**
- * A numeric field specifically for handling a currency amount
+ * A numeric field specifically for handling a decimal amount
  */
-class CurrencyField extends NumberField {
+class DecimalField extends NumberField {
 
-	protected $_type = 'currency';
 	protected $_vtype = 'double';
 	protected $_step = 0.01;
 
-	/** The used currency symbol */
-	protected $_curSymbol = '€';
 	/** How many decimal digits */
 	protected $_decDigits = 2;
 	/** The decimal separator */
@@ -518,9 +514,6 @@ class CurrencyField extends NumberField {
 		$this->_vopts['thosep'] = & $this->_thoSep;
 	}
 
-	public function getCurSymbol(): string {
-		return $this->_curSymbol;
-	}
 	public function getDecDigits(): int {
 		return $this->_decDigits;
 	}
@@ -540,6 +533,38 @@ class CurrencyField extends NumberField {
 			$value = (float)$value;
 		return number_format($value, $this->_decDigits, $this->_decSep, $this->_thoSep);
 	}
+}
+
+
+/**
+ * A numeric field specifically for handling a percentage values
+ */
+class PercentageField extends DecimalField {
+
+	protected $_type = 'percentage';
+
+	/** The used currency symbol */
+	protected $_curSymbol = '%';
+
+	public function getCurSymbol(): string {
+		return $this->_curSymbol;
+	}
+}
+
+/**
+ * A numeric field specifically for handling a currency amount
+ */
+class CurrencyField extends DecimalField {
+
+	protected $_type = 'currency';
+
+	/** The used currency symbol */
+	protected $_curSymbol = '€';
+
+	public function getCurSymbol(): string {
+		return $this->_curSymbol;
+	}
+
 }
 
 
