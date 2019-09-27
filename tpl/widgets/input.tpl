@@ -8,6 +8,7 @@
 	{{$type=$field->getType()}}
 
 	{{$name=$field->getHTMLName()}}
+	{{$prepend=$field->getPrependText()}}
 
 	{{$value=$field->getDisplayValue()}}
 	{{if ! isset($label)}}
@@ -125,7 +126,7 @@
 		{{/block}}
 		<div id="{{$id}}_col" class="inputcol col-sm-{{$colw}} {{$pvclass}}">
 			{{block name='pre-input'}}
-				{{if $type=='date' || $type=='asyncFile' || $type=='currency' || $linkurl}}
+				{{if $type=='date' || $type=='asyncFile' || $type=='currency' || $linkurl || $prepend}}
 					<div class="input-group">
 				{{/if}}
 				{{if $type=='asyncFile'}}
@@ -136,9 +137,9 @@
 							Seleziona
 						</button>
 					</span>
-				{{elseif $type=='currency'}}
+				{{elseif $prepend}}
 					<div class="input-group-prepend">
-						<span class="input-group-text">{{$field->getCurSymbol()|htmlentities}}</span>
+						<span class="input-group-text">{{$prepend|htmlentities}}</span>
 					</div>
 				{{/if}}
 				{{if $type=='checkbox'}}
@@ -444,6 +445,8 @@
 				{{elseif $type=='checkbox'}}
 					<span class="custom-control-indicator"></span>
 					</label>
+				{{elseif $prepend}}
+					</div><!-- Input group end -->
 				{{/if}}
 				<script>
 					$("#{{$id}}").formhandle();

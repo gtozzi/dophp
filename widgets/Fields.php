@@ -52,6 +52,9 @@ interface Field extends FormWidget {
 	/** Sets field's soft required status */
 	public function setSoftRequired(bool $value);
 
+	/** Returns text to be prepended to the field, if any */
+	public function getPrependText(): ?string;
+
 	/** Returns field's smarty template name */
 	public function getTemplate(): string;
 
@@ -95,6 +98,8 @@ abstract class BaseField extends BaseFormWidget implements Field {
 
 	/** The field's group */
 	protected $_group = null;
+	/** An optional string to prepend to the field (i.e. currency symbol) */
+	protected $_prepend = null;
 
 	/** The fields' starting internal value */
 	protected $_iv = null;
@@ -138,6 +143,10 @@ abstract class BaseField extends BaseFormWidget implements Field {
 		unset($v);
 
 		return implode($es);
+	}
+
+	public function getPrependText(): ?string {
+		return $this->_prepend;
 	}
 
 	public function getDisplayValue(): string {
@@ -490,6 +499,13 @@ class NumberField extends TextField {
 			$vo['step'] = $this->_step;
 		return $vo;
 	}
+
+	public function format($value) {
+		if( is_float($value) )
+			return \dophp\Utils::formatCFloat($value);
+
+		return (string)$value;
+	}
 }
 
 
@@ -503,7 +519,7 @@ class CurrencyField extends NumberField {
 	protected $_step = 0.01;
 
 	/** The used currency symbol */
-	protected $_curSymbol = '€';
+	protected $_prepend = '€';
 	/** How many decimal digits */
 	protected $_decDigits = 2;
 	/** The decimal separator */
@@ -518,9 +534,6 @@ class CurrencyField extends NumberField {
 		$this->_vopts['thosep'] = & $this->_thoSep;
 	}
 
-	public function getCurSymbol(): string {
-		return $this->_curSymbol;
-	}
 	public function getDecDigits(): int {
 		return $this->_decDigits;
 	}
