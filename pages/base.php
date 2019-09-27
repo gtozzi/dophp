@@ -196,7 +196,7 @@ abstract class PageBase {
 		if( $this->_user->getUid() )
 			return;
 
-		throw new InvalidCredentials('Invalid login');
+		throw new InvalidCredentials(_('Invalid credentials'));
 	}
 
 	/**
