@@ -397,19 +397,27 @@ class bool_validator extends base_validator {
 * Validate as DateTime
 *
 * Custom validation rules: 'min'=>val, Date must be greater or equal than value
+*                                 (string or valid DateTime constructor arg)
 *                          'max'=>val, Date must be lesser or equal than value
+*                                 (string or valid DateTime constructor arg)
 *
 * @return object DateTime
 */
 class date_validator extends base_validator {
 
 	protected function do_validate($v, $o) {
-		if( isset($o['min']) )
+		if( isset($o['min']) ) {
+			if( ! $o['min'] instanceof \DateTime )
+				$o['min'] = new \DateTime($o['min']);
 			if( $err = $this->check_min($v, $o['min']) )
 				return $err;
-		if( isset($o['max']) )
+		}
+		if( isset($o['max']) ) {
+			if( ! $o['max'] instanceof \DateTime )
+				$o['max'] = new \DateTime($o['max']);
 			if( $err = $this->check_max($v, $o['max']) )
 				return $err;
+		}
 	}
 	protected function check_min($val, $min) {
 		if( $val === null || $val >= $min )

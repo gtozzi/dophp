@@ -165,14 +165,33 @@
 
 			function confirmDelete() {
 				{{$letter=($whatGender=='f')?'a':'o'}}
-				if( window.confirm('Confermi di voler eliminare definitivamente quest{{$letter}} '+{{$what|json_encode}}+'?') )
-				$.ajax({
-					url: {{$form->action()->asString()|json_encode}},
-					type: 'DELETE',
-					success: function(result) {
-						console.log(result);
-				 	}
-				});
+				if( window.confirm('Confermi di voler eliminare definitivamente quest{{$letter}} '+{{$what|json_encode}}+'?'))
+				{
+					$.ajax({
+						url: {{$form->action()->asString()|json_encode}},
+						type: "DELETE",
+						dataType: "text",
+						success: function(result) {
+							window.confirm(result);
+							console.log('Delete success', result);
+							let url = {{$this->getDeleteRedirectUrl($id)|json_encode}};
+							window.location.href = url;
+						},
+						error: function(jqXHR, textStatus, errorThrown) {
+							let message;
+							if( jqXHR.status == 409 ) {
+								// Constraint failed
+								console.log('Delete constraint failed', jqXHR.responseText);
+								message = 'Impossibile cancellare: ' + {{$what|json_encode}} + ' in uso.';
+							} else {
+								// Any other error
+								console.error('Delete error', textStatus, errorThrown, jqXHR);
+								message = 'Errore durante la cancellazione';
+							}
+							window.alert(message);
+						}
+					});
+				}
 			}
 
 			$(".save-button").click(function() {
@@ -189,49 +208,8 @@
 				window.location.reload();
 			});
 			$(".delete-button").click(confirmDelete);
-
-			// URL button
-			$('.btnc-linkbutton').click(function() {
-				let btn = $(this);
-				let url = btn.data('url');
-				let newtab = Boolean(btn.data('newtab'));
-
-				if (! url) {
-					window.alert('Software error: missing URL');
-					return;
-				}
-
-				if (newtab)
-					window.open(url, '_blank');
-				else
-					window.location.href=url;
-			});
-
-			// POST URL button
-			$('.btnc-postbutton').click(function() {
-				let btn = $(this);
-				let url = btn.data('url');
-				let newtab = Boolean(btn.data('newtab'));
-				let post = btn.data('post');
-
-				if (! url) {
-					window.alert('Software error: missing URL');
-					return;
-				}
-
-				let form = $('<form method="POST">');
-				form.attr('action', url);
-				for(let key in post) {
-					let input = $('<input type="hidden">');
-					input.attr('name', key);
-					input.attr('value', post[key]);
-					input.appendTo(form);
-				}
-
-				form.appendTo('body');
-				form.submit();
-			});
 		});
+
 	</script>
 	{{block name='finalscripts'}}{{/block}}
 {{/block}}

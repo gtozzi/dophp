@@ -86,6 +86,7 @@
 		<!-- DoPhp utils -->
 		<link rel="stylesheet" type="text/css" href="{{$config['dophp']['url']}}/webcontent/css/base-backend.css"/>
 		<script src="{{$config['dophp']['url']}}/webcontent/js/form.js"></script>
+		<script src="{{$config['dophp']['url']}}/webcontent/js/buttons.js"></script>
 
 		<!-- DoPhp font -->		
 		<link rel="stylesheet" type="text/css" href="{{$config['dophp']['url']}}/webcontent/css/mgmt-glyph.css"/>
@@ -127,8 +128,8 @@
 										class="nav-link {{if $childs}}dropdown-toggle{{else}}menu-link{{/if}}"
 											href="{{$m->getUrl()}}"
 										data-label={{$m->getLabel()|json_encode}}
+										id="{{$m->getId()|htmlentities}}_a"
 										{{if $childs}}
-											id="navbarDropdownMenuLink{{$m@iteration}}"
 											data-toggle="dropdown"
 											aria-haspopup="true"
 											aria-expanded="false"
@@ -136,13 +137,17 @@
 									>
 										{{if $m->getIcon()}}<span class="fa {{$m->getIcon()}}"></span>{{/if}}
 										{{$m->getLabel()|htmlentities}}
-									</a>
-									{{if $childs}}
-										<div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink{{$m@iteration}}">
-											{{foreach $childs as $c}}
-												<a class="dropdown-item menu-link" href="{{$c->getUrl()}}"
-													data-label={{$m->getLabel()|json_encode}}
-												>{{$c->getLabel()|htmlentities}}</a>
+										</a>
+										{{if $childs}}
+											<div class="dropdown-menu" aria-labelledby="{{$m->getId()|htmlentities}}_a">
+												{{foreach $childs as $c}}
+													{{if $c->getUrl() || $c->getLabel()}}
+														<a class="dropdown-item menu-link" href="{{$c->getUrl()}}"
+															data-label={{$m->getLabel()|json_encode}}
+														>{{$c->getLabel()|htmlentities}}</a>
+													{{else}}
+														<div class="dropdown-divider"></div>
+													{{/if}}
 												{{/foreach}}
 											</div>
 										{{/if}}

@@ -76,11 +76,12 @@ formUtil.FormControlHandler = class {
 				clearTimeout(__kupValidatorTout);
 			}
 			__kupValidatorTout= setTimeout(function(ev){
-				return that.onBlur(ev);
+				return that.onTout(ev);
 			},500);
 		});
 		el.on('blur', function(ev) { return that.onBlur(ev); });
 		el.on('change', function(ev) { return that.onChange(ev); });
+		el.on('focus', function(ev) { return that.onFocus(ev); });
 	}
 
 	/**
@@ -99,7 +100,14 @@ formUtil.FormControlHandler = class {
 		return true;
 	}
 
+	onFocus(ev) {
+	}
+
 	onInput(ev) {
+	}
+
+	onTout(ev) {
+		this.onBlur(ev);
 	}
 
 	onBlur(ev) {
@@ -225,13 +233,18 @@ formUtil['CurrencyFormControlHandler'] = class extends formUtil['FormControlHand
 		this.forbidden = new RegExp('[^0-9' + this.decSep + ']', 'g');
 	}
 
+	onFocus(ev) {
+		// Remove thousands separator
+		this.el.val(this.sanitize(this.el.val()));
+	}
+
 	onInput(ev) {
 		let val = this.el.val();
 		let ss = this.el[0].selectionStart;
 		let left = val.slice(0, ss);
 		let right = val.slice(ss);
-		let sleft = this.sanitize(left);
-		let sright = this.sanitize(right);
+		let sleft = this.sanitize(this.replThoWithDecSep(left));
+		let sright = this.sanitize(this.replThoWithDecSep(right));
 		let newval = sleft + sright;
 
 		if (val != newval) {
@@ -240,7 +253,12 @@ formUtil['CurrencyFormControlHandler'] = class extends formUtil['FormControlHand
 		}
 	}
 
+	onTout(ev) {
+		// Do nothing on timeout (overrides default behavior), wait for onBlur
+	}
+
 	onBlur(ev) {
+		// Re-add thousand separators
 		let val = this.el.val();
 		val = this.sanitize(val);
 
@@ -248,8 +266,17 @@ formUtil['CurrencyFormControlHandler'] = class extends formUtil['FormControlHand
 
 		let formatted = this.format(num);
 		this.el.val(formatted);
-		this.el[0].setSelectionRange(formatted.length - 3, formatted.length - 3);
+		this.el[0].setSelectionRange(formatted.length - this.decDigits - 1, formatted.length - this.decDigits) - 1;
 		this.validate();
+	}
+
+	/**
+	 * Replaces thousands separator with decimal separator
+	 *
+	 * @return string: The replaces string
+	 */
+	replThoWithDecSep(str) {
+		return str.replace(this.thoSep, this.decSep);
 	}
 
 	/**

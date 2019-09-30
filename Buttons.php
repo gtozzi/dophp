@@ -1,7 +1,9 @@
 <?php declare(strict_types=1);
 
-// Dedicated namespace
+
 namespace dophp\buttons;
+
+require_once 'Widgets.php';
 
 
 /**
@@ -10,8 +12,6 @@ namespace dophp\buttons;
 class ButtonBar {
 
 	protected $_buttons = [];
-	/** Used for iteration */
-	private $__validpos = false;
 
 	/**
 	 * Appends a button to this bar
@@ -65,6 +65,12 @@ class ButtonBar {
 	}
 
 	/**
+	 * Returns buttons array
+	 */
+	public function buttons(): array {
+		return $this->_buttons;
+	}
+	/**
 	 * Enables the given button by ID
 	 */
 	public function enable(string $id) {
@@ -90,23 +96,18 @@ class ButtonBar {
 		$this->_buttons[$id]->hide();
 	}
 
-	/**
-	 * Returns buttons array
-	 */
-	public function buttons(): array {
-		return $this->_buttons;
-	}
-
 }
 
 
 /**
  * Defines a button for a ButtonBar
  */
-abstract class Button {
+abstract class Button extends \dophp\widgets\BaseWidget {
 
 	const DEFAULT_TYPE = 'button';
 	const DEFAULT_CLASS = 'btn-secondary';
+	/** True if this is a dropdown button */
+	const DROPDOWN = false;
 
 	public $id;
 	public $type;
@@ -130,6 +131,8 @@ abstract class Button {
 		assert(! isset($options['class']) || is_string($options['class']));
 		assert(! isset($options['type']) || is_string($options['type']));
 
+		parent::__construct();
+
 		$this->id = $id;
 		$this->label = $label;
 		$this->icon = $icon;
@@ -152,6 +155,13 @@ abstract class Button {
 	}
 
 	/**
+	 * Returns true if this button is a dropdown
+	 */
+	public function isDropdown(): bool {
+		return static::DROPDOWN;
+	}
+
+	/**
 	 * Returns button's PHP class name, all lowercase
 	 */
 	public function phpclass(): string {
@@ -165,6 +175,65 @@ abstract class Button {
 	public function htmldata(): array {
 		return [];
 	}
+}
+
+
+/**
+ * A button containing dropdown links
+ */
+class DropdownButton extends Button {
+
+	const DROPDOWN = true;
+
+	protected $_childs = [];
+
+
+	/**
+	 * Appends a child link to this button
+	 */
+	public function add(DropdownButtonChild $child) {
+		if (array_key_exists($child->id, $this->_childs))
+			throw new \InvalidArgumentException('Duplicate child ' . $child->id);
+
+		$this->_childs[$child->id] = $child;
+	}
+
+	/**
+	 * Returns childs array
+	 */
+	public function childs(): array {
+		return $this->_childs;
+	}
+}
+
+
+/**
+ * A child for a dropdown button
+ */
+class DropdownButtonChild extends \dophp\widgets\BaseWidget {
+
+	public $id;
+	public $label;
+	public $icon = null;
+	public $url = null;
+
+	/**
+	 * Constructs the child
+	 *
+	 * @param $id string: Unique button ID
+	 * @param $label string: Button description for user
+	 * @param $icon string: FA-icon
+	 * @param $url string: The link URL
+	 */
+	public function __construct(string $id, string $label, string $icon=null, string $url=null) {
+		parent::__construct();
+
+		$this->id = $id;
+		$this->label = $label;
+		$this->icon = $icon;
+		$this->url = $url;
+	}
+
 }
 
 
