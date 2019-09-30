@@ -1439,7 +1439,7 @@ class DataTableButton {
 	 *                      params are replaced
 	 *        - icon string: The button's icon name
 	 * @param $params array of replaceable url params, associative, some are
-	 *        include dby default:
+	 *        included by default:
 	 *        - base: base url for the page
 	 */
 	public function __construct(DataTable $table, string $id, array $opt = [], array $params = []) {
