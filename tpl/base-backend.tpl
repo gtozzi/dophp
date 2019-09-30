@@ -93,8 +93,14 @@
 
 	{{block name='head'}}{{/block}}
 </head>
-<body>
+<body class="bframe-cont">
 {{block name='body'}}
+
+	<div class="bframe-top">
+		<div>
+			Testo che preferisci qui Testo che preferisci qui Testo che preferisci qui Testo che preferisci qui.
+		</div>
+	</div>
 
 	{{block name='navbar'}}
 		{{if isset($user) && $user->getUid()}}
