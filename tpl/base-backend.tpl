@@ -94,14 +94,16 @@
 
 	{{block name='head'}}{{/block}}
 </head>
-<body class="bframe-cont">
+<body {{if isset($config['testserver']) && $config['testserver']}}class="bframe-cont"{{/if}}>
 {{block name='body'}}
 
-	<div class="bframe-top">
-		<div>
-			Testo che preferisci qui Testo che preferisci qui Testo che preferisci qui Testo che preferisci qui.
+	{{if isset($config['testserver']) && $config['testserver']}}
+		<div class="bframe-top">
+			<div>
+				Attenzione! Questo è un server di test. Tutti i dati inseriti potrebbero essere cancellati senza preavviso.
+			</div>
 		</div>
-	</div>
+	{{/if}}
 
 	{{block name='navbar'}}
 		{{if isset($user) && $user->getUid()}}
