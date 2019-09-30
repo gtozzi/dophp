@@ -210,7 +210,8 @@
 						{{foreach $rbtns as $name => $btn}}
 							if( data.includes({{$name|json_encode}}) ) {
 								let url = {{$btn->getUrl()|json_encode}};
-								url = url.replace("{{'{{id}}'}}", row.id);
+								for(let key in row)
+									url = url.replace("{{'{{"+key+"}}'}}", row[key]);
 
 								{{if $btn->isPost()}}
 									let href = "javascript:onDTPostRowButton('" + encodeURI({{$name|json_encode}}) + "', " + row.id + ")";
