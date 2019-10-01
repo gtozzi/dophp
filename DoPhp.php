@@ -415,7 +415,7 @@ class DoPhp {
 		try {
 			require $inc_file;
 			$findName = self::className($page);
-			$classname = dophp\Utils::findClass($findName);
+			$classname = \dophp\Utils::findClass($findName);
 			if( ! $classname )
 				if( $this->__conf['debug'] )
 					throw new Exception("Page class \"$findName\" not found in file \"$inc_file\"");
@@ -427,7 +427,7 @@ class DoPhp {
 			$pobj->debug = $this->__debug;
 
 			list($out, $headers) = $this->__runPage($pobj);
-		} catch( dophp\PageDenied $e ) {
+		} catch( \dophp\PageDenied $e ) {
 			if( $def ) {
 				if( $def == $page ) {
 					// Prevent loop redirection
@@ -436,15 +436,15 @@ class DoPhp {
 					return;
 				}
 
-				self::addAlert(new dophp\LoginErrorAlert($e));
+				self::addAlert(new \dophp\LoginErrorAlert($e));
 
-				$to = dophp\Url::fullPageUrl($def, $key);
+				$to = \dophp\Url::fullPageUrl($def, $key);
 				header("HTTP/1.1 303 Login Required");
 				header("Location: $to");
 				echo $e->getMessage();
 				echo "\nPlease login at: $to";
 				return;
-			} elseif( $e instanceof dophp\InvalidCredentials ) {
+			} elseif( $e instanceof \dophp\InvalidCredentials ) {
 				header("HTTP/1.1 401 Unhautorized");
 				// Required by RFC 7235
 				header("WWW-Authenticate: Custom");
@@ -455,17 +455,17 @@ class DoPhp {
 				echo $e->getMessage();
 				return;
 			}
-		} catch( dophp\NotAcceptable $e ) {
+		} catch( \dophp\NotAcceptable $e ) {
 			header("HTTP/1.1 406 Not Acceptable");
 			echo $e->getMessage();
 			error_log('Not Acceptable: ' . $e->getMessage());
 			return;
-		} catch( dophp\PageError $e ) {
+		} catch( \dophp\PageError $e ) {
 			header("HTTP/1.1 400 Bad Request");
 			echo $e->getMessage();
 			error_log('Bad Request: ' . $e->getMessage());
 			return;
-		} catch( Exception $e ) {
+		} catch( \Throwable $e ) {
 			header("HTTP/1.1 500 Internal Server Error");
 			$this->__printException($e);
 			return;
@@ -527,7 +527,7 @@ class DoPhp {
 	 * @return array [ output string, headers associative array ]
 	 */
 	private function __runPage($page, $depth = 1, $maxDepth = 10) {
-		if( ! $page instanceof dophp\PageInterface )
+		if( ! $page instanceof \dophp\PageInterface )
 			throw new Exception('Wrong page type');
 
 		// First attempt to retrieve data from the cache
@@ -546,11 +546,11 @@ class DoPhp {
 		try {
 			$out = $page->run();
 			$headers = $page->headers();
-		} catch( dophp\PageRedirect $e ) {
+		} catch( \dophp\PageRedirect $e ) {
 			if( $depth >= $maxDepth )
 				throw new \Exception("Maximum internal redirect depth of $maxDepth reached");
 			return $this->__runPage($e->getPage(), $depth + 1);
-		} catch( dophp\UrlRedirect $e ) {
+		} catch( \dophp\UrlRedirect $e ) {
 			$out = $e->body();
 			$headers = $e->headers();
 		}
@@ -748,10 +748,10 @@ class DoPhp {
 	}
 
 	/**
-	 * Sets a custom printer to be called when an exception is catched
+	 * Sets a custom printer to be called when an exception/error is catched
 	 *
 	 * @param $callable callable: A callable, the following parameters are passed:
-	 *                  - exception: The raised exception
+	 *                  - throwable: The raised exception or error
 	 *                  - code: A fairly unique code to better find the exception
 	 *                          in log files and identify it
 	 *                  If may return true to also trigger the default exception
