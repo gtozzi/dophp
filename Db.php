@@ -2136,6 +2136,141 @@ class Date extends \DateTime {
 		$this->setTime(0, 0, 0);
 	}
 
+	/**
+	 * Checks if this Date is equal to other, accounting for date part only
+	 *
+	 * @todo This is supposed to overload == when feature will be available in PHP
+	 * @return bool: true if objects are equal
+	 */
+	public function eq(\DateTime $other=null) {
+		return self::s_eq($this, $other);
+	}
+
+	/**
+	 * Checks if this Date is not equal to other, accounting for date part only
+	 *
+	 * @todo This is supposed to overload != when feature will be available in PHP
+	 * @return bool: true if objects are not equal
+	 */
+	public function ne(\DateTime $other=null) {
+		return self::s_ne($this, $other);
+	}
+
+	/**
+	 * Checks if this Date is lesser than other, accounting for date part only
+	 *
+	 * @todo This is supposed to overload < when feature will be available in PHP
+	 * @return bool: true if $this < $other
+	 */
+	public function lt(\DateTime $other=null) {
+		return self::s_lt($this, $other);
+	}
+
+	/**
+	 * Checks if this Date is lesser than or equal to other, accounting for date part only
+	 *
+	 * @todo This is supposed to overload <= when feature will be available in PHP
+	 * @return bool: true if $this <= $other
+	 */
+	public function le(\DateTime $other=null) {
+		return self::s_le($this, $other);
+	}
+
+	/**
+	 * Checks if this Date is greater than other, accounting for date part only
+	 *
+	 * @todo This is supposed to overload > when feature will be available in PHP
+	 * @return bool: true if $this > $other
+	 */
+	public function gt(\DateTime $other=null) {
+		return self::s_gt($this, $other);
+	}
+
+	/**
+	 * Checks if this Date is greater than or equal to other, accounting for date part only
+	 *
+	 * @todo This is supposed to overload >= when feature will be available in PHP
+	 * @return bool: true if $this >= $other
+	 */
+	public function ge(\DateTime $other=null) {
+		return self::s_ge($this, $other);
+	}
+
+	/**
+	 * Checks if two DateTimes are equal, accounting for date part only
+	 *
+	 * @return bool: true if objects are equal
+	 */
+	public static function s_eq(\DateTime $obj1=null, \DateTime $obj2=null) {
+		return $obj1 == $obj2 || $obj1->format('Ymd') == $obj2->format('Ymd');
+	}
+
+	/**
+	 * Checks if two DateTimes are not equal, accounting for date part only
+	 *
+	 * @return bool: true if objects are not equal
+	 */
+	public static function s_ne(\DateTime $obj1=null, \DateTime $obj2=null) {
+		return ! self::s_eq($obj1, $obj2);
+	}
+
+	/**
+	 * Checks if first DateTime is lesser than second, accounting for date part only
+	 *
+	 * @return bool: true if $obj1 < $obj2
+	 */
+	public static function s_lt(\DateTime $obj1=null, \DateTime $obj2=null) {
+		if( ! $obj1 || ! $obj2 )
+			return false;
+
+		$y1 = (int)$obj1->format('Y');
+		$y2 = (int)$obj2->format('Y');
+		if( $y1 < $y2 )
+			return true;
+		if( $y1 > $y2 )
+			return false;
+
+		return (int)$obj1->format('z') < (int)$obj2->format('z');
+	}
+
+	/**
+	 * Checks if first DateTime is lesser than or equal to second, accounting for date part only
+	 *
+	 * @return bool: true if $obj1 <= $obj2
+	 */
+	public static function s_le(\DateTime $obj1=null, \DateTime $obj2=null) {
+		return self::s_eq($obj1, $obj2) || self::s_lt($obj1, $obj2);
+	}
+
+	/**
+	 * Checks if first DateTime is greater than second, accounting for date part only
+	 *
+	 * @return bool: true if $obj1 > $obj2
+	 */
+	public static function s_gt(\DateTime $obj1=null, \DateTime $obj2=null) {
+		if( ! $obj1 || ! $obj2 )
+			return false;
+
+		$y1 = (int)$obj1->format('Y');
+		$y2 = (int)$obj2->format('Y');
+		if( $y1 > $y2 )
+			return true;
+		if( $y1 < $y2 )
+			return false;
+
+		return (int)$obj1->format('z') > (int)$obj2->format('z');
+	}
+
+	/**
+	 * Checks if first DateTime is greater than or equal to second, accounting for date part only
+	 *
+	 * @return bool: true if $obj1 >= $obj2
+	 */
+	public static function s_ge(\DateTime $obj1=null, \DateTime $obj2=null) {
+		return self::s_eq($obj1, $obj2) || self::s_gt($obj1, $obj2);
+	}
+
+
 }
 
 
