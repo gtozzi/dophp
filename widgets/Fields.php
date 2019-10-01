@@ -52,6 +52,9 @@ interface Field extends FormWidget {
 	/** Sets field's soft required status */
 	public function setSoftRequired(bool $value);
 
+	/** Returns text to be prepended to the field, if any */
+	public function getPrependText(): ?string;
+
 	/** Returns field's smarty template name */
 	public function getTemplate(): string;
 
@@ -95,6 +98,8 @@ abstract class BaseField extends BaseFormWidget implements Field {
 
 	/** The field's group */
 	protected $_group = null;
+	/** An optional string to prepend to the field (i.e. currency symbol) */
+	protected $_prepend = null;
 
 	/** The fields' starting internal value */
 	protected $_iv = null;
@@ -138,6 +143,10 @@ abstract class BaseField extends BaseFormWidget implements Field {
 		unset($v);
 
 		return implode($es);
+	}
+
+	public function getPrependText(): ?string {
+		return $this->_prepend;
 	}
 
 	public function getDisplayValue(): string {
@@ -490,6 +499,13 @@ class NumberField extends TextField {
 			$vo['step'] = $this->_step;
 		return $vo;
 	}
+
+	public function format($value) {
+		if( is_float($value) )
+			return \dophp\Utils::formatCFloat($value);
+
+		return (string)$value;
+	}
 }
 
 
@@ -503,7 +519,7 @@ class CurrencyField extends NumberField {
 	protected $_step = 0.01;
 
 	/** The used currency symbol */
-	protected $_curSymbol = '€';
+	protected $_prepend = '€';
 	/** How many decimal digits */
 	protected $_decDigits = 2;
 	/** The decimal separator */
@@ -518,9 +534,6 @@ class CurrencyField extends NumberField {
 		$this->_vopts['thosep'] = & $this->_thoSep;
 	}
 
-	public function getCurSymbol(): string {
-		return $this->_curSymbol;
-	}
 	public function getDecDigits(): int {
 		return $this->_decDigits;
 	}
@@ -610,8 +623,22 @@ class SelectField extends InputField {
 
 	protected $_type = 'select';
 	protected $_vtype = 'string';
+
+	/** Array list or SelectQuery of currently selectable options */
 	protected $_options;
+	/**
+	 * Array list or SelectQuery to recover the description of a selected but
+	 * no longer selectable option
+	 * @see self::_addCurOpt
+	 */
+	protected $_wideOptions = null;
+	/** If true, will add an empty option */
 	protected $_addNullOpt = true;
+	/**
+	 * If true, will add an option for the currently selected element if not available
+	 * @see self::_wideOptions
+	 */
+	protected $_addCurOpt = true;
 	/** Parameters for the options query */
 	protected $_optParams = [];
 	/** Enables AJAX (with select2)
@@ -658,8 +685,10 @@ class SelectField extends InputField {
 		// Returns raw options from builtin array
 		if( is_array($this->_options) ) {
 			$yieldCount = 0;
+			$foundSelected = false;
 			foreach( $this->_options as $id => $descr ) {
 				$selected = ( $id == $this->_iv );
+				$foundSelected = $foundSelected || $selected;
 
 				$option = new SelectOption($id, $selected, $descr);
 
@@ -688,6 +717,9 @@ class SelectField extends InputField {
 					continue;
 				}
 			}
+
+			if( $this->_iv && ! $foundSelected && $this->_addCurOpt && ! $this->isAjax() )
+				yield $this->__genSelectedOption();
 			return;
 		}
 
@@ -706,8 +738,12 @@ class SelectField extends InputField {
 				if( strlen($ajax['term']) ) {
 					$pt = "%{$ajax['term']}%";
 					$ajaxparam = self::__addParam($params, 'term', $pt);
-					$where = $query->col($desck)['qname'] . " LIKE :$ajaxparam";
+					$qcol = $query->col($desck)['qname'];
+					$where = "$qcol LIKE :$ajaxparam";
 					$query->addWhere($where);
+
+					// Show exact match first
+					$query->prependOrderBy("LENGTH($qcol) ASC");
 				}
 			} else {
 				// Small trick: when readonly or ajax, only send the selected one
@@ -718,10 +754,12 @@ class SelectField extends InputField {
 				}
 			}
 
+			$foundSelected = false;
 			foreach( \DoPhp::db()->xrun($query, $params) as $r ) {
 				$id = $r[$idk];
 				$descr = (string)$r[$desck];
 				$selected = ( $id == $this->_iv );
+				$foundSelected = $foundSelected || $selected;
 				$option = new SelectOption($id, $selected, $descr);
 
 				// Custom ajax filter
@@ -731,10 +769,27 @@ class SelectField extends InputField {
 
 				yield $option;
 			}
+
+			if( $this->_iv && ! $foundSelected && $this->_addCurOpt && ! $this->isAjax() )
+				yield $this->__genSelectedOption();
 			return;
 		}
 
 		throw new \Exception('Should not reach this point');
+	}
+
+	private function __genSelectedOption(): SelectOption {
+		$descr = "({$this->_iv})";
+
+		if( $this->_wideOptions ) {
+			if( ! is_array($this->_wideOptions) )
+				throw new \dophp\NotImplementedException('Only array wideoptions are supported so far');
+
+			if( isset($this->_wideOptions[$this->_iv]) )
+				$descr = $this->_wideOptions[$this->_iv];
+		}
+
+		return new SelectOption($this->_iv, true, $descr);
 	}
 
 	/** Adds an unique param, internal usage */

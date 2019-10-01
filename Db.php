@@ -447,6 +447,26 @@ class Db {
 	}
 
 	/**
+	 * Utility function to build an IN() clause
+	 *
+	 * @param $params array: list of paramaters
+	 * @param $emptyok bool: If true, accepts an empty params array instead of
+	 *                       throwing and exception
+	 * @return string: The in statement, or empty string if no params
+	 * @throws \InvalidArgumentException
+	 */
+	public static function buildInStatement($params, $emptyok=false) {
+		if( ! $params ) {
+			if( $emptyok )
+				return '';
+
+			throw new \InvalidArgumentException('Empty list of params received and emptyok is not set');
+		}
+
+		return 'IN(' . implode(',', array_fill(0, count($params), '?')) . ')';
+	}
+
+	/**
 	* Processes an associative array of parameters into an array of SQL-ready
 	* elements
 	*
@@ -678,11 +698,9 @@ class Result implements \Iterator {
 
 			if( isset($this->_types[$meta['name']]) )
 				$type = $this->_types[$meta['name']];
-			elseif( ! array_key_exists('native_type', $meta) ) {
-				// Apparently JSON fields have no native_type, assuming string
-				// TODO: use some different detection?
-				error_log('DoPhp: missing native_type, assuming string; meta: ' . print_r($meta,true));
-				$type = Table::DATA_TYPE_STRING;
+			elseif( ! isset($meta['native_type']) ) {
+				// Apparently JSON fields have no native_type
+				throw new \InvalidArgumentException('Missing native_type form column $idx, must declare type explicitly');
 			} else
 				$type = Table::getType($meta['native_type'], $meta['len']);
 
@@ -820,6 +838,7 @@ class Table {
 	const DATA_TYPE_DATE     = 'Date';
 	const DATA_TYPE_DATETIME = 'DateTime';
 	const DATA_TYPE_TIME     = 'Time';
+	const DATA_TYPE_NULL     = 'null'; // Rare always null columns
 
 	/** Database table name, may be overridden in sub-class or passed by constructor */
 	protected $_name = null;
@@ -1109,7 +1128,7 @@ class Table {
 	 *                 DateTime, Time (see DATA_TYPE_* constants)
 	 */
 	public static function getType($dtype, $len) {
-		switch($dtype) {
+		switch(strtoupper($dtype)) {
 		case 'SMALLINT':
 		case 'MEDIUMINT':
 		case 'INT':
@@ -1158,6 +1177,9 @@ class Table {
 			return self::DATA_TYPE_DATETIME;
 		case 'TIME':
 			return self::DATA_TYPE_TIME;
+		case 'NULL':
+			// Rare always-null columns
+			return self::DATA_TYPE_NULL;
 		}
 
 		throw new NotImplementedException("Unsupported column type $dtype");
@@ -1252,6 +1274,8 @@ class Table {
 			return new \DateTime($val);
 		case self::DATA_TYPE_TIME:
 			return new Time($val);
+		case self::DATA_TYPE_NULL:
+			throw new \LogicException('Value should have been null');
 		}
 
 		throw new NotImplementedException("Unsupported data type $type");
@@ -1493,6 +1517,7 @@ class SelectQuery {
 	 *                   keyword
 	 *        - orderBy: The ORDER BY part of the query, without the ORDER BY
 	 *                   keyword
+	 *        - limit: The LIMIT part of the query, without the LIMIT keyword
 	 */
 	protected function _constructFromArray(array $query) {
 		if( ! is_array($query) )
@@ -1535,7 +1560,7 @@ class SelectQuery {
 			if( ! is_string($query['groupBy']) )
 				throw new \InvalidArgumentException('Group BY must be a string');
 
-			$this->_where = $query['groupBy'];
+			$this->_groupBy = $query['groupBy'];
 		}
 
 		if( isset($query['orderBy']) ) {
@@ -1543,6 +1568,14 @@ class SelectQuery {
 				throw new \InvalidArgumentException('Order BY must be a string');
 
 			$this->_orderBy = $query['orderBy'];
+		}
+
+		// TO DO: Modify type check. Use is_string instead of is_int, because $query['limit'] could be (val_1, val_2)
+		if( isset($query['limit']) ) {
+			if( ! is_int($query['limit']) && ! is_string($query['limit']) )
+				throw new \InvalidArgumentException('Limit must be a string or int');
+
+			$this->_limit = (string)$query['limit'];
 		}
 	}
 
@@ -1744,6 +1777,29 @@ class SelectQuery {
 	 */
 	public function setLimit($limit) {
 		$this->_limit = (string)$limit;
+	}
+
+	/**
+	 * Prepends an order by condition to the current one
+	 *
+	 * @param $orderBy string: The clause to prepend, wihout ORDER BY keyword
+	 */
+	public function prependOrderBy(string $orderBy) {
+		if( $this->_orderBy == null ) {
+			$this->_orderBy = $orderBy;
+			return;
+		}
+
+		$this->_orderBy = "$orderBy, {$this->_orderBy}";
+	}
+
+	/**
+	 * Sets a new order by condition
+	 *
+	 * @param $orderBy string: The new clause, wihout ORDER BY keyword
+	 */
+	public function setOrderBy(string $orderBy) {
+		$this->_orderBy = $orderBy;
 	}
 }
 
@@ -2079,6 +2135,141 @@ class Date extends \DateTime {
 		parent::__construct($date, new \DateTimeZone('UTC'));
 		$this->setTime(0, 0, 0);
 	}
+
+	/**
+	 * Checks if this Date is equal to other, accounting for date part only
+	 *
+	 * @todo This is supposed to overload == when feature will be available in PHP
+	 * @return bool: true if objects are equal
+	 */
+	public function eq(\DateTime $other=null) {
+		return self::s_eq($this, $other);
+	}
+
+	/**
+	 * Checks if this Date is not equal to other, accounting for date part only
+	 *
+	 * @todo This is supposed to overload != when feature will be available in PHP
+	 * @return bool: true if objects are not equal
+	 */
+	public function ne(\DateTime $other=null) {
+		return self::s_ne($this, $other);
+	}
+
+	/**
+	 * Checks if this Date is lesser than other, accounting for date part only
+	 *
+	 * @todo This is supposed to overload < when feature will be available in PHP
+	 * @return bool: true if $this < $other
+	 */
+	public function lt(\DateTime $other=null) {
+		return self::s_lt($this, $other);
+	}
+
+	/**
+	 * Checks if this Date is lesser than or equal to other, accounting for date part only
+	 *
+	 * @todo This is supposed to overload <= when feature will be available in PHP
+	 * @return bool: true if $this <= $other
+	 */
+	public function le(\DateTime $other=null) {
+		return self::s_le($this, $other);
+	}
+
+	/**
+	 * Checks if this Date is greater than other, accounting for date part only
+	 *
+	 * @todo This is supposed to overload > when feature will be available in PHP
+	 * @return bool: true if $this > $other
+	 */
+	public function gt(\DateTime $other=null) {
+		return self::s_gt($this, $other);
+	}
+
+	/**
+	 * Checks if this Date is greater than or equal to other, accounting for date part only
+	 *
+	 * @todo This is supposed to overload >= when feature will be available in PHP
+	 * @return bool: true if $this >= $other
+	 */
+	public function ge(\DateTime $other=null) {
+		return self::s_ge($this, $other);
+	}
+
+	/**
+	 * Checks if two DateTimes are equal, accounting for date part only
+	 *
+	 * @return bool: true if objects are equal
+	 */
+	public static function s_eq(\DateTime $obj1=null, \DateTime $obj2=null) {
+		return $obj1 == $obj2 || $obj1->format('Ymd') == $obj2->format('Ymd');
+	}
+
+	/**
+	 * Checks if two DateTimes are not equal, accounting for date part only
+	 *
+	 * @return bool: true if objects are not equal
+	 */
+	public static function s_ne(\DateTime $obj1=null, \DateTime $obj2=null) {
+		return ! self::s_eq($obj1, $obj2);
+	}
+
+	/**
+	 * Checks if first DateTime is lesser than second, accounting for date part only
+	 *
+	 * @return bool: true if $obj1 < $obj2
+	 */
+	public static function s_lt(\DateTime $obj1=null, \DateTime $obj2=null) {
+		if( ! $obj1 || ! $obj2 )
+			return false;
+
+		$y1 = (int)$obj1->format('Y');
+		$y2 = (int)$obj2->format('Y');
+		if( $y1 < $y2 )
+			return true;
+		if( $y1 > $y2 )
+			return false;
+
+		return (int)$obj1->format('z') < (int)$obj2->format('z');
+	}
+
+	/**
+	 * Checks if first DateTime is lesser than or equal to second, accounting for date part only
+	 *
+	 * @return bool: true if $obj1 <= $obj2
+	 */
+	public static function s_le(\DateTime $obj1=null, \DateTime $obj2=null) {
+		return self::s_eq($obj1, $obj2) || self::s_lt($obj1, $obj2);
+	}
+
+	/**
+	 * Checks if first DateTime is greater than second, accounting for date part only
+	 *
+	 * @return bool: true if $obj1 > $obj2
+	 */
+	public static function s_gt(\DateTime $obj1=null, \DateTime $obj2=null) {
+		if( ! $obj1 || ! $obj2 )
+			return false;
+
+		$y1 = (int)$obj1->format('Y');
+		$y2 = (int)$obj2->format('Y');
+		if( $y1 > $y2 )
+			return true;
+		if( $y1 < $y2 )
+			return false;
+
+		return (int)$obj1->format('z') > (int)$obj2->format('z');
+	}
+
+	/**
+	 * Checks if first DateTime is greater than or equal to second, accounting for date part only
+	 *
+	 * @return bool: true if $obj1 >= $obj2
+	 */
+	public static function s_ge(\DateTime $obj1=null, \DateTime $obj2=null) {
+		return self::s_eq($obj1, $obj2) || self::s_gt($obj1, $obj2);
+	}
+
 
 }
 

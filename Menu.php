@@ -9,6 +9,10 @@
 
 namespace dophp;
 
+
+require_once('Widgets.php');
+
+
 /**
 * Interface for every menu node
 */
@@ -201,7 +205,7 @@ class Menu implements MenuInterface {
 /**
 * Represents a menu item
 */
-class MenuItem implements MenuInterface {
+class MenuItem extends \dophp\widgets\BaseWidget implements MenuInterface {
 
 	/** User-friendly label */
 	protected $_label;
@@ -226,6 +230,8 @@ class MenuItem implements MenuInterface {
 	* @param $icon string: The optional icon name, if used
 	*/
 	public function __construct($label=null, $url=null, $alt=null, $icon=null) {
+		parent::__construct();
+
 		$this->_label = $label;
 		$this->_url = $url;
 		$this->_alt = $alt;

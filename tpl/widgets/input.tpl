@@ -8,6 +8,7 @@
 	{{$type=$field->getType()}}
 
 	{{$name=$field->getHTMLName()}}
+	{{$prepend=$field->getPrependText()}}
 
 	{{$value=$field->getDisplayValue()}}
 	{{if ! isset($label)}}
@@ -125,20 +126,20 @@
 		{{/block}}
 		<div id="{{$id}}_col" class="inputcol col-sm-{{$colw}} {{$pvclass}}">
 			{{block name='pre-input'}}
-				{{if $type=='date' || $type=='asyncFile' || $type=='currency' || $linkurl}}
+				{{if $type=='date' || $type=='asyncFile' || $type=='currency' || $linkurl || $prepend}}
 					<div class="input-group">
 				{{/if}}
 				{{if $type=='asyncFile'}}
 					<input id="{{$id}}_txt" type="text" class="form-control">
-					<input id="{{$id}}_hid" name="{{$name|htmlentities}}" type="hidden" class="ag-asyncupl-hid-fld" value="">
+					<input id="{{$id}}_hid" name="{{$name|htmlentities}}" type="hidden" class="ag-asyncupl-hid-fld" value="{{$value|htmlentities}}">
 					<span class="input-group-btn">
 						<button id="{{$id}}_btn" type="button" class="btn btn-secondary ag-calender-button">
 							Seleziona
 						</button>
 					</span>
-				{{elseif $type=='currency'}}
+				{{elseif $prepend}}
 					<div class="input-group-prepend">
-						<span class="input-group-text">{{$field->getCurSymbol()|htmlentities}}</span>
+						<span class="input-group-text">{{$prepend|htmlentities}}</span>
 					</div>
 				{{/if}}
 				{{if $type=='checkbox'}}
@@ -229,7 +230,7 @@
 
 				{{if $type=='date'}}
 					<span class="input-group-btn">
-						<button class="btn btn-secondary ag-calender-button" type="button" onclick="$('#{{$id}}').datepicker('show')" {{if $readonly}}disabled{{/if}}><span class="fa fa-calendar"></span></button>
+						<button class="btn btn-secondary ag-calender-button" type="button" tabindex="-1" onclick="$('#{{$id}}').datepicker('show')" {{if $readonly}}disabled{{/if}}><span class="fa fa-calendar"></span></button>
 					</span>
 				</div><!-- Input group end -->
 					<script>
@@ -431,12 +432,21 @@
 								},
 							{{/if}}
 						});
+						$('#select2-{{$id}}-container').parent().on("keydown", function(e) {
+							var key = e.keyCode;
+							if (key != 9 && key != 13 && key != 16) {
+								$(this).closest(".select2-container").siblings('select:enabled').select2('open');
+								$(".select2-search__field").focus();
+							}
+						});
 					</script>
 				{{elseif $type=='currency'}}
 					</div><!-- Input group end -->
 				{{elseif $type=='checkbox'}}
 					<span class="custom-control-indicator"></span>
 					</label>
+				{{elseif $prepend}}
+					</div><!-- Input group end -->
 				{{/if}}
 				<script>
 					$("#{{$id}}").formhandle();

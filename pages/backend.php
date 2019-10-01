@@ -215,6 +215,9 @@ abstract class TablePage extends \dophp\HybridRpcMethod {
  */
 abstract class FormPage extends \dophp\PageSmarty {
 
+	/** When true, force some checks on input id */
+	const ID_IS_INT = true;
+
 	/** Edit permission */
 	const PERM_EDIT = 'edit';
 	/** Insert permission */
@@ -319,6 +322,13 @@ abstract class FormPage extends \dophp\PageSmarty {
 	protected $_disableDelete = false;
 
 	/**
+	 * When true, always adds the save button
+	 * When false, never adds it
+	 * When null (default) try to autodetect it
+	 */
+	protected $_addSaveButton = null;
+
+	/**
 	 * Inits $this->_form
 	 */
 	protected function _initForm($id) {
@@ -330,13 +340,31 @@ abstract class FormPage extends \dophp\PageSmarty {
 	 *
 	 * By default, it does nothing
 	 */
-	protected function _initFields() {
+	protected function _initFields($id) {
 	}
 
 	/**
 	 * Called as first init action, overridable in child
 	 */
-	protected function _initEarly() {
+	protected function _initEarly($id) {
+	}
+
+	/**
+	 * Returns ID from request args, may be null
+	 */
+	public static function getRequestId() {
+		$id = isset($_REQUEST['id']) && $_REQUEST['id'] ? $_REQUEST['id'] : null;
+		if( $id !== null && ! preg_match('/^[a-zA-Z0-9_]+$/', $id) )
+			throw new \dophp\PageError("Invalid id $id");
+
+		// Convert to int or float if numeric
+		if( is_numeric($id) )
+			$id = $id + 0;
+
+		if( $id !== null && static::ID_IS_INT && ! is_int($id) )
+			throw new \dophp\PageError("Non integer id $id");
+
+		return $id;
 	}
 
 	protected function _build() {
@@ -352,18 +380,18 @@ abstract class FormPage extends \dophp\PageSmarty {
 		if( ! array_key_exists($this->_sesskey, $_SESSION) || ! is_array($_SESSION[$this->_sesskey]) )
 			$_SESSION[$this->_sesskey] = [];
 
-		$this->_initBackendComponent();
-		$this->_initEarly();
-		$this->_initFields();
-
 		// Determine if editing or inserting
-		$id = isset($_REQUEST['id']) && $_REQUEST['id'] ? $_REQUEST['id'] : null;
+		$id = static::getRequestId();
 		$this->_smarty->assign('id', $id);
 
 		foreach( $this->_getKeep as $v )
 			if( isset($_GET[$v]) )
 				$this->_getArgs[$v] = $_GET[$v];
 		$this->_smarty->assignByRef('getArgs', $this->_getArgs);
+
+		$this->_initBackendComponent();
+		$this->_initEarly($id);
+		$this->_initFields($id);
 
 		// Determine action
 		if( $id )
@@ -381,12 +409,12 @@ abstract class FormPage extends \dophp\PageSmarty {
 			break;
 		case self::ACT_EDIT:
 			if( $this->_disableEdit )
-				throw new \Exception('Insert is disabled');
+				throw new \Exception('Edit is disabled');
 			$perm = [ self::PERM_EDIT, self::PERM_VIEW ];
 			break;
 		case self::ACT_DEL:
 			if( $this->_disableDelete )
-				throw new \Exception('Insert is disabled');
+				throw new \Exception('Delete is disabled');
 			$perm = self::PERM_DEL;
 			break;
 		default:
@@ -487,8 +515,12 @@ abstract class FormPage extends \dophp\PageSmarty {
 		default:
 			throw new \Exception("Unsupported method {$_SERVER['REQUEST_METHOD']}");
 		}
-		$this->_form->action( $this->_formAction );
-		$this->_smarty->assignByRef('form', $this->_form);
+
+		if( isset($this->_form) ) {
+			// Form is not set on DELETE
+			$this->_form->action( $this->_formAction );
+			$this->_smarty->assignByRef('form', $this->_form);
+		}
 
 		// Assign useful smarty variables
 		$this->_smarty->assignByRef('baseTpl', $this->_baseTpl);
@@ -508,7 +540,18 @@ abstract class FormPage extends \dophp\PageSmarty {
 			$res = $this->_buildEdit($id, $posted);
 			break;
 		case self::ACT_DEL:
-			$res = $this->_buildDelete($id);
+			$this->_headers['Content-Type'] = 'text/plain';
+			try {
+				$res = $this->_buildDelete($id);
+			} catch( FormPageDeleteConstraintError $e ) {
+				header("HTTP/1.0 409 Conflict");
+				if( $e->messageIsUserFriendly() )
+					$res = $e->getMessage();
+				else
+					$res = '';
+				if( $this->_config['debug'] )
+					$this->_headers['X-DoPhp-Debug-DeleteReson'] = $e->getMessage();
+			}
 			break;
 		default:
 			throw new \Exception("Action $action not supported");
@@ -548,16 +591,24 @@ abstract class FormPage extends \dophp\PageSmarty {
 	 * @param $id mixed: The element id
 	 */
 	protected function _addButtons($id) {
-		$this->_buttons->add(new \dophp\buttons\SaveButton());
-		$this->_buttons->add(new \dophp\buttons\CancelButton());
-		$this->_buttons->add(new \dophp\buttons\DeleteButton());
+		if( $this->_addSaveButton || (
+			$this->_addSaveButton === null && ( ! $this->_disableInsert || ! $this->_disableEdit )
+		)) {
+			$this->_buttons->add(new \dophp\buttons\SaveButton());
+			$this->_buttons->add(new \dophp\buttons\CancelButton());
 
-		if( $this->hasPerm(self::PERM_EDIT) ) {
-			$this->_buttons->enable(\dophp\buttons\SaveButton::DEFAULT_ID);
-			$this->_buttons->enable(\dophp\buttons\CancelButton::DEFAULT_ID);
+			if( $this->hasPerm(self::PERM_EDIT) ) {
+				$this->_buttons->enable(\dophp\buttons\SaveButton::DEFAULT_ID);
+				$this->_buttons->enable(\dophp\buttons\CancelButton::DEFAULT_ID);
+			}
 		}
-		if( $this->hasPerm(self::PERM_DEL) )
-			$this->_buttons->enable(\dophp\buttons\DeleteButton::DEFAULT_ID);
+
+		if( ! $this->_disableDelete ) {
+			$this->_buttons->add(new \dophp\buttons\DeleteButton());
+
+			if( $this->hasPerm(self::PERM_DEL) )
+				$this->_buttons->enable(\dophp\buttons\DeleteButton::DEFAULT_ID);
+		}
 	}
 
 	/**
@@ -648,7 +699,7 @@ abstract class FormPage extends \dophp\PageSmarty {
 	 *
 	 * @param $id mixed: ID of the inserted element
 	 */
-	protected function _getInsertRedirectUrl($id) {
+	public function getInsertRedirectUrl($id) {
 		$url = clone $this->_formAction;
 		$url->args['id'] = $id;
 		return $url->asString();
@@ -658,7 +709,7 @@ abstract class FormPage extends \dophp\PageSmarty {
 	 * Redirects after an isert
 	 */
 	protected function _redirectAfterInsert($id) {
-		$location = $this->_getInsertRedirectUrl($id);
+		$location = $this->getInsertRedirectUrl($id);
 		throw new \dophp\UrlRedirect($location);
 	}
 
@@ -672,10 +723,10 @@ abstract class FormPage extends \dophp\PageSmarty {
 	protected function _buildEdit($id, bool $posted) {
 		// User submitted valid data
 		if( $posted && $this->_form->isValid() ) {
-			$this->_updDbData($id, $this->_form->getInternalValues());
+			$newid = $this->_updDbData($id, $this->_form->getInternalValues());
 
 			// Page needs to be reloaded since data has changed
-			$this->_redirectAfterEdit($id);
+			$this->_redirectAfterEdit($newid ?? $id);
 		}
 
 		if( ! $posted || $this->_form->isValid() )
@@ -687,7 +738,7 @@ abstract class FormPage extends \dophp\PageSmarty {
 	 *
 	 * @param $id mixed: ID of the edited element
 	 */
-	protected function _getEditRedirectUrl($id) {
+	public function getEditRedirectUrl($id) {
 		$url = clone $this->_formAction;
 		$url->args['id'] = $id;
 		return $url->asString();
@@ -697,7 +748,7 @@ abstract class FormPage extends \dophp\PageSmarty {
 	 * Redirects after an edit
 	 */
 	protected function _redirectAfterEdit($id) {
-		$location = $this->_getEditRedirectUrl($id);
+		$location = $this->getEditRedirectUrl($id);
 		throw new \dophp\UrlRedirect($location);
 	}
 
@@ -705,10 +756,34 @@ abstract class FormPage extends \dophp\PageSmarty {
 	 * Process the "delete" action
 	 *
 	 * @param $id mixed: The ID of the element to be deleted
+	 * @return The delete message on success
+	 * @throws FormPageDeleteConstraintError
 	 */
 	protected function _buildDelete($id) {
-		$this->_delDbData($id);
+		try {
+			$this->_delDbData($id);
+		} catch( \PDOException $e ) {
+			if( $this->_db->inTransaction() )
+				$this->_db->rollback();
+
+			if( $e->getCode() != 23000 )
+				throw $e;
+
+			$ce = new FormPageDeleteConstraintError($e->getMessage(), $e->getCode(), $e);
+			throw $ce;
+		}
 		return _('Delete succesful');
+	}
+
+	/**
+	 * Returns redirect URL after delete, overridable in child
+	 *
+	 * @param $id mixed: ID of the deleted element
+	 */
+	public function getDeleteRedirectUrl($id) {
+		$name = $this->name();
+		$name = substr($name, 0, strpos($name, '.mod')).'.admin';
+		return \dophp\Url::fullPageUrl($name);
 	}
 
 	/**
@@ -767,6 +842,7 @@ abstract class FormPage extends \dophp\PageSmarty {
 	 *
 	 * @param $id mixed: The element's ID
 	 * @param $data array: associative array of data
+	 * @return mixed: May return a new ID, if changed (null means unchanged)
 	 */
 	protected function _updDbData($id, array $data) {
 		$t = $this->__getTable();
@@ -777,6 +853,7 @@ abstract class FormPage extends \dophp\PageSmarty {
 	 * Deletes a record from the DB
 	 *
 	 * @param $id mixed: The element's ID
+	 * @throws FormPageDeleteConstraintError
 	 */
 	protected function _delDbData($id) {
 		$t = $this->__getTable();
@@ -806,5 +883,27 @@ abstract class FormPage extends \dophp\PageSmarty {
 				'feedback' => $f->getVFeedback(),
 			];
 		return $ret;
+	}
+}
+
+
+/**
+ * Exception thrown in FormPage when a delete operation fails
+ * because of a constraint
+ */
+class FormPageDeleteConstraintError extends \Exception {
+
+	private $_friendlyMex;
+
+	/**
+	 * @param $friendlyMex bool: Tells whether message should be show to user
+	 */
+	public function __construct(string $message='', int $code=0, \Throwable $previous=null, bool $friendlyMex=false) {
+		parent::__construct($message, $code, $previous);
+		$this->_friendlyMex = $friendlyMex;
+	}
+
+	public function messageIsUserFriendly(): bool {
+		return $this->_friendlyMex;
 	}
 }

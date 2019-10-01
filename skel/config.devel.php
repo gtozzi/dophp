@@ -21,4 +21,5 @@ $config = array_merge($config, [
 	*/
 	'debug' => true,
 	'strict' => true,
+	'testserver' => true,
 ]);
