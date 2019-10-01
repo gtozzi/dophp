@@ -11,6 +11,9 @@
 	border-bottom: 45px solid #f00;
 	margin-bottom: 0px;
 	padding-bottom: 75px;
+	position: absolute;
+	min-height: 100%;
+	width: 100%;
 }
 
 .bframe-cont .bframe-top {
@@ -35,7 +38,6 @@
 
 .bframe-cont .footer {
 	border-bottom: 75px solid #f00;
-	width: calc( 100% - 30px );
 }
 
 /** Navbar */
