@@ -545,7 +545,12 @@ abstract class FormPage extends \dophp\PageSmarty {
 				$res = $this->_buildDelete($id);
 			} catch( FormPageDeleteConstraintError $e ) {
 				header("HTTP/1.0 409 Conflict");
-				$res = $e->getMessage();
+				if( $e->messageIsUserFriendly() )
+					$res = $e->getMessage();
+				else
+					$res = '';
+				if( $this->_config['debug'] )
+					$this->_headers['X-DoPhp-Debug-DeleteReson'] = $e->getMessage();
 			}
 			break;
 		default:
@@ -848,6 +853,7 @@ abstract class FormPage extends \dophp\PageSmarty {
 	 * Deletes a record from the DB
 	 *
 	 * @param $id mixed: The element's ID
+	 * @throws FormPageDeleteConstraintError
 	 */
 	protected function _delDbData($id) {
 		$t = $this->__getTable();
@@ -886,4 +892,18 @@ abstract class FormPage extends \dophp\PageSmarty {
  * because of a constraint
  */
 class FormPageDeleteConstraintError extends \Exception {
+
+	private $_friendlyMex;
+
+	/**
+	 * @param $friendlyMex bool: Tells whether message should be show to user
+	 */
+	public function __construct(string $message='', int $code=0, \Throwable $previous=null, bool $friendlyMex=false) {
+		parent::__construct($message, $code, $previous);
+		$this->_friendlyMex = $friendlyMex;
+	}
+
+	public function messageIsUserFriendly(): bool {
+		return $this->_friendlyMex;
+	}
 }
