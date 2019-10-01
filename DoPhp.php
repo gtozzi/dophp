@@ -465,6 +465,11 @@ class DoPhp {
 			echo $e->getMessage();
 			error_log('Bad Request: ' . $e->getMessage());
 			return;
+		} catch( \dophp\PageGone $e ) {
+			header("HTTP/1.1 410 Gone");
+			echo $e->getMessage();
+			error_log('Resource is Gone: ' . $e->getMessage());
+			return;
 		} catch( \Throwable $e ) {
 			header("HTTP/1.1 500 Internal Server Error");
 			$this->__printException($e);
