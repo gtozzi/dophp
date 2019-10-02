@@ -778,6 +778,8 @@ abstract class FormPage extends \dophp\PageSmarty {
 	/**
 	 * Returns redirect URL after delete, overridable in child
 	 *
+	 * @note This will be called BEFORE the delete operation occurs,
+	 *       so the given ID is still valid
 	 * @param $id mixed: ID of the deleted element
 	 */
 	public function getDeleteRedirectUrl($id) {
