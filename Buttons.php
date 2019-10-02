@@ -216,6 +216,7 @@ class DropdownButtonChild extends \dophp\widgets\BaseWidget {
 	public $label;
 	public $icon = null;
 	public $url = null;
+	public $post = null;
 
 	/**
 	 * Constructs the child
@@ -224,14 +225,16 @@ class DropdownButtonChild extends \dophp\widgets\BaseWidget {
 	 * @param $label string: Button description for user
 	 * @param $icon string: FA-icon
 	 * @param $url string: The link URL
+	 * @param $post array: If given, will be a POST button
 	 */
-	public function __construct(string $id, string $label, string $icon=null, string $url=null) {
+	public function __construct(string $id, string $label, string $icon=null, string $url=null, $post=null) {
 		parent::__construct();
 
 		$this->id = $id;
 		$this->label = $label;
 		$this->icon = $icon;
 		$this->url = $url;
+		$this->post = $post;
 	}
 
 }
