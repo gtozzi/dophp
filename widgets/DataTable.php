@@ -1465,7 +1465,7 @@ class DataTableButton {
 	public function getUrl(): string {
 		$searches = [];
 		$replaces = [];
-		foreach( $this->_params as $name => $val ) {
+		foreach( array_merge($this->_table->params, $this->_params) as $name => $val ) {
 			$searches[] = self::PARAM_START . $name . self::PARAM_END;
 			$replaces[] = $val;
 		}
