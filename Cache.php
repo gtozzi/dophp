@@ -121,9 +121,9 @@ class Memcache {
 		return $this->_cache->replace($key, $var, $flag, $expire);
 	}
 
-	public function delete($key, $var, int $timeout=0) {
+	public function delete($key, int $timeout=0) {
 		$key = $this->_normKey($key);
-		return $this->_cache->delete($key, $var, $timeout);
+		return $this->_cache->delete($key, $timeout);
 	}
 
 	public function decrement($key, int $value=1) {
