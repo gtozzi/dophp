@@ -151,12 +151,12 @@ class DataTable extends BaseWidget {
 	public function __construct(\dophp\PageInterface $page) {
 		parent::__construct();
 
-		$this->_initProps();
-
 		$this->_page = $page;
 		$this->_db = $page->db();
 		$this->_config = $page->config();
 		$this->_user = $page->user();
+
+		$this->_initProps();
 
 		// Deprecation checks
 		if( isset($this->_pk) )
