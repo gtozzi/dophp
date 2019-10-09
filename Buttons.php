@@ -71,6 +71,12 @@ class ButtonBar {
 		return $this->_buttons;
 	}
 	/**
+	 * Returns a signle button by ID
+	 */
+	public function button(string $id): Button {
+		return $this->_buttons[$id];
+	}
+	/**
 	 * Enables the given button by ID
 	 */
 	public function enable(string $id) {
@@ -112,6 +118,7 @@ abstract class Button extends \dophp\widgets\BaseWidget {
 	public $id;
 	public $type;
 	public $class;
+	public $confirm = '';
 	public $icon;
 	public $label;
 	public $enabled = false;
@@ -126,6 +133,7 @@ abstract class Button extends \dophp\widgets\BaseWidget {
 	 * @param $options array: array of optional options:
 	 *        - type: string button type, default 'button'
 	 *        - class: string button class, default 'btn-secondary'
+	 *        - confirm: A string to ask confirmation before proceeding
 	 */
 	public function __construct(string $id, string $label, string $icon, array $options=[]) {
 		assert(! isset($options['class']) || is_string($options['class']));
@@ -173,7 +181,9 @@ abstract class Button extends \dophp\widgets\BaseWidget {
 	 * Returns html data- attributes
 	 */
 	public function htmldata(): array {
-		return [];
+		return [
+			'confirm' => $this->confirm,
+		];
 	}
 }
 
