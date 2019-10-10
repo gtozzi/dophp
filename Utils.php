@@ -495,7 +495,13 @@ class Utils {
 			$aspl = explode(';', $astr, 2);
 			$encoding = trim($aspl[0]);
 
-			if( isset($aspl[1]) ) {
+			if( $encoding == 'application/signed-exchange' ) {
+				// Chrome is sending "application/signed-exchange;v=b3",
+				// just ignoring it
+				// https://wicg.github.io/webpackage/draft-yasskin-http-origin-signed-responses.html#application-signed-exchange
+				$pri = 1;
+
+			} elseif( isset($aspl[1]) ) {
 				$matches = [];
 				$m = preg_match('/^\s*q=([0-9.]+)\s*$/', $aspl[1], $matches);
 				if( $m )
@@ -505,6 +511,7 @@ class Utils {
 					error_log("Could not decode Accept params: \"$aspl[1]\" in \"{$_SERVER['HTTP_ACCEPT']}\"");
 					$pri = 1;
 				}
+
 			} else
 				$pri = 1;
 
