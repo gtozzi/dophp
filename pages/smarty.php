@@ -90,7 +90,8 @@ trait SmartyFunctionalities {
 
 		// Init default template name
 		$base_file = basename($_SERVER['PHP_SELF'], '.php');
-		$this->_template = "$base_file.{$this->_name}.tpl";
+		if( isset($this->_name) )
+			$this->_template = "$base_file.{$this->_name}.tpl";
 	}
 
 	/**
