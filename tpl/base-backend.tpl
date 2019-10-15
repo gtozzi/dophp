@@ -204,6 +204,8 @@
 							<li class="breadcrumb-item breadcrumb-search">
 								<div class="bc-search">
 									<input class="bc-search-fld" type="text" value="" />
+									<span class="bc-search-cancel">annulla</span>
+									<div class="bc-search-list"></div>
 								</div>
 							</li>
 						</ol>
