@@ -88,7 +88,7 @@
 		<script src="{{$config['dophp']['url']}}/webcontent/js/form.js"></script>
 		<script src="{{$config['dophp']['url']}}/webcontent/js/buttons.js"></script>
 
-		<!-- DoPhp font -->		
+		<!-- DoPhp font -->
 		<link rel="stylesheet" type="text/css" href="{{$config['dophp']['url']}}/webcontent/css/mgmt-glyph.css"/>
 	{{/block}}
 
@@ -200,6 +200,11 @@
 							{{/if}}
 							<li class="breadcrumb-item active">
 								<div class="bc-text active">{{$pageTitle|htmlentities}}{{block name='breadbadges'}}{{/block}}</div>
+							</li>
+							<li class="breadcrumb-item breadcrumb-search">
+								<div class="bc-search">
+									<input class="bc-search-fld" type="text" value="" />
+								</div>
 							</li>
 						</ol>
 					{{/if}}
