@@ -198,9 +198,9 @@
 									</li>
 								{{/foreach}}
 							{{/if}}
-							<div class="bc-text active">
-								<li class="breadcrumb-item active">{{$pageTitle|htmlentities}}{{block name='breadbadges'}}{{/block}}</li>
-							</div>
+							<li class="breadcrumb-item active">
+								<div class="bc-text active">{{$pageTitle|htmlentities}}{{block name='breadbadges'}}{{/block}}</div>
+							</li>
 						</ol>
 					{{/if}}
 				{{/block}}
