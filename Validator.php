@@ -527,7 +527,7 @@ class file_validator extends base_validator {
 *
 * Custom validation rules: 'rules': array list of array elements to check for,
 *                                   like on main rules
-*                          'required': boolean|lambda($field_values, $all_values)
+*                          'required': boolean|lambda($field_values, $all_values, $field_validator_object)
 *                                      if true (or when lambda returns true),
 *                                      an array must be present
 *                          'errarray': boolean
@@ -547,7 +547,7 @@ class array_validator implements field_validator {
 
 		if( ! $value ) {
 			if( array_key_exists('required',$options) && $options['required'] )
-				if( ! is_callable($options['required']) || $options['required']($value, $values) )
+				if( ! is_callable($options['required']) || $options['required']($value, $values, $this) )
 					$this->__error = _("Field can't be empty") . '.';
 
 		}elseif( ! is_array($value) ) {
