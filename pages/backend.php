@@ -499,7 +499,26 @@ abstract class FormPage extends \dophp\PageSmarty {
 				// Requested an AJAX integration
 				$this->_loadFormFromSession();
 
-				$field = $this->_form->field($_GET['ajaxField']);
+				//TODO: This is a bit hacky, better use namespace or something
+				//      more generic
+				if( $this->_form->hasField($_GET['ajaxField']) )
+					$field = $this->_form->field($_GET['ajaxField']);
+				elseif( strpos($_GET['ajaxField'], '.') !== false ) {
+					$p = explode('.', $_GET['ajaxField']);
+					if( ! $this->_form->hasField($p[0]) )
+						throw new \dophp\PageError("Unknown field {$_GET['ajaxField']}");
+
+					$parent = $this->_form->field($p[0]);
+					if( ! $parent instanceof \dophp\widgets\TableField )
+						throw new \dophp\PageError("Unknown field {$_GET['ajaxField']}");
+
+					$childs = $parent->childs();
+					if( ! isset($childs[$_GET['ajaxField']]) )
+						throw new \dophp\PageError("Unknown field {$_GET['ajaxField']}");
+
+					$field = $childs[$_GET['ajaxField']];
+				} else
+					throw new \dophp\PageError("Unknown field {$_GET['ajaxField']}");
 				return json_encode($field->ajaxQuery($_GET));
 			} else {
 				// Instantiate a new form for the fields
