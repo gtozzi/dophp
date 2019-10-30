@@ -892,10 +892,10 @@
 	<div class="wp-date-filter-body">
 
 		<div class="wp-date-fiter-tab-cont">
-		    <div class="wp-date-filter-tab wp-active" id="tab-1">Data</div>
-		    <div class="wp-date-filter-tab" id="tab-2">Mese</div>
-		    <div class="wp-date-filter-tab" id="tab-3">Anno</div>
-		    <div class="wp-date-clear"></div>
+			<div class="wp-date-filter-tab wp-active" id="tab-1">Data</div>
+			<div class="wp-date-filter-tab" id="tab-2">Mese</div>
+			<div class="wp-date-filter-tab" id="tab-3">Anno</div>
+			<div class="wp-date-clear"></div>
 		</div>
 
 		<div class="wp-date-filter-form form-1 wp-active">
