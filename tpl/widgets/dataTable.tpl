@@ -985,3 +985,6 @@
 		</tr>
 	</thead>
 </table>
+<div class="dtbl-buttons-container">
+	<a href="#" class="dtbl-buttons-itm"><span class="fa fa-file-excel-o"></span> Esporta</button></a>
+</div>
