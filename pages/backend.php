@@ -150,6 +150,22 @@ abstract class TablePage extends \dophp\HybridRpcMethod {
 		if( \dophp\Utils::isAcceptedEncoding('application/json') ) {
 			// Returning JSON data
 			return parent::run();
+		} elseif( isset($_GET['export']) ) {
+			if( $_GET['export'] != 'xlsx' )
+				throw new \dophp\PageError('Only xlsx export is supported');
+
+			// Run on low priority
+			proc_nice(9);
+
+			$spreadsheet = $this->_table->getXlsxData();
+			$writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+			$data = \dophp\Spreadsheet::writeToString($writer);
+
+			$fh = \dophp\Utils::makeAttachmentHeaders(\dophp\Spreadsheet::XLSX_MIME,
+				$this->getPageTitle() . '.xlsx');
+			$this->_headers = array_merge($this->_headers, $fh);
+
+			return $data;
 		} else {
 			$this->_headers['Content-type'] = 'text/html';
 
@@ -175,12 +191,19 @@ abstract class TablePage extends \dophp\HybridRpcMethod {
 	}
 
 	/**
+	 * Returns full page title
+	 */
+	public function getPageTitle() {
+		return $this->title ?? _('List') . ' ' .  ucwords($this->_what);
+	}
+
+	/**
 	 * Builds the Smarty page data
 	 */
 	protected function _buildSmarty() {
 		$this->_ajaxURL = \dophp\Url::getToStr($_GET);
 
-		$this->_pageTitle = $this->title ?? _('List') . ' ' .  ucwords($this->_what);
+		$this->_pageTitle = $this->getPageTitle();
 
 		// If custom template does not exist, use the generic one
 		$this->_templateFallback('backend/tablepage.tpl');

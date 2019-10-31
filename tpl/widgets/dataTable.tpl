@@ -292,10 +292,12 @@
 						'<span id="data-table-sel-count">' +
 						( table.selectedAll ? 'tutti' : table.selectedItems.size.toString() )
 						+ '</span> selezionati';
-					return pre + selInfo;
-				{{else}}
-					return pre;
+					pre += selInfo;
 				{{/if}}
+
+				pre += '. <a style="color: inherit;" href="{{$ajaxURL|htmlentities}}&amp;export=xlsx">esporta</a>';
+
+				return pre;
 			},
 		});
 

@@ -508,9 +508,11 @@ class DataTable extends BaseWidget {
 	 * Parses the request data and returns result
 	 *
 	 * @param $pars: array of parameters, associative
+	 * @param $encode: bool, if true (default) will encode data in native format
 	 * @see https://datatables.net/manual/server-side
+	 * @see self::_encodeData
 	 */
-	public function getData( $pars=[] ): array {
+	public function getData( $pars=[], $encode=true ): array {
 		// Parses the super filter
 		foreach( $this->_sfilter as $field )
 			$field->setInternalValue( (bool)$pars['filter'][$field->getName()] );
@@ -643,7 +645,7 @@ class DataTable extends BaseWidget {
 			'draw' => $pars['draw'] ?? 0,
 			'recordsTotal' => $tot,
 			'recordsFiltered' => $found,
-			'data' => $this->_encodeData($data),
+			'data' => $encode ? $this->_encodeData($data) : $data,
 		];
 		if( static::DEBUG_QUERY )
 			$ret['query'] = $q;
@@ -685,6 +687,34 @@ class DataTable extends BaseWidget {
 		unset($col);
 		unset($val);
 		return $data;
+	}
+
+	/**
+	 * Parses the request data and returns result
+	 *
+	 * @see self::getData
+	 * @return \PhpOffice\PhpSpreadsheet\Spreadsheet: A spreadsheet
+	 */
+	public function getXlsxData(): \PhpOffice\PhpSpreadsheet\Spreadsheet {
+		$heads = [];
+		foreach($this->_cols as $k => $c)
+			$heads[] = $c->descr;
+
+		$data = [];
+		foreach( $this->getData([], false)['data'] as $datarow ) {
+			$row = [];
+
+			foreach( $datarow as $k => $v ) {
+				if( $k[0] == '~' )
+					continue;
+
+				$row[] = $v;
+			}
+
+			$data[] = $row;
+		}
+
+		return \dophp\Spreadsheet::fromArray($data, [ $heads ]);
 	}
 
 	/**

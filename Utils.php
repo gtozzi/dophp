@@ -587,4 +587,24 @@ class Utils {
 	public static function formatCFloat($float) {
 		return sprintf('%F', $float);
 	}
+
+	/**
+	 * Creates attachment headers
+	 *
+	 * @param $mime string: The mime content/type
+	 * @param $filename string: The optional file name
+	 * @return array: associative array of headers
+	 */
+	public static function makeAttachmentHeaders(string $mime, string $filename=null): array {
+		$headers = [
+			'Content-type' => $mime,
+			'Content-Description' => 'File Transfer',
+			'Content-Disposition' => 'attachment',
+		];
+
+		if( $filename )
+			$headers['Content-Disposition'] .= "; filename*=UTF-8''" . rawurlencode($filename);
+
+		return $headers;
+	}
 }
