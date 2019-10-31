@@ -515,7 +515,8 @@ class DataTable extends BaseWidget {
 	public function getData( $pars=[], $encode=true ): array {
 		// Parses the super filter
 		foreach( $this->_sfilter as $field )
-			$field->setInternalValue( (bool)$pars['filter'][$field->getName()] );
+			if( isset($pars['filter'][$field->getName()]) )
+				$field->setInternalValue( (bool)$pars['filter'][$field->getName()] );
 
 		$trx = $this->_db->beginTransaction(true);
 

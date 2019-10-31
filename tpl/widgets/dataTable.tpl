@@ -295,14 +295,14 @@
 					pre += selInfo;
 				{{/if}}
 
-				pre += '. <a style="color: inherit;" href="{{$ajaxURL|htmlentities}}&amp;export=xlsx">esporta</a>';
-
 				return pre;
 			},
 		});
 
 		table.on( 'draw', function(){
-			$(".dtbl-buttons-container").html('<a class="dtbl-buttons-itm"><span class="fa fa-file-excel-o"></span> Esporta</a>');
+			$(".dtbl-buttons-container").html(
+				'<a class="dtbl-buttons-itm" href="{{$ajaxURL|htmlentities}}&amp;export=xlsx">'
+				+ '<span class="fa fa-file-excel-o"></span> Esporta</a>');
 		} );
 
 		// Custom selection handling
