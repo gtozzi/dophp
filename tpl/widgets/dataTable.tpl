@@ -176,7 +176,7 @@
 			// Can't set to false or search will be ignored
 			//bFilter:        false,
 			//stateSave:      true,
-			dom:            'lrtip',
+			dom:            'lrtip<"dtbl-buttons-container">',
 
 			// Scroller extension
 			scroller:       true,
@@ -300,6 +300,10 @@
 				return pre;
 			},
 		});
+
+		table.on( 'draw', function(){
+			$(".dtbl-buttons-container").html('<a class="dtbl-buttons-itm"><span class="fa fa-file-excel-o"></span> Esporta</a>');
+		} );
 
 		// Custom selection handling
 		table.selectedItems = new Set();

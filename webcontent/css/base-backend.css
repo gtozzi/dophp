@@ -135,3 +135,33 @@
 	}
 
 }
+
+
+/** Datatables */
+.dtbl-buttons-container {
+	float: right;
+	margin-top: 10px;
+	color: #2b76b6;
+}
+
+.dtbl-buttons-container a{
+	text-decoration: none;
+	color: #2b76b6;
+}
+
+.dtbl-buttons-itm {
+	color: #2b76b6;
+	cursor: pointer;
+	position: relative;
+	z-index: 500;
+}
+
+.dataTables_wrapper .dataTables_info{
+	float: left;	
+}
+
+@media (max-width: 767px){
+	.dataTables_wrapper .dataTables_info {
+		text-align: left;
+	}
+}
