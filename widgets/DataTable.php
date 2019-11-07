@@ -715,6 +715,12 @@ class DataTable extends BaseWidget {
 			$data[] = $row;
 		}
 
+		$client = \DoPhp::cache();
+		$pool = new \Cache\Adapter\Memcache\MemcacheCachePool($client->_cache);
+		$simpleCache = new \Cache\Bridge\SimpleCache\SimpleCacheBridge($pool);
+
+		\PhpOffice\PhpSpreadsheet\Settings::setCache($simpleCache);
+
 		return \dophp\Spreadsheet::fromArray($data, [ $heads ]);
 	}
 
