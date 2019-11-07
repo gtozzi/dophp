@@ -14,28 +14,6 @@ require_once 'Psr/SimpleCache/CacheException.php';
 require_once 'Psr/SimpleCache/CacheInterface.php';
 require_once 'Psr/SimpleCache/InvalidArgumentException.php';
 
-
-// PHP SPREADSHEET CHACHING AREA 
-require_once 'psrlog/LoggerAwareInterface.php';
-
-require_once 'psrcache/CacheItemPoolInterface.php';
-require_once 'psrcache/CacheItemInterface.php';
-
-require_once 'taginterop/TaggableCacheItemPoolInterface.php';
-require_once 'taginterop/TaggableCacheItemInterface.php';
-
-require_once 'adaptercommon/PhpCachePool.php';
-require_once 'adaptercommon/AbstractCachePool.php';
-require_once 'adaptercommon/TagSupportWithArray.php';
-require_once 'simplecachebridge/SimpleCacheBridge.php';
-require_once 'memcacheadapter/MemcacheCachePool.php';
-
-require_once 'adaptercommon/HasExpirationTimestampInterface.php';
-require_once 'adaptercommon/PhpCacheItem.php';
-require_once 'adaptercommon/CacheItem.php';
-// END PHP SPREADSHEET CHACHING AREA 
-
-
 require_once __DIR__ . '/phpspreadsheet/Exception.php';
 require_once __DIR__ . '/phpspreadsheet/HashTable.php';
 require_once __DIR__ . '/phpspreadsheet/IComparable.php';
