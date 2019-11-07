@@ -697,6 +697,29 @@ class DataTable extends BaseWidget {
 	 * @return \PhpOffice\PhpSpreadsheet\Spreadsheet: A spreadsheet
 	 */
 	public function getXlsxData(): \PhpOffice\PhpSpreadsheet\Spreadsheet {
+
+		// START Temporary Fix for large XLS table
+		$rows_count = $this->_count();
+
+		// Upgrade memory_limit
+		$memory_limit_txt =  ini_get('memory_limit');
+		$memory_limit = intval(substr($memory_limit_txt, 0, -1));
+
+		// Calculate the new memory_limit rounding it up
+		$memory_limit += round(0.012 * $rows_count, 0, PHP_ROUND_HALF_UP);
+		$memory_limit_txt = $memory_limit."M";
+		ini_set('memory_limit', $memory_limit_txt);
+		error_log($memory_limit_txt);
+
+		// Upgrade max_execution_time
+		// Assuming an average elaboration time of 300 rows per second, 
+		// we calc the new maximum execution time
+		$max_execution_time = round($rows_count/300, 0, PHP_ROUND_HALF_UP);
+		if($max_execution_time > intval(ini_get('max_execution_time')))
+			ini_set('max_execution_time', $max_execution_time.'');
+		error_log(ini_get('max_execution_time'));
+		// END Temporary Fix for large XLS table
+
 		$heads = [];
 		foreach($this->_cols as $k => $c)
 			$heads[] = $c->descr;
@@ -714,12 +737,6 @@ class DataTable extends BaseWidget {
 
 			$data[] = $row;
 		}
-
-		$client = \DoPhp::cache();
-		$pool = new \Cache\Adapter\Memcache\MemcacheCachePool($client->_cache);
-		$simpleCache = new \Cache\Bridge\SimpleCache\SimpleCacheBridge($pool);
-
-		\PhpOffice\PhpSpreadsheet\Settings::setCache($simpleCache);
 
 		return \dophp\Spreadsheet::fromArray($data, [ $heads ]);
 	}
