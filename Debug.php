@@ -165,11 +165,11 @@ class MemcacheDebug extends Debug {
 	 *
 	 * $cache Memcache The cache object instance
 	 */
-	public static function init(\Memcache $cache) {
+	public static function init(\dophp\cache\Memcache $cache) {
 		parent::_init(new self($cache));
 	}
 
-	protected function __construct(\Memcache $cache) {
+	protected function __construct(\dophp\cache\Memcache $cache) {
 		parent::__construct();
 
 		$this->_cache = $cache;

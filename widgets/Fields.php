@@ -52,6 +52,9 @@ interface Field extends FormWidget {
 	/** Sets field's soft required status */
 	public function setSoftRequired(bool $value);
 
+	/** Returns text to be prepended to the field, if any */
+	public function getPrependText(): ?string;
+
 	/** Returns field's smarty template name */
 	public function getTemplate(): string;
 
@@ -95,6 +98,8 @@ abstract class BaseField extends BaseFormWidget implements Field {
 
 	/** The field's group */
 	protected $_group = null;
+	/** An optional string to prepend to the field (i.e. currency symbol) */
+	protected $_prepend = null;
 
 	/** The fields' starting internal value */
 	protected $_iv = null;
@@ -138,6 +143,10 @@ abstract class BaseField extends BaseFormWidget implements Field {
 		unset($v);
 
 		return implode($es);
+	}
+
+	public function getPrependText(): ?string {
+		return $this->_prepend;
 	}
 
 	public function getDisplayValue(): string {
@@ -279,6 +288,19 @@ class HiddenField extends BaseField {
 
 	public function __construct($name, array $namespace = []) {
 		parent::__construct($name, $namespace);
+	}
+}
+
+
+/**
+ * A simple non-editable label
+ */
+class LabelField extends BaseField {
+
+	protected $_type = 'label';
+
+	public function __construct($name, array $namespace = [], array $opts = []) {
+		parent::__construct($name, $namespace, $opts['label'] ?? null);
 	}
 }
 
@@ -490,6 +512,13 @@ class NumberField extends TextField {
 			$vo['step'] = $this->_step;
 		return $vo;
 	}
+
+	public function format($value) {
+		if( is_float($value) )
+			return \dophp\Utils::formatCFloat($value);
+
+		return (string)$value;
+	}
 }
 
 
@@ -503,7 +532,7 @@ class CurrencyField extends NumberField {
 	protected $_step = 0.01;
 
 	/** The used currency symbol */
-	protected $_curSymbol = '€';
+	protected $_prepend = '€';
 	/** How many decimal digits */
 	protected $_decDigits = 2;
 	/** The decimal separator */
@@ -518,9 +547,6 @@ class CurrencyField extends NumberField {
 		$this->_vopts['thosep'] = & $this->_thoSep;
 	}
 
-	public function getCurSymbol(): string {
-		return $this->_curSymbol;
-	}
 	public function getDecDigits(): int {
 		return $this->_decDigits;
 	}
@@ -1369,11 +1395,25 @@ class TableField extends BaseField {
 		foreach( $this->_cols as $k => $o ) {
 			if( $k == self::ID_KEY )
 				continue;
-			$cols[$this->_name . ".\${idx}.$k"] = $o;
+			$cols[$this->_fieldTplName($k)] = $o;
 		}
 		$this->_tpl = new Form($cols, $this->_namespace);
 
 		$this->_iv = [];
+	}
+
+	/**
+	 * Returns name of the key column
+	 */
+	public function key(): string {
+		return self::ID_KEY;
+	}
+
+	/**
+	 * Returns field template name form single field name
+	 */
+	protected function _fieldTplName(string $name) {
+		return $this->_name . ".\${idx}.$name";
 	}
 
 	public function format($value) {
@@ -1412,7 +1452,7 @@ class TableField extends BaseField {
 				$data[$fname] = $rowData[$x];
 			}
 
-			$row = new Form($cols, $this->_namespace);
+			$row = new Form($cols, $this->_namespace, $this->getForm() ? $this->getForm()->action() : null);
 			$row->setInternalValues($data);
 			$this->_iv[$k] = $row;
 		}
@@ -1430,4 +1470,34 @@ class TableField extends BaseField {
 		return $this->_tpl->fields();
 	}
 
+	/**
+	 * Returns table headers
+	 *
+	 * @return array associative array of table headers
+	 */
+	public function getHeaders(): array {
+		$heads = [];
+
+		foreach( $this->_cols as $k => $o ) {
+			if( $k == self::ID_KEY )
+				continue;
+
+			$heads[$k] = $this->_tpl->field($this->_fieldTplName($k))->getLabel();
+		}
+
+		return $heads;
+	}
+
+	/**
+	 * Returns list of child fields
+	 *
+	 * @return array associative array name => field
+	 */
+	public function childs(): array {
+		$ret = [];
+		foreach( $this->_iv as $form )
+			foreach( $form->fields() as $name => $field )
+				$ret[$name] = $field;
+		return $ret;
+	}
 }

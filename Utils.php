@@ -495,7 +495,13 @@ class Utils {
 			$aspl = explode(';', $astr, 2);
 			$encoding = trim($aspl[0]);
 
-			if( isset($aspl[1]) ) {
+			if( $encoding == 'application/signed-exchange' ) {
+				// Chrome is sending "application/signed-exchange;v=b3",
+				// just ignoring it
+				// https://wicg.github.io/webpackage/draft-yasskin-http-origin-signed-responses.html#application-signed-exchange
+				$pri = 1;
+
+			} elseif( isset($aspl[1]) ) {
 				$matches = [];
 				$m = preg_match('/^\s*q=([0-9.]+)\s*$/', $aspl[1], $matches);
 				if( $m )
@@ -505,6 +511,7 @@ class Utils {
 					error_log("Could not decode Accept params: \"$aspl[1]\" in \"{$_SERVER['HTTP_ACCEPT']}\"");
 					$pri = 1;
 				}
+
 			} else
 				$pri = 1;
 
@@ -579,5 +586,51 @@ class Utils {
 	 */
 	public static function formatCFloat($float) {
 		return sprintf('%F', $float);
+	}
+
+	/**
+	 * Creates attachment headers
+	 *
+	 * @param $mime string: The mime content/type
+	 * @param $filename string: The optional file name
+	 * @return array: associative array of headers
+	 */
+	public static function makeAttachmentHeaders(string $mime, string $filename=null): array {
+		$headers = [
+			'Content-type' => $mime,
+			'Content-Description' => 'File Transfer',
+			'Content-Disposition' => 'attachment',
+		];
+
+		if( $filename )
+			$headers['Content-Disposition'] .= "; filename*=UTF-8''" . rawurlencode($filename);
+
+		return $headers;
+	}
+
+	/**
+	 * Returns memory_limit ini setting in megabytes
+	 *
+	 * @return float: The current PHP memory limit, in megabytes
+	 */
+	public static function getMemoryLimitMb(): float {
+		$memory_limit_txt = trim(ini_get('memory_limit'));
+		$memory_limit = intval($memory_limit_txt);
+
+		switch( substr($memory_limit_txt, -1) ) {
+		case 'K':
+			$memory_limit *= 1024;
+			break;
+		case 'M':
+			$memory_limit *= 1024 ** 2;
+			break;
+		case 'G':
+			$memory_limit *= 1024 ** 3;
+			break;
+		default:
+			throw new \dophp\NotImplementedException("Unparsable memory limit value \"$memory_limit_txt\"");
+		}
+
+		return $memory_limit / 1024 ** 2;
 	}
 }

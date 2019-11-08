@@ -13,7 +13,7 @@
 		id="{{$btn->getId()|htmlentities}}"
 		{{if ! $btn->enabled}}disabled{{/if}}
 		{{foreach $btn->htmldata() as $k => $v}}
-			data-{{$k}}="{{htmlentities($v)}}"
+			data-{{$k|htmlentities}}="{{$v|htmlentities}}"
 		{{/foreach}}
 		{{if isset($btnForm)}}form="{{$btnForm|htmlentities}}"{{/if}}
 		{{if ! $text}}title="{{$btn->label|htmlentities}}"{{/if}}
@@ -28,7 +28,16 @@
 	{{if $btn->isDropdown()}}
 		<div class="dropdown-menu" aria-labelledby="{{$btn->getId()|htmlentities}}">
 			{{foreach $btn->childs() as $child}}
-				<a id="{{$btn->getId()|htmlentities}}" class="dropdown-item" href="{{$child->url|htmlentities}}">
+				<a id="{{$btn->getId()|htmlentities}}"
+					class="dropdown-item {{if $child->post}}btnc-postbutton{{/if}}"
+					{{if $child->post}}
+						data-post="{{$child->post|json_encode|htmlentities}}"
+						data-url="{{$child->url|htmlentities}}"
+						href="javascript::dophpPostButton(this);"
+					{{else}}
+						href="{{$child->url|htmlentities}}"
+					{{/if}}
+				>
 					{{$child->label|htmlentities}}
 				</a>
 			{{/foreach}}

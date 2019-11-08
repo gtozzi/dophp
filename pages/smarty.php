@@ -90,7 +90,8 @@ trait SmartyFunctionalities {
 
 		// Init default template name
 		$base_file = basename($_SERVER['PHP_SELF'], '.php');
-		$this->_template = "$base_file.{$this->_name}.tpl";
+		if( isset($this->_name) )
+			$this->_template = "$base_file.{$this->_name}.tpl";
 	}
 
 	/**
@@ -126,7 +127,7 @@ trait SmartyFunctionalities {
 	/**
 	 * Smarty plugin
 	 *
-	 * Debug die and dump variable
+	 * Die and dump variable, useful for debug
 	 */
 	public static function dieDump($var) {
 		die(var_dump($var));

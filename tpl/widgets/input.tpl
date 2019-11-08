@@ -8,13 +8,16 @@
 	{{$type=$field->getType()}}
 
 	{{$name=$field->getHTMLName()}}
+	{{$prepend=$field->getPrependText()}}
 
 	{{$value=$field->getDisplayValue()}}
 	{{if ! isset($label)}}
 		{{$label=$field->getLabel()}}
 	{{/if}}
-	{{if $type != 'hidden'}}
+	{{if $type != 'hidden' && $type != 'label'}}
 		{{$readonly=$field->isReadOnly()}}
+	{{else}}
+		{{$readonly=true}}
 	{{/if}}
 
 	{{if method_exists($field, 'getPlaceholder')}}
@@ -98,7 +101,7 @@
 		{{$agSelectParent_=$agSelectParent}}
 	{{/if}}
 
-	{{if $type == 'hidden'}}
+	{{if $type == 'hidden' || $type == 'label'}}
 		{{$linkurl=null}}
 	{{else}}
 		{{$linkurl=$field->getLinkUrl()}}
@@ -106,6 +109,8 @@
 {{/strip}}
 {{if $type=='hidden'}}
 	<input type="hidden" id="{{$id}}" name="{{$name|htmlentities}}" value="{{$value|htmlentities}}">
+{{elseif $type=='label'}}
+	{{$value|htmlentities}}
 {{else}}
 	{{if ! $norow}}
 		<div id="{{$id}}_group" class="form-group row">
@@ -125,7 +130,7 @@
 		{{/block}}
 		<div id="{{$id}}_col" class="inputcol col-sm-{{$colw}} {{$pvclass}}">
 			{{block name='pre-input'}}
-				{{if $type=='date' || $type=='asyncFile' || $type=='currency' || $linkurl}}
+				{{if $type=='date' || $type=='asyncFile' || $type=='currency' || $linkurl || $prepend}}
 					<div class="input-group">
 				{{/if}}
 				{{if $type=='asyncFile'}}
@@ -136,9 +141,9 @@
 							Seleziona
 						</button>
 					</span>
-				{{elseif $type=='currency'}}
+				{{elseif $prepend}}
 					<div class="input-group-prepend">
-						<span class="input-group-text">{{$field->getCurSymbol()|htmlentities}}</span>
+						<span class="input-group-text">{{$prepend|htmlentities}}</span>
 					</div>
 				{{/if}}
 				{{if $type=='checkbox'}}
@@ -444,6 +449,8 @@
 				{{elseif $type=='checkbox'}}
 					<span class="custom-control-indicator"></span>
 					</label>
+				{{elseif $prepend}}
+					</div><!-- Input group end -->
 				{{/if}}
 				<script>
 					$("#{{$id}}").formhandle();

@@ -150,6 +150,22 @@ abstract class TablePage extends \dophp\HybridRpcMethod {
 		if( \dophp\Utils::isAcceptedEncoding('application/json') ) {
 			// Returning JSON data
 			return parent::run();
+		} elseif( isset($_GET['export']) ) {
+			if( $_GET['export'] != 'xlsx' )
+				throw new \dophp\PageError('Only xlsx export is supported');
+
+			// Run on low priority
+			proc_nice(9);
+
+			$spreadsheet = $this->_table->getXlsxData();
+			$writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+			$data = \dophp\Spreadsheet::writeToString($writer);
+
+			$fh = \dophp\Utils::makeAttachmentHeaders(\dophp\Spreadsheet::XLSX_MIME,
+				$this->getPageTitle() . '.xlsx');
+			$this->_headers = array_merge($this->_headers, $fh);
+
+			return $data;
 		} else {
 			$this->_headers['Content-type'] = 'text/html';
 
@@ -175,12 +191,19 @@ abstract class TablePage extends \dophp\HybridRpcMethod {
 	}
 
 	/**
+	 * Returns full page title
+	 */
+	public function getPageTitle() {
+		return $this->title ?? _('List') . ' ' .  ucwords($this->_what);
+	}
+
+	/**
 	 * Builds the Smarty page data
 	 */
 	protected function _buildSmarty() {
 		$this->_ajaxURL = \dophp\Url::getToStr($_GET);
 
-		$this->_pageTitle = $this->title ?? _('List') . ' ' .  ucwords($this->_what);
+		$this->_pageTitle = $this->getPageTitle();
 
 		// If custom template does not exist, use the generic one
 		$this->_templateFallback('backend/tablepage.tpl');
@@ -214,6 +237,9 @@ abstract class TablePage extends \dophp\HybridRpcMethod {
  * - When a POST request is sent, the new form is updated and validated
  */
 abstract class FormPage extends \dophp\PageSmarty {
+
+	/** When true, force some checks on input id */
+	const ID_IS_INT = true;
 
 	/** Edit permission */
 	const PERM_EDIT = 'edit';
@@ -350,7 +376,18 @@ abstract class FormPage extends \dophp\PageSmarty {
 	 * Returns ID from request args, may be null
 	 */
 	public static function getRequestId() {
-		return isset($_REQUEST['id']) && $_REQUEST['id'] ? $_REQUEST['id'] : null;
+		$id = isset($_REQUEST['id']) && $_REQUEST['id'] ? $_REQUEST['id'] : null;
+		if( $id !== null && ! preg_match('/^[a-zA-Z0-9_]+$/', $id) )
+			throw new \dophp\PageError("Invalid id $id");
+
+		// Convert to int or float if numeric
+		if( is_numeric($id) )
+			$id = $id + 0;
+
+		if( $id !== null && static::ID_IS_INT && ! is_int($id) )
+			throw new \dophp\PageError("Non integer id $id");
+
+		return $id;
 	}
 
 	protected function _build() {
@@ -485,7 +522,26 @@ abstract class FormPage extends \dophp\PageSmarty {
 				// Requested an AJAX integration
 				$this->_loadFormFromSession();
 
-				$field = $this->_form->field($_GET['ajaxField']);
+				//TODO: This is a bit hacky, better use namespace or something
+				//      more generic
+				if( $this->_form->hasField($_GET['ajaxField']) )
+					$field = $this->_form->field($_GET['ajaxField']);
+				elseif( strpos($_GET['ajaxField'], '.') !== false ) {
+					$p = explode('.', $_GET['ajaxField']);
+					if( ! $this->_form->hasField($p[0]) )
+						throw new \dophp\PageError("Unknown field {$_GET['ajaxField']}");
+
+					$parent = $this->_form->field($p[0]);
+					if( ! $parent instanceof \dophp\widgets\TableField )
+						throw new \dophp\PageError("Unknown field {$_GET['ajaxField']}");
+
+					$childs = $parent->childs();
+					if( ! isset($childs[$_GET['ajaxField']]) )
+						throw new \dophp\PageError("Unknown field {$_GET['ajaxField']}");
+
+					$field = $childs[$_GET['ajaxField']];
+				} else
+					throw new \dophp\PageError("Unknown field {$_GET['ajaxField']}");
 				return json_encode($field->ajaxQuery($_GET));
 			} else {
 				// Instantiate a new form for the fields
@@ -531,7 +587,12 @@ abstract class FormPage extends \dophp\PageSmarty {
 				$res = $this->_buildDelete($id);
 			} catch( FormPageDeleteConstraintError $e ) {
 				header("HTTP/1.0 409 Conflict");
-				$res = $e->getMessage();
+				if( $e->messageIsUserFriendly() )
+					$res = $e->getMessage();
+				else
+					$res = '';
+				if( $this->_config['debug'] )
+					$this->_headers['X-DoPhp-Debug-DeleteReson'] = $e->getMessage();
 			}
 			break;
 		default:
@@ -759,6 +820,8 @@ abstract class FormPage extends \dophp\PageSmarty {
 	/**
 	 * Returns redirect URL after delete, overridable in child
 	 *
+	 * @note This will be called BEFORE the delete operation occurs,
+	 *       so the given ID is still valid
 	 * @param $id mixed: ID of the deleted element
 	 */
 	public function getDeleteRedirectUrl($id) {
@@ -834,6 +897,7 @@ abstract class FormPage extends \dophp\PageSmarty {
 	 * Deletes a record from the DB
 	 *
 	 * @param $id mixed: The element's ID
+	 * @throws FormPageDeleteConstraintError
 	 */
 	protected function _delDbData($id) {
 		$t = $this->__getTable();
@@ -872,4 +936,18 @@ abstract class FormPage extends \dophp\PageSmarty {
  * because of a constraint
  */
 class FormPageDeleteConstraintError extends \Exception {
+
+	private $_friendlyMex;
+
+	/**
+	 * @param $friendlyMex bool: Tells whether message should be show to user
+	 */
+	public function __construct(string $message='', int $code=0, \Throwable $previous=null, bool $friendlyMex=false) {
+		parent::__construct($message, $code, $previous);
+		$this->_friendlyMex = $friendlyMex;
+	}
+
+	public function messageIsUserFriendly(): bool {
+		return $this->_friendlyMex;
+	}
 }

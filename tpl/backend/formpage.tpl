@@ -181,8 +181,12 @@
 							let message;
 							if( jqXHR.status == 409 ) {
 								// Constraint failed
-								console.log('Delete constraint failed', jqXHR.responseText);
-								message = 'Impossibile cancellare: ' + {{$what|json_encode}} + ' in uso.';
+								console.log('Delete constraint failed', jqXHR.responseText, jqXHR);
+								message = 'Impossibile cancellare: ';
+								if( jqXHR.responseText )
+									message += jqXHR.responseText;
+								else
+									message += {{$what|json_encode}} + ' in uso.';
 							} else {
 								// Any other error
 								console.error('Delete error', textStatus, errorThrown, jqXHR);

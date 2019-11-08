@@ -698,11 +698,9 @@ class Result implements \Iterator {
 
 			if( isset($this->_types[$meta['name']]) )
 				$type = $this->_types[$meta['name']];
-			elseif( ! array_key_exists('native_type', $meta) ) {
-				// Apparently JSON fields have no native_type, assuming string
-				// TODO: use some different detection?
-				error_log('DoPhp: missing native_type, assuming string; meta: ' . print_r($meta,true));
-				$type = Table::DATA_TYPE_STRING;
+			elseif( ! isset($meta['native_type']) ) {
+				// Apparently JSON fields have no native_type
+				throw new \InvalidArgumentException('Missing native_type form column $idx, must declare type explicitly');
 			} else
 				$type = Table::getType($meta['native_type'], $meta['len']);
 
@@ -846,20 +844,30 @@ class Table {
 	protected $_name = null;
 	/** Database object instance, passed by constructor */
 	protected $_db = null;
-	/** Column definition cache, populated at runtime */
-	protected $_cols = array();
-	/** references cache, populated at runtime */
-	protected $_refs = array();
-	/** Primary key cache, populated at runtime */
-	protected $_pk = array();
+
+	/**
+	 * Shared cache for all instances (indexed db, type)
+	 * types: 'tables', 'cols', 'refs', pk'
+	 */
+	protected static $_cache = [];
+
+	/** Existing tables cache, linked at runtime to self::_cache */
+	protected $_tables;
+	/** Column definition cache, linked at runtime to self::_cache */
+	protected $_cols;
+	/** references cache, linked at runtime to self::_cache */
+	protected $_refs;
+	/** Primary key cache, linked at runtime to self::_cache */
+	protected $_pk;
 
 	/**
 	* Creates the table object
 	*
 	* @param $db object: The Db instance
 	* @param $name string: The table name, override the given one
+	* @param $reload bool: If true, forces reloading of cached table structure
 	*/
-	public function __construct($db, $name=null) {
+	public function __construct($db, $name=null, $reload=false) {
 
 		// Assign and check parameters
 		$this->_db = $db;
@@ -869,6 +877,8 @@ class Table {
 			throw new \LogicException('Db must be a valid dophp\Db instance');
 		if( ! $this->_name || gettype($this->_name) !== 'string' )
 			throw new \InvalidArgumentException('Invalid table name');
+
+		$dbh = spl_object_hash($this->_db);
 
 		// Determine the object to use to refer to "self" db
 		switch( $this->_db->type() ) {
@@ -886,108 +896,138 @@ class Table {
 			throw new NotImplementedException('Not Implemented');
 		}
 
+		// Prepare the cache
+		if( ! array_key_exists($dbh, self::$_cache) )
+			self::$_cache[$dbh] = [
+				'tables' => [],
+				'cols' => [],
+				'refs' => [],
+				'pk' => [],
+			];
+		$this->_tables = & self::$_cache[$dbh]['tables'];
+
+		if( $reload )
+			if( ($k = array_search($this->_name, $this->_tables)) !== false )
+				unset($this->_tables[$key]);
+
+		if( $reload || ! array_key_exists($this->_name, self::$_cache[$dbh]['cols']) )
+			self::$_cache[$dbh]['cols'][$this->_name] = [];
+		if( $reload || ! array_key_exists($this->_name, self::$_cache[$dbh]['refs']) )
+			self::$_cache[$dbh]['refs'][$this->_name] = [];
+		if( $reload || ! array_key_exists($this->_name, self::$_cache[$dbh]['pk']) )
+			self::$_cache[$dbh]['pk'][$this->_name] = [];
+
+		$this->_cols = & self::$_cache[$dbh]['cols'][$this->_name];
+		$this->_refs = & self::$_cache[$dbh]['refs'][$this->_name];
+		$this->_pk = & self::$_cache[$dbh]['pk'][$this->_name];
+
 		// Makes sure that table exists
-		$q = '
-			SELECT
-				"TABLE_TYPE"
-			FROM "information_schema"."TABLES"
-			WHERE "TABLE_SCHEMA" = '.$sqlSelfDb.'
-				AND "TABLE_NAME" = ?
-		';
-		if( ! $this->_db->run($this->_db->quoteConv($q), array($this->_name))->fetch() )
-			throw new \LogicException("Table {$this->_name} not found");
+		if( ! in_array($this->_name, $this->_tables) ) {
 
-		// Read and cache table structure
-		$q = '
-			SELECT
-				"COLUMN_NAME",
-				"COLUMN_DEFAULT",
-				"IS_NULLABLE",
-				"DATA_TYPE",
-				"CHARACTER_MAXIMUM_LENGTH",
-				"NUMERIC_PRECISION",
-				"NUMERIC_SCALE"';
-		if( $colKey )
-			$q .= ",\n\t\t\t\t\"COLUMN_KEY\"";
-		$q .= '
-			FROM "information_schema"."COLUMNS"
-			WHERE "TABLE_SCHEMA" = '.$sqlSelfDb.'
-				AND "TABLE_NAME" = ?
-			ORDER BY "ORDINAL_POSITION"
-		';
-		foreach( $this->_db->run($this->_db->quoteConv($q), array($this->_name))->fetchAll() as $c ) {
-			if( isset($this->_cols['COLUMN_NAME']) )
-				throw new \LogicException("Duplicate definition found for column {$c['COLUMN_NAME']}");
-
-			$this->_cols[$c['COLUMN_NAME']] = $c;
-
-			if( $colKey && $c['COLUMN_KEY'] == 'PRI' )
-				$this->_pk[] = $c['COLUMN_NAME'];
-		}
-
-		// Read primary keys (if not done earlier)
-		if( ! $colKey ) {
 			$q = '
 				SELECT
-					"COLUMN_NAME"
-				FROM
-					"information_schema"."TABLE_CONSTRAINTS" AS "tab",
-					"information_schema"."CONSTRAINT_COLUMN_USAGE" AS "col"
-				WHERE
-					"col"."CONSTRAINT_NAME" = "tab"."CONSTRAINT_NAME"
-					AND "col"."TABLE_NAME" = "tab"."TABLE_NAME"
-					AND "CONSTRAINT_TYPE" = \'PRIMARY KEY\'
-					AND "col"."TABLE_SCHEMA" = '.$sqlSelfDb.'
-					AND "col"."TABLE_NAME" = ?
-			';
-			foreach( $this->_db->run($this->_db->quoteConv($q), array($this->_name))->fetchAll() as $c )
-				$this->_pk[] = $c['COLUMN_NAME'];
-		}
-
-		// Read and cache references structure
-		if( $hasReferences )
-			$q = '
-				SELECT
-					"CONSTRAINT_NAME",
-					"COLUMN_NAME",
-					"REFERENCED_TABLE_NAME",
-					"REFERENCED_COLUMN_NAME"
-				FROM "information_schema"."KEY_COLUMN_USAGE"
-				WHERE "CONSTRAINT_SCHEMA" = '.$sqlSelfDb.'
-					AND "TABLE_SCHEMA" = '.$sqlSelfDb.'
-					AND "REFERENCED_TABLE_SCHEMA" = '.$sqlSelfDb.'
+					"TABLE_TYPE"
+				FROM "information_schema"."TABLES"
+				WHERE "TABLE_SCHEMA" = '.$sqlSelfDb.'
 					AND "TABLE_NAME" = ?
-				ORDER BY "ORDINAL_POSITION",
-					"POSITION_IN_UNIQUE_CONSTRAINT"
 			';
-		else
+			if( ! $this->_db->run($this->_db->quoteConv($q), array($this->_name))->fetch() )
+				throw new \LogicException("Table {$this->_name} not found");
+
+			$this->_tables[] = $this->_name;
+
+			// Read and cache table structure
 			$q = '
 				SELECT
-					"kcu1"."CONSTRAINT_NAME",
-					"kcu1"."COLUMN_NAME",
-					"kcu2"."TABLE_NAME" AS "REFERENCED_TABLE_NAME",
-					"kcu2"."COLUMN_NAME" AS "REFERENCED_COLUMN_NAME"
-				FROM "information_schema"."REFERENTIAL_CONSTRAINTS" AS "rc"
-				INNER JOIN "information_schema"."KEY_COLUMN_USAGE" AS "kcu1"
-					ON "kcu1"."CONSTRAINT_CATALOG" = "rc"."CONSTRAINT_CATALOG"
-					AND "kcu1"."CONSTRAINT_SCHEMA" = "rc"."CONSTRAINT_SCHEMA"
-					AND "kcu1"."CONSTRAINT_NAME" = "rc"."CONSTRAINT_NAME"
-				INNER JOIN "information_schema"."KEY_COLUMN_USAGE" AS "kcu2"
-					ON "kcu2"."CONSTRAINT_CATALOG" = "rc"."UNIQUE_CONSTRAINT_CATALOG"
-					AND "kcu2"."CONSTRAINT_SCHEMA" = "rc"."UNIQUE_CONSTRAINT_SCHEMA"
-					AND "kcu2"."CONSTRAINT_NAME" = "rc"."UNIQUE_CONSTRAINT_NAME"
-					AND "kcu2"."ORDINAL_POSITION" = "kcu1"."ORDINAL_POSITION"
-				WHERE "kcu1"."CONSTRAINT_SCHEMA" = '.$sqlSelfDb.'
-					AND "kcu1"."TABLE_SCHEMA" = '.$sqlSelfDb.'
-					AND "kcu2"."TABLE_SCHEMA" = '.$sqlSelfDb.'
-					AND "kcu1"."TABLE_NAME" = ?
-				ORDER BY "kcu1"."ORDINAL_POSITION",
-					"kcu2"."ORDINAL_POSITION"
+					"COLUMN_NAME",
+					"COLUMN_DEFAULT",
+					"IS_NULLABLE",
+					"DATA_TYPE",
+					"CHARACTER_MAXIMUM_LENGTH",
+					"NUMERIC_PRECISION",
+					"NUMERIC_SCALE"';
+			if( $colKey )
+				$q .= ",\n\t\t\t\t\"COLUMN_KEY\"";
+			$q .= '
+				FROM "information_schema"."COLUMNS"
+				WHERE "TABLE_SCHEMA" = '.$sqlSelfDb.'
+					AND "TABLE_NAME" = ?
+				ORDER BY "ORDINAL_POSITION"
 			';
-		foreach( $this->_db->run($this->_db->quoteConv($q), array($this->_name))->fetchAll() as $c ) {
-			if( isset($this->_refs['COLUMN_NAME']) )
-				throw new \LogicException("More than one reference detected for column {$c['COLUMN_NAME']}");
-			$this->_refs[$c['COLUMN_NAME']] = $c;
+			foreach( $this->_db->run($this->_db->quoteConv($q), array($this->_name))->fetchAll() as $c ) {
+				if( isset($this->_cols['COLUMN_NAME']) )
+					throw new \LogicException("Duplicate definition found for column {$c['COLUMN_NAME']}");
+
+				$this->_cols[$c['COLUMN_NAME']] = $c;
+
+				if( $colKey && $c['COLUMN_KEY'] == 'PRI' )
+					$this->_pk[] = $c['COLUMN_NAME'];
+			}
+
+			// Read primary keys (if not done earlier)
+			if( ! $colKey ) {
+				$q = '
+					SELECT
+						"COLUMN_NAME"
+					FROM
+						"information_schema"."TABLE_CONSTRAINTS" AS "tab",
+						"information_schema"."CONSTRAINT_COLUMN_USAGE" AS "col"
+					WHERE
+						"col"."CONSTRAINT_NAME" = "tab"."CONSTRAINT_NAME"
+						AND "col"."TABLE_NAME" = "tab"."TABLE_NAME"
+						AND "CONSTRAINT_TYPE" = \'PRIMARY KEY\'
+						AND "col"."TABLE_SCHEMA" = '.$sqlSelfDb.'
+						AND "col"."TABLE_NAME" = ?
+				';
+				foreach( $this->_db->run($this->_db->quoteConv($q), array($this->_name))->fetchAll() as $c )
+					$this->_pk[] = $c['COLUMN_NAME'];
+			}
+
+			// Read and cache references structure
+			if( $hasReferences )
+				$q = '
+					SELECT
+						"CONSTRAINT_NAME",
+						"COLUMN_NAME",
+						"REFERENCED_TABLE_NAME",
+						"REFERENCED_COLUMN_NAME"
+					FROM "information_schema"."KEY_COLUMN_USAGE"
+					WHERE "CONSTRAINT_SCHEMA" = '.$sqlSelfDb.'
+						AND "TABLE_SCHEMA" = '.$sqlSelfDb.'
+						AND "REFERENCED_TABLE_SCHEMA" = '.$sqlSelfDb.'
+						AND "TABLE_NAME" = ?
+					ORDER BY "ORDINAL_POSITION",
+						"POSITION_IN_UNIQUE_CONSTRAINT"
+				';
+			else
+				$q = '
+					SELECT
+						"kcu1"."CONSTRAINT_NAME",
+						"kcu1"."COLUMN_NAME",
+						"kcu2"."TABLE_NAME" AS "REFERENCED_TABLE_NAME",
+						"kcu2"."COLUMN_NAME" AS "REFERENCED_COLUMN_NAME"
+					FROM "information_schema"."REFERENTIAL_CONSTRAINTS" AS "rc"
+					INNER JOIN "information_schema"."KEY_COLUMN_USAGE" AS "kcu1"
+						ON "kcu1"."CONSTRAINT_CATALOG" = "rc"."CONSTRAINT_CATALOG"
+						AND "kcu1"."CONSTRAINT_SCHEMA" = "rc"."CONSTRAINT_SCHEMA"
+						AND "kcu1"."CONSTRAINT_NAME" = "rc"."CONSTRAINT_NAME"
+					INNER JOIN "information_schema"."KEY_COLUMN_USAGE" AS "kcu2"
+						ON "kcu2"."CONSTRAINT_CATALOG" = "rc"."UNIQUE_CONSTRAINT_CATALOG"
+						AND "kcu2"."CONSTRAINT_SCHEMA" = "rc"."UNIQUE_CONSTRAINT_SCHEMA"
+						AND "kcu2"."CONSTRAINT_NAME" = "rc"."UNIQUE_CONSTRAINT_NAME"
+						AND "kcu2"."ORDINAL_POSITION" = "kcu1"."ORDINAL_POSITION"
+					WHERE "kcu1"."CONSTRAINT_SCHEMA" = '.$sqlSelfDb.'
+						AND "kcu1"."TABLE_SCHEMA" = '.$sqlSelfDb.'
+						AND "kcu2"."TABLE_SCHEMA" = '.$sqlSelfDb.'
+						AND "kcu1"."TABLE_NAME" = ?
+					ORDER BY "kcu1"."ORDINAL_POSITION",
+						"kcu2"."ORDINAL_POSITION"
+				';
+			foreach( $this->_db->run($this->_db->quoteConv($q), array($this->_name))->fetchAll() as $c ) {
+				if( isset($this->_refs['COLUMN_NAME']) )
+					throw new \LogicException("More than one reference detected for column {$c['COLUMN_NAME']}");
+				$this->_refs[$c['COLUMN_NAME']] = $c;
+			}
 		}
 
 	}
@@ -2137,6 +2177,141 @@ class Date extends \DateTime {
 		parent::__construct($date, new \DateTimeZone('UTC'));
 		$this->setTime(0, 0, 0);
 	}
+
+	/**
+	 * Checks if this Date is equal to other, accounting for date part only
+	 *
+	 * @todo This is supposed to overload == when feature will be available in PHP
+	 * @return bool: true if objects are equal
+	 */
+	public function eq(\DateTime $other=null) {
+		return self::s_eq($this, $other);
+	}
+
+	/**
+	 * Checks if this Date is not equal to other, accounting for date part only
+	 *
+	 * @todo This is supposed to overload != when feature will be available in PHP
+	 * @return bool: true if objects are not equal
+	 */
+	public function ne(\DateTime $other=null) {
+		return self::s_ne($this, $other);
+	}
+
+	/**
+	 * Checks if this Date is lesser than other, accounting for date part only
+	 *
+	 * @todo This is supposed to overload < when feature will be available in PHP
+	 * @return bool: true if $this < $other
+	 */
+	public function lt(\DateTime $other=null) {
+		return self::s_lt($this, $other);
+	}
+
+	/**
+	 * Checks if this Date is lesser than or equal to other, accounting for date part only
+	 *
+	 * @todo This is supposed to overload <= when feature will be available in PHP
+	 * @return bool: true if $this <= $other
+	 */
+	public function le(\DateTime $other=null) {
+		return self::s_le($this, $other);
+	}
+
+	/**
+	 * Checks if this Date is greater than other, accounting for date part only
+	 *
+	 * @todo This is supposed to overload > when feature will be available in PHP
+	 * @return bool: true if $this > $other
+	 */
+	public function gt(\DateTime $other=null) {
+		return self::s_gt($this, $other);
+	}
+
+	/**
+	 * Checks if this Date is greater than or equal to other, accounting for date part only
+	 *
+	 * @todo This is supposed to overload >= when feature will be available in PHP
+	 * @return bool: true if $this >= $other
+	 */
+	public function ge(\DateTime $other=null) {
+		return self::s_ge($this, $other);
+	}
+
+	/**
+	 * Checks if two DateTimes are equal, accounting for date part only
+	 *
+	 * @return bool: true if objects are equal
+	 */
+	public static function s_eq(\DateTime $obj1=null, \DateTime $obj2=null) {
+		return $obj1 == $obj2 || $obj1->format('Ymd') == $obj2->format('Ymd');
+	}
+
+	/**
+	 * Checks if two DateTimes are not equal, accounting for date part only
+	 *
+	 * @return bool: true if objects are not equal
+	 */
+	public static function s_ne(\DateTime $obj1=null, \DateTime $obj2=null) {
+		return ! self::s_eq($obj1, $obj2);
+	}
+
+	/**
+	 * Checks if first DateTime is lesser than second, accounting for date part only
+	 *
+	 * @return bool: true if $obj1 < $obj2
+	 */
+	public static function s_lt(\DateTime $obj1=null, \DateTime $obj2=null) {
+		if( ! $obj1 || ! $obj2 )
+			return false;
+
+		$y1 = (int)$obj1->format('Y');
+		$y2 = (int)$obj2->format('Y');
+		if( $y1 < $y2 )
+			return true;
+		if( $y1 > $y2 )
+			return false;
+
+		return (int)$obj1->format('z') < (int)$obj2->format('z');
+	}
+
+	/**
+	 * Checks if first DateTime is lesser than or equal to second, accounting for date part only
+	 *
+	 * @return bool: true if $obj1 <= $obj2
+	 */
+	public static function s_le(\DateTime $obj1=null, \DateTime $obj2=null) {
+		return self::s_eq($obj1, $obj2) || self::s_lt($obj1, $obj2);
+	}
+
+	/**
+	 * Checks if first DateTime is greater than second, accounting for date part only
+	 *
+	 * @return bool: true if $obj1 > $obj2
+	 */
+	public static function s_gt(\DateTime $obj1=null, \DateTime $obj2=null) {
+		if( ! $obj1 || ! $obj2 )
+			return false;
+
+		$y1 = (int)$obj1->format('Y');
+		$y2 = (int)$obj2->format('Y');
+		if( $y1 > $y2 )
+			return true;
+		if( $y1 < $y2 )
+			return false;
+
+		return (int)$obj1->format('z') > (int)$obj2->format('z');
+	}
+
+	/**
+	 * Checks if first DateTime is greater than or equal to second, accounting for date part only
+	 *
+	 * @return bool: true if $obj1 >= $obj2
+	 */
+	public static function s_ge(\DateTime $obj1=null, \DateTime $obj2=null) {
+		return self::s_eq($obj1, $obj2) || self::s_gt($obj1, $obj2);
+	}
+
 
 }
 

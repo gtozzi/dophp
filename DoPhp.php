@@ -8,7 +8,10 @@
 */
 
 require_once(__DIR__ . '/Exceptions.php');
+if( class_exists('Memcache') )
+	require_once(__DIR__ . '/Cache.php');
 require_once(__DIR__ . '/Url.php');
+require_once(__DIR__ . '/Log.php');
 require_once(__DIR__ . '/Debug.php');
 require_once(__DIR__ . '/Lang.php');
 require_once(__DIR__ . '/Db.php');
@@ -22,6 +25,7 @@ require_once(__DIR__ . '/Buttons.php');
 require_once(__DIR__ . '/Widgets.php');
 require_once(__DIR__ . '/Model.php');
 require_once(__DIR__ . '/smarty/libs/Smarty.class.php');
+require_once(__DIR__ . '/PhpSpreadsheet.php');
 
 
 /**
@@ -37,6 +41,18 @@ class DoPhp {
 	const MODEL_PREFIX = 'm';
 	/** The is the key used to store alerts in $_SESSION */
 	const SESS_ALERTS = 'DoPhp::Alerts';
+	/** Default values for arguments */
+	const DEFAULT_ARGS = [
+		'conf'   => [],
+		'db'     => 'dophp\\Db',
+		'auth'   => null,
+		'lang'   => 'dophp\\Lang',
+		'log'    => null,
+		'sess'   => true,
+		'def'    => 'home',
+		'key'    => self::BASE_KEY,
+		'strict' => false,
+	];
 
 	/** Stores the current instance */
 	private static $__instance = null;
@@ -49,6 +65,8 @@ class DoPhp {
 	private $__auth = null;
 	/** The Language object instance */
 	private $__lang = null;
+	/** The logger object instance */
+	private $__log = null;
 	/** Stores the execution start time */
 	private $__start = null;
 	/** Models instances cache */
@@ -66,7 +84,8 @@ class DoPhp {
 	* Process request parameters and expect $key to contain the name of the
 	* page to be loaded, then loads <inc_path>/<my_name>.<do>.php
 	*
-	* @param $conf array: Configuration associative array. Keys:
+	* @param $args array: Parameters associative array. Keys:
+	*             'conf' => array( // Configuration associative array. Keys:
 	*                 'paths' => array( //Where files are located, defaults to key name
 	*                     'inc'=> include files (page php files)
 	*                     'mod'=> model files
@@ -121,17 +140,28 @@ class DoPhp {
 	*                 )
 	*                 'debug' => enables debug info, should be false in production servers
 	*                 'strict' => triggers an error on any notice
+	*             ),
 	*
-	* @param $db     string: Name of the class to use for the database connection
-	* @param $auth   string: Name of the class to use for user authentication
-	* @param $lang   string: Name of the class to use for multilanguage handling
-	* @param $sess   boolean: If true, starts the session and uses it
-	* @param $def    string: Default page name, used when received missing or unvalid page
-	* @param $key    string: the key containing the page name
-	* @param $strict string: if true, return a 500 status on ANY error
+	*             'db' =>   name of the class to use for the database connection
+	*                       Default: 'dophp\\Db'
+	*             'auth' => name of the class to use for user authentication
+	*                       Default: null
+	*             'lang' => name of the class to use for multilanguage handling
+	*                       Default: 'dophp\\Lang'
+	*             'log'  => name of the class to use for logging
+	*                       Default: null
+	*             'sess' => ff true, starts the session and uses it
+	*                       Default: true
+	*             'def' =>  default page name, used when received missing or unvalid page
+	*                       Default: 'home'
+	*             'key' =>  the key containing the page name
+	*                       Default: self::BASE_KEY
+	*             'strict' => if true, return a 500 status on ANY error
+	*                         Default: false
 	*/
-	public function __construct($conf=null, $db='dophp\\Db', $auth=null, $lang='dophp\\Lang',
-			$sess=true, $def='home', $key=self::BASE_KEY, $strict=false) {
+	public function __construct(...$input) {
+		// Uses ...$input for rough backward-compatibility, so it can trigger an
+		// exception when deprecated calling syntax is used
 
 		$start = microtime(true);
 
@@ -140,6 +170,18 @@ class DoPhp {
 			throw new \LogicException('DoPhp is already instantiated');
 		self::$__instance = $this;
 		$this->__start = $start;
+
+		// Build arguments and assign them to local variables for convenience
+		if( count($input) != 1 )
+			throw new \InvalidArgumentException('only a single array argument should be passed');
+		$args = $input[0];
+		if( ! is_array($args) )
+			throw new \InvalidArgumentException('args must be an array');
+		foreach( $args as $k => $v )
+			if( ! array_key_exists($k, self::DEFAULT_ARGS) )
+				throw new \InvalidArgumentException("unknown argument \"$k\"");
+		foreach( self::DEFAULT_ARGS as $k => $v )
+			$$k = array_key_exists($k, $args) ? $args[$k] : $v;
 
 		// Start the session
 		if( isset($conf['session']['name']) )
@@ -150,6 +192,8 @@ class DoPhp {
 		$sesstime = microtime(true);
 
 		// Build default config
+		if( ! is_array($conf) )
+			throw new \InvalidArgumentException('conf must be an array');
 		$this->__conf = $conf;
 		if( ! array_key_exists('paths', $this->__conf) )
 			$this->__conf['paths'] = array();
@@ -158,6 +202,7 @@ class DoPhp {
 				$this->__conf['paths'][$k] = $k;
 		if( ! array_key_exists('lang', $this->__conf) )
 			$this->__conf['lang'] = array();
+
 		if( ! array_key_exists('supported', $this->__conf['lang']) )
 			$this->__conf['lang']['supported'] = array();
 		if( ! array_key_exists('coding', $this->__conf['lang']) )
@@ -166,14 +211,14 @@ class DoPhp {
 			$this->__conf['lang']['texts'] = array();
 		if( ! array_key_exists('tables', $this->__conf['lang']) )
 			$this->__conf['lang']['tables'] = array();
-		if( ! array_key_exists('dophp', $this->__conf) )
-			$this->__conf['dophp'] = array();
+
 		if( ! array_key_exists('dophp', $this->__conf) )
 			$this->__conf['dophp'] = array();
 		if( ! array_key_exists('url', $this->__conf['dophp']) )
 			$this->__conf['dophp']['url'] = preg_replace('/^'.preg_quote($_SERVER['DOCUMENT_ROOT'],'/').'/', '', __DIR__, 1);
 		if( ! array_key_exists('path', $this->__conf['dophp']) )
 			$this->__conf['dophp']['path'] = __DIR__;
+
 		if( ! array_key_exists('cors', $this->__conf) )
 			$this->__conf['cors'] = array();
 		if( ! array_key_exists('origins', $this->__conf['cors']) )
@@ -184,8 +229,10 @@ class DoPhp {
 			$this->__conf['cors']['credentials'] = false;
 		if( ! array_key_exists('maxage', $this->__conf['cors']) )
 			$this->__conf['cors']['maxage'] = 86400;
+
 		if( ! array_key_exists('debug', $this->__conf) )
 			$this->__conf['debug'] = false;
+
 		if( ! array_key_exists('strict', $this->__conf) )
 			$this->__conf['strict'] = false;
 
@@ -213,7 +260,7 @@ class DoPhp {
 				$conf['memcache']['port'] = 11211;
 
 			if( class_exists('Memcache') ) {
-				$this->__cache = new Memcache;
+				$this->__cache = new \dophp\cache\Memcache;
 				if( ! $this->__cache->connect($conf['memcache']['host'], $conf['memcache']['port']) ) {
 					$this->__cache = null;
 					error_log("Couldn't connect to memcached at {$conf['memcache']['host']}:{$conf['memcache']['port']}");
@@ -250,6 +297,13 @@ class DoPhp {
 			if( ! $this->__auth instanceof dophp\AuthInterface )
 				throw new \LogicException('Wrong auth interface');
 			$this->__auth->login();
+		}
+
+		// Creates the logger
+		if( $log ) {
+			$this->__log = new $log($start, $this->__conf, $this->__db, $this->__auth);
+			if( ! $this->__log instanceof \dophp\log\Logger )
+				throw new \LogicException('Wrong logger interface');
 		}
 
 		// Calculates the name of the page to be loaded
@@ -291,6 +345,10 @@ class DoPhp {
 			echo('Page Not Found');
 			return;
 		}
+
+		// Logs the request
+		if( $this->__log )
+			$this->__log->logPageRequest($pagefound, $page, $path);
 
 		// List of allowed methods, used later in CORS preflight and OPTIONS
 		// TODO: Do not hardcode it, handle it nicely
@@ -358,7 +416,7 @@ class DoPhp {
 		try {
 			require $inc_file;
 			$findName = self::className($page);
-			$classname = dophp\Utils::findClass($findName);
+			$classname = \dophp\Utils::findClass($findName);
 			if( ! $classname )
 				if( $this->__conf['debug'] )
 					throw new Exception("Page class \"$findName\" not found in file \"$inc_file\"");
@@ -370,7 +428,7 @@ class DoPhp {
 			$pobj->debug = $this->__debug;
 
 			list($out, $headers) = $this->__runPage($pobj);
-		} catch( dophp\PageDenied $e ) {
+		} catch( \dophp\PageDenied $e ) {
 			if( $def ) {
 				if( $def == $page ) {
 					// Prevent loop redirection
@@ -379,15 +437,15 @@ class DoPhp {
 					return;
 				}
 
-				self::addAlert(new dophp\LoginErrorAlert($e));
+				self::addAlert(new \dophp\LoginErrorAlert($e));
 
-				$to = dophp\Url::fullPageUrl($def, $key);
+				$to = \dophp\Url::fullPageUrl($def, $key);
 				header("HTTP/1.1 303 Login Required");
 				header("Location: $to");
 				echo $e->getMessage();
 				echo "\nPlease login at: $to";
 				return;
-			} elseif( $e instanceof dophp\InvalidCredentials ) {
+			} elseif( $e instanceof \dophp\InvalidCredentials ) {
 				header("HTTP/1.1 401 Unhautorized");
 				// Required by RFC 7235
 				header("WWW-Authenticate: Custom");
@@ -398,17 +456,22 @@ class DoPhp {
 				echo $e->getMessage();
 				return;
 			}
-		} catch( dophp\NotAcceptable $e ) {
+		} catch( \dophp\NotAcceptable $e ) {
 			header("HTTP/1.1 406 Not Acceptable");
 			echo $e->getMessage();
 			error_log('Not Acceptable: ' . $e->getMessage());
 			return;
-		} catch( dophp\PageError $e ) {
+		} catch( \dophp\PageError $e ) {
 			header("HTTP/1.1 400 Bad Request");
 			echo $e->getMessage();
 			error_log('Bad Request: ' . $e->getMessage());
 			return;
-		} catch( Exception $e ) {
+		} catch( \dophp\PageGone $e ) {
+			header("HTTP/1.1 410 Gone");
+			echo $e->getMessage();
+			error_log('Resource is Gone: ' . $e->getMessage());
+			return;
+		} catch( \Throwable $e ) {
 			header("HTTP/1.1 500 Internal Server Error");
 			$this->__printException($e);
 			return;
@@ -470,7 +533,7 @@ class DoPhp {
 	 * @return array [ output string, headers associative array ]
 	 */
 	private function __runPage($page, $depth = 1, $maxDepth = 10) {
-		if( ! $page instanceof dophp\PageInterface )
+		if( ! $page instanceof \dophp\PageInterface )
 			throw new Exception('Wrong page type');
 
 		// First attempt to retrieve data from the cache
@@ -489,11 +552,11 @@ class DoPhp {
 		try {
 			$out = $page->run();
 			$headers = $page->headers();
-		} catch( dophp\PageRedirect $e ) {
+		} catch( \dophp\PageRedirect $e ) {
 			if( $depth >= $maxDepth )
 				throw new \Exception("Maximum internal redirect depth of $maxDepth reached");
 			return $this->__runPage($e->getPage(), $depth + 1);
-		} catch( dophp\UrlRedirect $e ) {
+		} catch( \dophp\UrlRedirect $e ) {
 			$out = $e->body();
 			$headers = $e->headers();
 		}
@@ -584,6 +647,17 @@ class DoPhp {
 		if( ! self::$__instance )
 			throw new \dophp\DoPhpNotInitedException();
 		return self::$__instance->__cache;
+	}
+
+	/**
+	* Returns Logger instance, if available
+	*
+	* @return \dophp\log\Logger: A Logger instance or null
+	*/
+	public static function log() {
+		if( ! self::$__instance )
+			throw new \dophp\DoPhpNotInitedException();
+		return self::$__instance->__log;
 	}
 
 	/**
@@ -680,10 +754,10 @@ class DoPhp {
 	}
 
 	/**
-	 * Sets a custom printer to be called when an exception is catched
+	 * Sets a custom printer to be called when an exception/error is catched
 	 *
 	 * @param $callable callable: A callable, the following parameters are passed:
-	 *                  - exception: The raised exception
+	 *                  - throwable: The raised exception or error
 	 *                  - code: A fairly unique code to better find the exception
 	 *                          in log files and identify it
 	 *                  If may return true to also trigger the default exception

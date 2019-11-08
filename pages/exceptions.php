@@ -33,6 +33,12 @@ class PageDenied extends PageError {
 }
 
 /**
+ * Exception raised when the page has been removed (i.e. missing id)
+ */
+class PageGone extends PageError {
+}
+
+/**
 * Exception raised when user is providing invalid credentials
 */
 class InvalidCredentials extends PageDenied {

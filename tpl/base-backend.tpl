@@ -94,8 +94,16 @@
 
 	{{block name='head'}}{{/block}}
 </head>
-<body>
+<body {{if isset($config['testserver']) && $config['testserver']}}class="bframe-cont"{{/if}}>
 {{block name='body'}}
+
+	{{if isset($config['testserver']) && $config['testserver']}}
+		<div class="bframe-top">
+			<div>
+				Attenzione! Questo è un server di test. Tutti i dati inseriti potrebbero essere cancellati senza preavviso.
+			</div>
+		</div>
+	{{/if}}
 
 	{{block name='navbar'}}
 		{{if isset($user) && $user->getUid()}}
@@ -117,7 +125,7 @@
 							{{if isset($menu) && $user->getUid()}}
 								{{foreach $menu->getChilds() as $m}}
 									{{$childs=$m->getChilds()}}
-									<li class="nav-item {{if $childs}}dropdown{{/if}} {{if $m->isActive()}}active{{/if}} ag-mmexp-targ">
+									<li class="nav-item {{if $childs}}dropdown{{/if}} {{if $m->isActive()}}active{{/if}} ag-mmexp-targ nowrap">
 										<a
 										class="nav-link {{if $childs}}dropdown-toggle{{else}}menu-link{{/if}}"
 											href="{{$m->getUrl()}}"
@@ -128,7 +136,7 @@
 											aria-haspopup="true"
 											aria-expanded="false"
 										{{/if}}
-									>
+										>
 										{{if $m->getIcon()}}<span class="fa {{$m->getIcon()}}"></span>{{/if}}
 										{{$m->getLabel()|htmlentities}}
 										</a>
