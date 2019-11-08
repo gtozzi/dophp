@@ -14,8 +14,10 @@
 	{{if ! isset($label)}}
 		{{$label=$field->getLabel()}}
 	{{/if}}
-	{{if $type != 'hidden'}}
+	{{if $type != 'hidden' && $type != 'label'}}
 		{{$readonly=$field->isReadOnly()}}
+	{{else}}
+		{{$readonly=true}}
 	{{/if}}
 
 	{{if method_exists($field, 'getPlaceholder')}}
@@ -99,7 +101,7 @@
 		{{$agSelectParent_=$agSelectParent}}
 	{{/if}}
 
-	{{if $type == 'hidden'}}
+	{{if $type == 'hidden' || $type == 'label'}}
 		{{$linkurl=null}}
 	{{else}}
 		{{$linkurl=$field->getLinkUrl()}}
@@ -107,6 +109,8 @@
 {{/strip}}
 {{if $type=='hidden'}}
 	<input type="hidden" id="{{$id}}" name="{{$name|htmlentities}}" value="{{$value|htmlentities}}">
+{{elseif $type=='label'}}
+	{{$value|htmlentities}}
 {{else}}
 	{{if ! $norow}}
 		<div id="{{$id}}_group" class="form-group row">

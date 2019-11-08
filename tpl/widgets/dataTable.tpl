@@ -176,7 +176,7 @@
 			// Can't set to false or search will be ignored
 			//bFilter:        false,
 			//stateSave:      true,
-			dom:            'lrtip',
+			dom:            'lrtip<"dtbl-buttons-container">',
 
 			// Scroller extension
 			scroller:       true,
@@ -292,12 +292,18 @@
 						'<span id="data-table-sel-count">' +
 						( table.selectedAll ? 'tutti' : table.selectedItems.size.toString() )
 						+ '</span> selezionati';
-					return pre + selInfo;
-				{{else}}
-					return pre;
+					pre += selInfo;
 				{{/if}}
+
+				return pre;
 			},
 		});
+
+		table.on( 'draw', function(){
+			$(".dtbl-buttons-container").html(
+				'<a class="dtbl-buttons-itm" href="{{$ajaxURL|htmlentities}}&amp;export=xlsx">'
+				+ '<span class="fa fa-file-excel-o"></span> Esporta</a>');
+		} );
 
 		// Custom selection handling
 		table.selectedItems = new Set();
@@ -892,10 +898,10 @@
 	<div class="wp-date-filter-body">
 
 		<div class="wp-date-fiter-tab-cont">
-		    <div class="wp-date-filter-tab wp-active" id="tab-1">Data</div>
-		    <div class="wp-date-filter-tab" id="tab-2">Mese</div>
-		    <div class="wp-date-filter-tab" id="tab-3">Anno</div>
-		    <div class="wp-date-clear"></div>
+			<div class="wp-date-filter-tab wp-active" id="tab-1">Data</div>
+			<div class="wp-date-filter-tab" id="tab-2">Mese</div>
+			<div class="wp-date-filter-tab" id="tab-3">Anno</div>
+			<div class="wp-date-clear"></div>
 		</div>
 
 		<div class="wp-date-filter-form form-1 wp-active">

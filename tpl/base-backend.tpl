@@ -125,7 +125,7 @@
 							{{if isset($menu) && $user->getUid()}}
 								{{foreach $menu->getChilds() as $m}}
 									{{$childs=$m->getChilds()}}
-									<li class="nav-item {{if $childs}}dropdown{{/if}} {{if $m->isActive()}}active{{/if}} ag-mmexp-targ">
+									<li class="nav-item {{if $childs}}dropdown{{/if}} {{if $m->isActive()}}active{{/if}} ag-mmexp-targ nowrap">
 										<a
 										class="nav-link {{if $childs}}dropdown-toggle{{else}}menu-link{{/if}}"
 											href="{{$m->getUrl()}}"
@@ -136,7 +136,7 @@
 											aria-haspopup="true"
 											aria-expanded="false"
 										{{/if}}
-									>
+										>
 										{{if $m->getIcon()}}<span class="fa {{$m->getIcon()}}"></span>{{/if}}
 										{{$m->getLabel()|htmlentities}}
 										</a>
