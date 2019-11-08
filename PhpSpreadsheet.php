@@ -284,6 +284,10 @@ class Spreadsheet {
 			}
 
 			$sheet->getRowDimension($row)->setRowHeight(20);
+
+			// Reset the execution timer every 1000 rows
+			if( $row % 1000 == 0 )
+				set_time_limit(30);
 		}
 
 		return $spreadsheet;
@@ -296,6 +300,9 @@ class Spreadsheet {
 	 * @return string
 	 */
 	public static function writeToString(\PhpOffice\PhpSpreadsheet\Writer\IWriter $writer): string {
+
+		// Allow 5 minutes
+		set_time_limit(60 * 5);
 
 		$tmpfile = tempnam( sys_get_temp_dir(), 'dophp_spreadsheet_' );
 		$writer->save($tmpfile);

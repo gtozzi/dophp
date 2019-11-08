@@ -18,9 +18,6 @@ require_once(__DIR__ . '/../Page.php');
 class DataTable extends BaseWidget {
 	use \dophp\SmartyFunctionalities;
 
-	/** Useful for debugging, set it back to off */
-	const DEBUG_QUERY = true;
-
 	/** Special data key for buttons */
 	const BTN_KEY = '~btns~';
 
@@ -505,23 +502,17 @@ class DataTable extends BaseWidget {
 	}
 
 	/**
-	 * Parses the request data and returns result
+	 * Parses the request data and returns raw data
 	 *
 	 * @param $pars: array of parameters, associative
-	 * @param $encode: bool, if true (default) will encode data in native format
 	 * @see https://datatables.net/manual/server-side
-	 * @see self::_encodeData
+	 * @return \dophp\Result Query result object
 	 */
-	public function getData( $pars=[], $encode=true ): array {
+	public function getRawData( $pars=[] ): \dophp\Result {
 		// Parses the super filter
 		foreach( $this->_sfilter as $field )
 			if( isset($pars['filter'][$field->getName()]) )
 				$field->setInternalValue( (bool)$pars['filter'][$field->getName()] );
-
-		$trx = $this->_db->beginTransaction(true);
-
-		// First count total
-		$tot = $this->_count();
 
 		// Base query
 		list($q, $where, $p, $groupBy) = $this->_buildBaseQuery();
@@ -580,7 +571,6 @@ class DataTable extends BaseWidget {
 					$p[":f$idx"] = "%$search%";
 				}
 
-
 			}
 		}
 
@@ -616,16 +606,28 @@ class DataTable extends BaseWidget {
 		}
 
 		// Filter by limit, if given
-		if( isset($pars['length']) && $pars['length'] > 0 )
-		{
+		if( isset($pars['length']) && $pars['length'] > 0 ) {
 			if( $this->_db->type() == $this->_db::TYPE_MSSQL)
 				$q .= "\nOFFSET ". ( (int)$pars['start'] ) . ' ROWS FETCH NEXT ' . $pars['length'].' ROWS ONLY';
 			else
 				$q .= "\nLIMIT " . ( (int)$pars['start'] ) . ',' . $pars['length'];
 		}
 
+		return $this->_db->xrun($q, $p, $types);
+	}
+
+	/**
+	 * Parses the request data and returns result
+	 *
+	 * @param $pars: array of parameters, associative
+	 * @see https://datatables.net/manual/server-side
+	 * @see self::_encodeData
+	 */
+	public function getData( $pars=[] ): array {
+		$trx = $this->_db->beginTransaction(true);
+
 		// Retrieve data
-		$data = $this->_db->xrun($q, $p, $types)->fetchAll();
+		$data = $this->getRawData($pars)->fetchAll();
 
 		// Add buttons
 		foreach( $data as &$d ) {
@@ -644,12 +646,10 @@ class DataTable extends BaseWidget {
 
 		$ret = [
 			'draw' => $pars['draw'] ?? 0,
-			'recordsTotal' => $tot,
+			'recordsTotal' => $this->_count(),
 			'recordsFiltered' => $found,
-			'data' => $encode ? $this->_encodeData($data) : $data,
+			'data' => $this->_encodeData($data),
 		];
-		if( static::DEBUG_QUERY )
-			$ret['query'] = $q;
 
 		return $ret;
 	}
@@ -697,40 +697,40 @@ class DataTable extends BaseWidget {
 	 * @return \PhpOffice\PhpSpreadsheet\Spreadsheet: A spreadsheet
 	 */
 	public function getXlsxData(): \PhpOffice\PhpSpreadsheet\Spreadsheet {
-
-		// START Temporary Fix for large XLS table
-		$rows_count = $this->_count();
-
-		// Upgrade memory_limit
-		$memory_limit_txt =  ini_get('memory_limit');
-		$memory_limit = intval(substr($memory_limit_txt, 0, -1));
-
-		// Calculate the new memory_limit rounding it up
-		$memory_limit += round(0.012 * $rows_count, 0, PHP_ROUND_HALF_UP);
-		$memory_limit_txt = $memory_limit."M";
-		ini_set('memory_limit', $memory_limit_txt);
-
-		// Upgrade max_execution_time
-		// Assuming an average elaboration time of 300 rows per second, 
-		// we calc the new maximum execution time
-		$max_execution_time = round($rows_count/300, 0, PHP_ROUND_HALF_UP);
-		if($max_execution_time > intval(ini_get('max_execution_time')))
-			ini_set('max_execution_time', $max_execution_time.'');
-		// END Temporary Fix for large XLS table
-
 		$heads = [];
 		foreach($this->_cols as $k => $c)
 			$heads[] = $c->descr;
 
 		$data = [];
-		foreach( $this->getData([], false)['data'] as $datarow ) {
+		$colCount = null;
+		foreach($this->getRawData() as $datarow ) {
 			$row = [];
 
+			if( $colCount === null )
+				$cc = 0;
 			foreach( $datarow as $k => $v ) {
 				if( $k[0] == '~' )
 					continue;
 
+				if( $colCount === null )
+					$cc++;
 				$row[] = $v;
+			}
+			if( $colCount === null )
+				$colCount = $cc;
+
+			if( count($data) % 1000 == 0 ) {
+				// Increase memory limit every 1.000 rows
+				// Adds ~1.1K per cell to the memory limit
+				// Upgrade memory_limit: PhpSpreadsheet uses about ~1k RAM per cell
+				// https://phpspreadsheet.readthedocs.io/en/latest/topics/memory_saving/
+				$memory_limit = \dophp\Utils::getMemoryLimitMb();
+				$memory_limit += 0.0011 * $colCount * 1000;
+				$memory_limit = (int)ceil($memory_limit);
+				ini_set('memory_limit', "{$memory_limit}M");
+
+				// Also resets the execution timer
+				set_time_limit(30);
 			}
 
 			$data[] = $row;

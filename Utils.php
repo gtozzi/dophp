@@ -607,4 +607,30 @@ class Utils {
 
 		return $headers;
 	}
+
+	/**
+	 * Returns memory_limit ini setting in megabytes
+	 *
+	 * @return float: The current PHP memory limit, in megabytes
+	 */
+	public static function getMemoryLimitMb(): float {
+		$memory_limit_txt = trim(ini_get('memory_limit'));
+		$memory_limit = intval($memory_limit_txt);
+
+		switch( substr($memory_limit_txt, -1) ) {
+		case 'K':
+			$memory_limit *= 1024;
+			break;
+		case 'M':
+			$memory_limit *= 1024 ** 2;
+			break;
+		case 'G':
+			$memory_limit *= 1024 ** 3;
+			break;
+		default:
+			throw new \dophp\NotImplementedException("Unparsable memory limit value \"$memory_limit_txt\"");
+		}
+
+		return $memory_limit / 1024 ** 2;
+	}
 }
