@@ -27,7 +27,7 @@ class DataTable extends BaseWidget {
 	const ORDER_DESC = 'desc';
 
 	/** Divider for date range in date filter **/
-	const DFILTER_DIVIDER = "||";
+	const DFILTER_DIVIDER = ",";
 
 	/** Available data types list **/
 	const DTYPE_LIST = array(

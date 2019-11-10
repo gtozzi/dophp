@@ -649,7 +649,7 @@
 	function filterKeyUp(event){
 		var code = event.keyCode || event.which;
 		// Avoid key that not have to activate the filter (9 = TAB, 16 = SHIFT, 20 = CAPS LOCK)
-		if (code != '9' && code != '16' && code != '20') 
+		if (code != '9' && code != '16' && code != '20')
 		{
 			filterChanged(event.target);
 			wpHideDateWidget();
@@ -1076,7 +1076,7 @@
 							data-seltab=""
 							id="ag-dt-dtFilt-{{$c@index}}"
 						{{else}}
-							onfocus="wpHideDateWidget()" 
+							onfocus="wpHideDateWidget()"
 						{{/if}}
 						{{if $c->search}}
 							value="{{$c->search|htmlentities}}"
