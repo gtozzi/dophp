@@ -156,14 +156,27 @@ class DataTable extends BaseWidget {
 	}
 
 	/**
+	 * Returns a fairly unique table identified based on class an column name hashes
+	 *
+	 * The identifier changes when the final class name changes or when the
+	 * column name changes
+	 *
+	 * @return string
+	 */
+	public function getFairlyUniqueIdentifier(): string {
+		$cls = get_called_class();
+		$colHash = sha1(serialize(array_keys($this->_cols)));
+		return "{$cls}_{$colHash}";
+	}
+
+	/**
 	 * Retrieve column type info from cache or live
 	 *
 	 * @return array associative [ id -> type ]
 	 */
 	protected function _getColumnTypeInfo(): array {
 		$cache = \DoPhp::cache();
-		$cls = get_called_class();
-		$cacheKey = self::MEMCACHE_KEY_BASE . "DataTable::$cls::colTypes";
+		$cacheKey = self::MEMCACHE_KEY_BASE . $this->getFairlyUniqueIdentifier() . "::colTypes";
 
 		// Try cache first
 		if( $cache ) {
