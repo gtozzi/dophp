@@ -163,7 +163,7 @@ class DataTable extends BaseWidget {
 	protected function _getColumnTypeInfo(): array {
 		$cache = \DoPhp::cache();
 		$cls = get_called_class();
-		$cacheKey = self::MEMCACHE_KEY_BASE . "dataTable::$cls::colTypes";
+		$cacheKey = self::MEMCACHE_KEY_BASE . "DataTable::$cls::colTypes";
 
 		// Try cache first
 		if( $cache ) {
