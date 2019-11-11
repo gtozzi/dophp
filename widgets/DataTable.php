@@ -146,58 +146,50 @@ class DataTable extends BaseWidget {
 	/**
 	 * Get field types from the DBMS and set the field type for the Date type
 	 */
-	protected function _earlyRetriveType() {
+	protected function _earlyRetrieveType() {
+		$types = $this->_getColumnTypeInfo();
 
-		$myResult = null;
+		foreach( $this->_cols as $col ) {
+			if( ! isset($col->type) && $types[$col->id] == self::DATA_TYPE_DATE )
+				$col->type = self::DATA_TYPE_DATE;
+		}
+	}
+
+	/**
+	 * Retrieve column type info from cache or live
+	 *
+	 * @return array associative [ id -> type ]
+	 */
+	protected function _getColumnTypeInfo(): array {
 		$cache = \DoPhp::cache();
+		$cls = get_called_class();
+		$cacheKey = self::MEMCACHE_KEY_BASE . "dataTable::$cls::colTypes";
 
-		// Query building
-		$q = 'SELECT ';
-		foreach ($this->_cols as $colName => $colValue) {
-			if( isset($colValue['qname']))
-				$q .= $colValue['qname'].', ';
-			else
-				$q .= $colName.', ';
+		// Try cache first
+		if( $cache ) {
+			$info = $cache->get($cacheKey);
+			if( $info )
+				return $info;
 		}
 
-		$q = substr($q, 0, strlen($q)-2);
-		$q .= ' FROM '.$this->_from;
-		if(isset($this->_groupBy) && $this->_groupBy != '')
-			$q .= ' GROUP BY '.$this->_groupBy.' LIMIT 0';
+		// Cache failed, go retrieve it
+		list($q, $where, $p, $groupBy) = $this->_buildBaseQuery(false, false);
+		$q .= "\n LIMIT 0 \n";
 
+		$res = $this->_db->xrun($q);
 		$i = 0;
-		foreach ($this->_cols as $colName => $colValue) {
+		$types = [];
+		foreach( $this->_cols as $col ) {
+			$info = $res->getColumnInfo($i);
+			$types[$col->id] = $info->type;
 
-			$cacheColumnName = null;
-			if( isset($colValue['qname']))
-				$cacheColumnName = $colValue['qname'];
-			else
-				$cacheColumnName = $colName;
-
-			// cacheKey for a single column
-			$cacheKey = self::MEMCACHE_KEY_BASE . 'dataTable_resultSet::'.sha1(sha1($q).sha1($cacheColumnName));
-
-			if( $cache )
-				$myResult_Cols = $cache->get($cacheKey);
-
-			if(!isset($myResult_Cols) || $myResult_Cols === false) {
-				// If it isn't in the cache I get it from the DBMS
-				if(!isset($myResult))
-					$myResult = $this->_db->xrun($q);
-
-				$myResult_Cols = $myResult->getColumnInfo($i);
-			}
-
-			// Assign type to _cols, just for 'Date' type
-			if($myResult_Cols->type == self::DATA_TYPE_DATE)
-				$this->_cols[$colName]['type'] = self::DATA_TYPE_DATE;
-
-			// Save the new value in cache
-			if( $cache )
-				$cache->set($cacheKey, $myResult_Cols, 0, static::COLTYPES_CACHE_EXPIRE);
-
-			++$i;
+			$i++;
 		}
+
+		if( $cache )
+			$cache->set($cacheKey, $types, 0, static::COLTYPES_CACHE_EXPIRE);
+
+		return $types;
 	}
 
 	/**
@@ -244,8 +236,6 @@ class DataTable extends BaseWidget {
 			$field->setInternalValue( $val );
 			$field->filter = $filter;
 		}
-
-		$this->_earlyRetriveType();
 		unset($field);
 
 		// Prepares admin column definitions
@@ -258,6 +248,9 @@ class DataTable extends BaseWidget {
 				throw new \Exception('Invalid column definition: ' . gettype($col));
 		}
 		unset($col);
+
+		// Retrieves column types for the query
+		$this->_earlyRetrieveType();
 
 		// Makes sure PK is valid
 		$this->_getPkName();
@@ -512,12 +505,13 @@ class DataTable extends BaseWidget {
 	 * Returns the base query to be executed, with the super filter and
 	 * the access filter, no limit, no order
 	 *
-	 * @param $cnt boolean: id true, build a query for the COUNT(*)
+	 * @param $cnt boolean: if true, build a query for the COUNT(*)
+	 * @param $calcFound boolean: if true, add SQL_CALC_FOUND_ROWS
 	 * @todo Caching
 	 * @return [ $query, $where and array, $params array, $groupBy condition (may be null) ]
 	 */
-	protected function _buildBaseQuery($cnt=false) {
-		if( $cnt )
+	protected function _buildBaseQuery($cnt=false, $calcFound=true) {
+		if( $cnt || ! $calcFound )
 			$q = "SELECT\n";
 		else
 			$q = "SELECT SQL_CALC_FOUND_ROWS\n";
