@@ -700,7 +700,7 @@ class Result implements \Iterator {
 				$type = $this->_types[$meta['name']];
 			elseif( ! isset($meta['native_type']) ) {
 				// Apparently JSON fields have no native_type
-				throw new \InvalidArgumentException('Missing native_type form column $idx, must declare type explicitly');
+				throw new \InvalidArgumentException("Missing native_type form column $idx, must declare type explicitly");
 			} else
 				$type = Table::getType($meta['native_type'], $meta['len']);
 

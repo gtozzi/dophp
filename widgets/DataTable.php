@@ -137,6 +137,9 @@ class DataTable extends BaseWidget {
 	 */
 	protected $_enableCountCache = false;
 
+	/** Local preferences cache variable */
+	protected $_prefsCache = null;
+
 	/**
 	 * Inits some props at runtime, overridable in child
 	 */
@@ -164,7 +167,7 @@ class DataTable extends BaseWidget {
 	 * @return string
 	 */
 	public function getFairlyUniqueIdentifier(): string {
-		$cls = get_called_class();
+		$cls = $this->getClsId();
 		$colHash = sha1(serialize(array_keys($this->_cols)));
 		return "{$cls}_{$colHash}";
 	}
@@ -283,6 +286,12 @@ class DataTable extends BaseWidget {
 			$button = new DataTableRowButton($this, $k, $button, $this->params);
 		}
 		unset($button);
+
+		// Retrieve default search filter and apply it
+		foreach( $this->_getSavedSearchFilter() as $colid => $search ) {
+			$this->_cols[$colid]->search = $search;
+			$this->_cols[$colid]->regex = false;
+		}
 	}
 
 	/**
@@ -323,8 +332,40 @@ class DataTable extends BaseWidget {
 			return [];
 		if( ! isset($prefs['ordcol']) )
 			return [];
+		if( ! isset($prefs['sfcol']) )
+			return [];
 
 		return $prefs;
+	}
+
+	/**
+	 * Retrieve saved preferences from DB
+	 *
+	 * @return array or null
+	 */
+	protected function _getSavedPrefs(): ?array {
+		if( $this->_prefsCache !== null )
+			return $this->_prefsCache;
+
+		$prefs = $this->_getConfigPrefs();
+		if( ! $prefs ) {
+			error_log('Not reading datatable prefs. See $config[\'datatable\'][\'prefs\']');
+			return null;
+		}
+
+		$q = "
+			SELECT
+				`{$prefs['sortcol']}` AS sortcol,
+				`{$prefs['ordcol']}` AS sortord,
+				`{$prefs['sfcol']}` AS sf
+			FROM `{$prefs['table']}`
+			WHERE `{$prefs['uidcol']}` = ? AND `{$prefs['tablecol']}` = ?
+		";
+		$p = [ $this->_user->getUid(), $this->getClsId() ];
+		$t = [ 'sf' => \dophp\Table::DATA_TYPE_STRING ];
+		$this->_prefsCache = $this->_db->xrun($q, $p, $t)->fetch();
+
+		return $this->_prefsCache;
 	}
 
 	/**
@@ -334,29 +375,48 @@ class DataTable extends BaseWidget {
 	 * @return [ colid, ascdesc ] or [ colidx, ascdesc ] or null if not found
 	 */
 	protected function _getSavedOrder(bool $asIdx = false): ?array {
-		$prefs = $this->_getConfigPrefs();
-		if( ! $prefs ) {
-			error_log('Not reading datatable order. See $config[\'datatable\'][\'prefs\']');
+		$r = $this->_getSavedPrefs();
+		if( ! $r || ! $r['sortcol'] || ! $r['sortord'] )
 			return null;
+
+		if( $r['sortord'] != self::ORDER_ASC && $r['sortord'] != self::ORDER_DESC )
+			return null;
+
+		if( ! array_key_exists($r['sortcol'], $this->_cols) )
+			return null;
+
+		return [ $asIdx ? $this->colIdToIdx($r['sortcol']) : $r['sortcol'], $r['sortord'] ];
+	}
+
+	/**
+	 * Retrieve saved filter from DB
+	 *
+	 * @param $asIdx bool: If true, returns colidx instead of colid
+	 * @return array associative [ colid => search ] or [ colidx => search ]
+	 */
+	protected function _getSavedSearchFilter(bool $asIdx = false): array {
+		$r = $this->_getSavedPrefs();
+		if( ! $r || ! $r['sf'] )
+			return [];
+
+		$decoded = json_decode( $r['sf'], true );
+		if( $decoded === null ) {
+			error_log("Error decoding JSON preferences: {$r['sf']}");
+			return [];
 		}
 
-		$q = "
-			SELECT `{$prefs['sortcol']}`, `{$prefs['ordcol']}`
-			FROM `{$prefs['table']}`
-			WHERE `{$prefs['uidcol']}` = ? AND `{$prefs['tablecol']}` = ?
-		";
-		$p = [ $this->_user->getUid(), $this->getClsId() ];
-		$r = $this->_db->xrun($q, $p)->fetch();
-		if( ! $r || ! $r[$prefs['sortcol']] || ! $r[$prefs['ordcol']] )
-			return null;
+		if( ! is_array($decoded) ) {
+			error_log("Malformatted JSON preferences: {$r['sf']}");
+			return [];
+		}
 
-		if( $r[$prefs['sortcol']] != self::ORDER_ASC && $r[$prefs['ordcol']] != self::ORDER_DESC )
-			return null;
+		// Ignore removed or invalid columns
+		$filter = [];
+		foreach( $decoded as $colid => $search )
+			if( array_key_exists($colid, $this->_cols) && is_string($search) && strlen($search) )
+				$filter[ $asIdx ? $this->colIdToIdx($colid) : $colid ] = $search;
 
-		if( ! array_key_exists($r[$prefs['sortcol']], $this->_cols) )
-			return null;
-
-		return [ $asIdx ? $this->colIdToIdx($r[$prefs['sortcol']]) : $r[$prefs['sortcol']], $r[$prefs['ordcol']] ];
+		return $filter;
 	}
 
 	/**
@@ -378,6 +438,31 @@ class DataTable extends BaseWidget {
 			$prefs['sortcol'] => $colId,
 			$prefs['ordcol'] => $ascDesc,
 		]);
+
+		// Invalidate cache
+		$this->_prefsCache = null;
+	}
+
+	/**
+	 * Save given search filter
+	 *
+	 * @param $filter array associative array [ colid => search ]
+	 */
+	protected function _saveSearchFilter(array $filter) {
+		$prefs = $this->_getConfigPrefs();
+		if( ! $prefs ) {
+			error_log('Not saving search filter. See $config[\'datatable\'][\'prefs\']');
+			return;
+		}
+
+		$this->_db->insertOrUpdate($prefs['table'], [
+			$prefs['uidcol'] => $this->_user->getUid(),
+			$prefs['tablecol'] => $this->getClsId(),
+			$prefs['sfcol'] => json_encode($filter, JSON_FORCE_OBJECT),
+		]);
+
+		// Invalidate cache
+		$this->_prefsCache = null;
 	}
 
 	/**
@@ -574,10 +659,11 @@ class DataTable extends BaseWidget {
 	 * Parses the request data and returns raw data
 	 *
 	 * @param $pars: array of parameters, associative
+	 * @param $save: if true, save search filter and order
 	 * @see https://datatables.net/manual/server-side
 	 * @return \dophp\Result Query result object
 	 */
-	public function getRawData( $pars=[] ): \dophp\Result {
+	public function getRawData( $pars=[], $save=false ): \dophp\Result {
 		// Parses the super filter
 		foreach( $this->_sfilter as $field )
 			if( isset($pars['filter'][$field->getName()]) )
@@ -595,53 +681,55 @@ class DataTable extends BaseWidget {
 
 		// Calculate filter having clause
 		$filter = [];
-		if( isset($pars['columns']) ) {
-			$idx = -1;
-			foreach( $this->_cols as $c ) {
-				$idx++;
+		$saveFilter = [];
+		$idx = -1;
+		foreach( $this->_cols as $c ) {
+			$idx++;
 
-				if( ! isset($pars['columns'][$idx]) )
-					continue;
-				if( ! isset($pars['columns'][$idx]['search']) )
-					continue;
-				if( ! isset($pars['columns'][$idx]['search']['value']) )
-					continue;
+			// Use given search value but fall back to column's default
+			if( isset($pars['columns'][$idx]['search']) )
+				$search = isset($pars['columns'][$idx]['search']['value']) ? trim($pars['columns'][$idx]['search']['value']) : '';
+			elseif( isset($c->search) )
+				$search = $c->search;
+			else
+				continue;
 
-				$search = trim($pars['columns'][$idx]['search']['value']);
-				if( ! strlen($search) )
-					continue;
+			if( ! strlen($search) )
+				continue;
 
+			$saveFilter[$c->id] = $search;
 
-				// checks if filter is a date filter and calculate where clause
-				if($c->type==self::DATA_TYPE_DATE){
+			// checks if filter is a date filter and calculate where clause
+			if($c->type==self::DATA_TYPE_DATE){
 
-					$firstElem = $search;
-					$isDateRange = false;
-					// check if search string is a range of dates,
-					// if yes retrieve first element to parse its type
-					if(strpos($search,self::DFILTER_DIVIDER)){
-						$firstElem = $this->agGetFirstDateInRange($search);
-						$isDateRange = true;
-					}
-					$agDateType = $this->agGetDateType($firstElem);
-
-					// proceed only if date_type has been identified
-					if($agDateType){
-						$search = $this->getDateFilter($search,$agDateType,$isDateRange,$c->qname);
-						$filter[] = $search;
-					}
-					// if data type is unknown return no results
-					else{
-						$filter[] = " FALSE ";
-					}
+				$firstElem = $search;
+				$isDateRange = false;
+				// check if search string is a range of dates,
+				// if yes retrieve first element to parse its type
+				if(strpos($search,self::DFILTER_DIVIDER)){
+					$firstElem = $this->agGetFirstDateInRange($search);
+					$isDateRange = true;
 				}
+				$agDateType = $this->agGetDateType($firstElem);
+
+				// proceed only if date_type has been identified
+				if($agDateType){
+					$search = $this->getDateFilter($search,$agDateType,$isDateRange,$c->qname);
+					$filter[] = $search;
+				}
+				// if data type is unknown return no results
 				else{
-					$filter[] = "{$c->qname} LIKE :f$idx";
-					$p[":f$idx"] = "%$search%";
+					$filter[] = " FALSE ";
 				}
-
+			} else {
+				$filter[] = "{$c->qname} LIKE :f$idx";
+				$p[":f$idx"] = "%$search%";
 			}
+
 		}
+		// Save the search filter
+		if( $save )
+			$this->_saveSearchFilter($saveFilter);
 
 		if( $filter )
 			$having[] = '( ' . implode(' AND ', $filter) . ' )';
@@ -671,7 +759,8 @@ class DataTable extends BaseWidget {
 			$q .= strtoupper($ord);
 
 			// Saves the new order preference
-			$this->_saveOrder($colId, $ord);
+			if( $save )
+				$this->_saveOrder($colId, $ord);
 		}
 
 		// Filter by limit, if given
@@ -689,14 +778,15 @@ class DataTable extends BaseWidget {
 	 * Parses the request data and returns result
 	 *
 	 * @param $pars: array of parameters, associative
+	 * @param $save: boolean; if true, will save requested data
 	 * @see https://datatables.net/manual/server-side
 	 * @see self::_encodeData
 	 */
-	public function getData( $pars=[] ): array {
+	public function getData( array $pars=[], bool $save=true ): array {
 		$trx = $this->_db->beginTransaction(true);
 
 		// Retrieve data
-		$data = $this->getRawData($pars)->fetchAll();
+		$data = $this->getRawData($pars, $save)->fetchAll();
 
 		// Add buttons
 		foreach( $data as &$d ) {
