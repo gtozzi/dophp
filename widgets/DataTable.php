@@ -35,7 +35,6 @@ class DataTable extends BaseWidget {
 		"m" => "m",
 		"y" => "y",
 		"my" => "my",
-		"my_sql" => "my_sql",
 		"ud" => "ud"
 	);
 
@@ -1120,12 +1119,6 @@ class DataTable extends BaseWidget {
 
 				break;
 
-				// already sql friendly string
-				// 2018-01
-				case(preg_match("/^[0-9]{4}\-[0-9]{2}$/",$string)):
-					$type=self::DTYPE_LIST["my_sql"];
-				break;
-
 				// specific day
 				// e.g.:
 				// 01/01/2018
@@ -1219,11 +1212,6 @@ class DataTable extends BaseWidget {
 								$search= " YEAR(".$columnName.") = '".intval(substr($date,0,4))."' AND MONTH(".$columnName.") = '".intval(substr($date,5,7))."' ";
 							}
 						break;
-						// 2018-01
-						case self::DTYPE_LIST["my_sql"]:
-							//$search=$columnName.">='".$string."'";
-							$search= " YEAR(".$columnName.") = '".intval(substr($string,0,4))."' AND MONTH(".$columnName.") = '".intval(substr($string,5,7))."' ";
-						break;
 
 						// 2018
 						case self::DTYPE_LIST["y"]:
@@ -1291,39 +1279,6 @@ class DataTable extends BaseWidget {
 										}
 									}
 								}
-							break;
-							// 2018-01||2018-02
-							case self::DTYPE_LIST["my_sql"]:
-
-								if(count($items)>=2){
-
-									$start = $items[0];
-									$end = $items[1];
-
-									$startTmp=explode("-",$start);
-									$endTmp=explode("-",$end);
-
-									if($start&&$end
-										&&(count($startTmp)==2)
-										&&(count($endTmp)==2)
-										&&checkdate(intval($startTmp[1]),1,intval($startTmp[0]))
-										&&checkdate((intval($endTmp[1])) ,1,intval($endTmp[0]))  ){
-
-										$startSec=strtotime($start);
-										$endSec=strtotime($end);
-
-										if($startSec>$endSec){
-											$endTmp=$end;
-											$end=$start;
-											$start=$endTmp;
-										}
-
-										$end=date("Y-m-t",strtotime($end));
-
-										$search=" ( ".$columnName.">='".$start."' && ".$columnName."<='".$end."' ) ";
-									}
-								}
-
 							break;
 
 							// 2018||2019
