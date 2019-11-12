@@ -363,7 +363,8 @@ class DataTable extends BaseWidget {
 		";
 		$p = [ $this->_user->getUid(), $this->getClsId() ];
 		$t = [ 'sf' => \dophp\Table::DATA_TYPE_STRING ];
-		$this->_prefsCache = $this->_db->xrun($q, $p, $t)->fetch();
+		$res = $this->_db->xrun($q, $p, $t)->fetch();
+		$this->_prefsCache = $res ? $res : null;
 
 		return $this->_prefsCache;
 	}
