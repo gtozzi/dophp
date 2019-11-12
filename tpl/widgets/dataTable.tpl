@@ -181,7 +181,7 @@
 			// Scroller extension
 			scroller:       true,
 			deferRender:    true,
-			scrollY:        '400px',
+			scrollY:        'calc( 100vh - 300px )',
 			scrollX:        true,
 			autoWidth:      true,
 
