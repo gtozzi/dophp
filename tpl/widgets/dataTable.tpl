@@ -305,6 +305,16 @@
 				+ '<span class="fa fa-file-excel-o"></span> Esporta</a>');
 		} );
 
+		// change opacity for table body while processing data
+		table.on('processing.dt', function (e, settings, processing) {
+			let tableID=table.tables().nodes().to$().attr('id');
+			if (processing) {
+				$("#"+tableID+"_wrapper .dataTables_scroll").css("opacity","0.2");
+			} else {
+				$("#"+tableID+"_wrapper .dataTables_scroll").css("opacity","1");
+			}
+		});
+
 		// Custom selection handling
 		table.selectedItems = new Set();
 		table.selectedAll = false;
