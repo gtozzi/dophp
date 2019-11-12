@@ -35,6 +35,7 @@ class DataTable extends BaseWidget {
 		"m" => "m",
 		"y" => "y",
 		"my" => "my",
+		"m.y" => "m.y",
 		"ud" => "ud"
 	);
 
@@ -1111,11 +1112,21 @@ class DataTable extends BaseWidget {
 				// e.g.:
 				// gen2018 gen 2018
 				case(preg_match("/^[a-zA-Z]{3}[ ]*[0-9]{4}$/",$string)):
-
 					// check if inserted string is an existing month
 					if($this->agStrToMonthNumb(substr($string,0,3))){
 						$type=self::DTYPE_LIST["my"];
 					}
+
+				break;
+
+				// month number of a given year
+				// 01.2018
+				// 1.2018
+				case(preg_match("/^[0-9]{1,2}\.[0-9]{4}$/", $string)):
+
+					// check if inserted number is an existing month
+					if($this->agMonthNumbToStr(explode('.', $string)[0]))
+						$type=self::DTYPE_LIST["m.y"];
 
 				break;
 
@@ -1213,6 +1224,18 @@ class DataTable extends BaseWidget {
 							}
 						break;
 
+						// 01.2018
+						// 1.2018
+						case self::DTYPE_LIST["m.y"]:
+							$splittedDate = explode('.', $string);
+							$monthName = $this->agMonthNumbToStr($splittedDate[0]);
+							$year = $splittedDate[1];
+							if($date=$this->makeYearMonthString($year,$monthName)){
+								//$search=$columnName.">='".$date."'";
+								$search= " YEAR(".$columnName.") = '".intval(substr($date,0,4))."' AND MONTH(".$columnName.") = '".intval(substr($date,5,7))."' ";
+							}
+						break;
+
 						// 2018
 						case self::DTYPE_LIST["y"]:
 							$search=" YEAR(".$columnName.") = '".$string."'";
@@ -1254,6 +1277,7 @@ class DataTable extends BaseWidget {
 									}
 								}
 							break;
+
 							// gen 2018||feb 2018
 							// gen2018||feb2018
 							case self::DTYPE_LIST["my"]:
@@ -1276,6 +1300,37 @@ class DataTable extends BaseWidget {
 											$end=date("Y-m-t",strtotime($end));
 
 											$search=" ( ".$columnName.">='".$start."' && ".$columnName."<='".$end."' ) ";
+										}
+									}
+								}
+							break;
+
+							// 01.2018||02.2018
+							// 1.2018||2.2018
+							// and all combination of them
+							case self::DTYPE_LIST["m.y"]:
+
+								if(count($items)>=2){
+
+									$splittedDate = explode('.', $items[0]);
+									$startMonth = $splittedDate[0];
+									$startYear = $splittedDate[1];
+
+									$splittedDate = explode('.', $items[1]);
+									$endMonth =  $splittedDate[0];
+									$endYear = $splittedDate[1];
+
+									// Check $startMonth and $endMonth aren't 0
+									if($startMonth && $endMonth ){
+										$start = $this->makeYearMonthString($startYear,$startMonth);
+										$end = $this->makeYearMonthString($endYear,$endMonth);
+
+										if($start&&$end){
+
+											$end=date("Y-m-t",strtotime($end));
+
+											$search=" ( ".$columnName.">='".$start."' && ".$columnName."<='".$end."' ) ";
+
 										}
 									}
 								}
@@ -1462,6 +1517,11 @@ class DataTable extends BaseWidget {
 
 		$date= false;
 		if((intval($year)>0)&&(trim($monthName)!="")){
+
+			// if $monthName is already a month number
+			// it returns the formatted YearMonthString
+			if(is_numeric($monthName))
+				$date=$year."-".$monthName;
 
 			// if string is a known month return a
 			// a string with given year and month number
