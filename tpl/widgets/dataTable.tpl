@@ -1070,7 +1070,7 @@
 				<th class="data-table-filter">
 					<input class="data-table-filter {{if $c->type==$customDateFilt}}ag-dt-dtFilt{{/if}}"
 						type="text" placeholder="filtra - cerca" onkeyup="filterKeyUp(event);" onchange="filterChanged(this);"
-						data-lastval="" data-timer="" data-coln="{{$c@index}}"
+						data-timer="" data-coln="{{$c@index}}"
 						{{if $c->type==$customDateFilt}}
 							onfocus="filterShowDate(this);"
 							data-seltab=""
@@ -1080,6 +1080,9 @@
 						{{/if}}
 						{{if $c->search}}
 							value="{{$c->search|htmlentities}}"
+							data-lastval="{{$c->search|htmlentities}}"
+						{{else}}
+							data-lastval=""
 						{{/if}}
 					/>
 				</th>

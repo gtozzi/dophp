@@ -661,10 +661,11 @@ class DataTable extends BaseWidget {
 	 *
 	 * @param $pars: array of parameters, associative
 	 * @param $save: if true, save search filter and order
+	 * @param $useSaved: boolean, if true, will use saved params as defaults
 	 * @see https://datatables.net/manual/server-side
 	 * @return \dophp\Result Query result object
 	 */
-	public function getRawData( $pars=[], $save=false ): \dophp\Result {
+	public function getRawData( $pars=[], $save=false, $useSaved=false ): \dophp\Result {
 		// Parses the super filter
 		foreach( $this->_sfilter as $field )
 			if( isset($pars['filter'][$field->getName()]) )
@@ -690,7 +691,7 @@ class DataTable extends BaseWidget {
 			// Use given search value but fall back to column's default
 			if( isset($pars['columns'][$idx]['search']) )
 				$search = isset($pars['columns'][$idx]['search']['value']) ? trim($pars['columns'][$idx]['search']['value']) : '';
-			elseif( isset($c->search) )
+			elseif( $useSaved && isset($c->search) )
 				$search = $c->search;
 			else
 				continue;
@@ -780,14 +781,15 @@ class DataTable extends BaseWidget {
 	 *
 	 * @param $pars: array of parameters, associative
 	 * @param $save: boolean; if true, will save requested data
+	 * @param $useSaved: boolean, if true, will use saved params as defaults
 	 * @see https://datatables.net/manual/server-side
 	 * @see self::_encodeData
 	 */
-	public function getData( array $pars=[], bool $save=true ): array {
+	public function getData( array $pars=[], bool $save=true, bool $useSaved=false ): array {
 		$trx = $this->_db->beginTransaction(true);
 
 		// Retrieve data
-		$data = $this->getRawData($pars, $save)->fetchAll();
+		$data = $this->getRawData($pars, $save, $useSaved)->fetchAll();
 
 		// Add buttons
 		foreach( $data as &$d ) {
@@ -863,7 +865,7 @@ class DataTable extends BaseWidget {
 
 		$data = [];
 		$colCount = null;
-		foreach($this->getRawData() as $datarow ) {
+		foreach($this->getRawData(false, true) as $datarow ) {
 			$row = [];
 
 			if( $colCount === null )
