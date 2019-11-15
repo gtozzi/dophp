@@ -60,7 +60,7 @@ class DateFilter {
 	 *
 	 * @param $date string: The unformatted filter date (eg. 2018, 10.2018, 01-11-2018)
 	 *
-	 * @return date separator as string if it is in DATE_SEPARATOR array, false otherwise
+	 * @return string The found date separator, if it is in DATE_SEPARATOR array, false otherwise
 	 *
 	 */
 	protected static function getDateSeparatot(string $date) {
@@ -76,7 +76,7 @@ class DateFilter {
 	 *
 	 * @param $date string: The unformatted filter date (eg. 2018, 10.2018, 01-11-2018)
 	 *
-	 * @return the date as array of strings
+	 * @return array An array of strings representing the give date
 	 *
 	 */
 	protected static function getSplittedDate(string $date): array {
@@ -93,7 +93,7 @@ class DateFilter {
 	 *
 	 * @param $date string: The unformatted filter date (eg. 2018, 10.2018, 01-11-2018)
 	 *
-	 * @return the date precision as string
+	 * @return string date precision as string
 	 *
 	 */
 	protected static function getDatePrecision(string $date) {
@@ -129,7 +129,7 @@ class DateFilter {
 	 * @param $date string: The unformatted filter date (eg. 2018, 10.2018, 01-11-2018)
 	 * @param $isStart bool: It's true if the $date have to be considered a start date
 	 *
-	 * @return DateTime object according to $isStart parameter
+	 * @return DateTime object from the given $date according to $isStart parameter
 	 *
 	 */
 	public static function formatDate(string $date, bool $isStart = true): \DateTime {
@@ -169,7 +169,7 @@ class DateFilter {
 	 * @param $date string: The unformatted filter date (eg. 2018, 10.2018, 01-11-2018)
 	 * @param $isStart bool: It's true if the $date have to be considered a start date
 	 *
-	 * @return DateWithPrecision object
+	 * @return DateWithPrecision
 	 *
 	 */
 	public static function strToDateWithPrecision(string $date, bool $isStart): DateWithPrecision {
