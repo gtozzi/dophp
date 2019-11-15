@@ -181,6 +181,18 @@ class DateFilter {
 		return new DateWithPrecision($formattedDate, $prec);
 	}
 
+	public function serializeJSON() {
+
+		$serialized = json_encode(
+			[
+				'startDate' => $this->_startDate,
+				'endDate' =>  $this->_endDate
+			]
+		);
+		return $serialized;
+
+	}
+
 }
 
 class DateWithPrecision extends Date {
