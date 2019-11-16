@@ -855,17 +855,18 @@ class DataTable extends BaseWidget {
 	/**
 	 * Parses the request data and returns result
 	 *
+	 * @param $pars: array of parameters, associative
 	 * @see self::getData
 	 * @return \PhpOffice\PhpSpreadsheet\Spreadsheet: A spreadsheet
 	 */
-	public function getXlsxData(): \PhpOffice\PhpSpreadsheet\Spreadsheet {
+	public function getXlsxData( array $pars=[] ): \PhpOffice\PhpSpreadsheet\Spreadsheet {
 		$heads = [];
 		foreach($this->_cols as $k => $c)
 			$heads[] = $c->descr;
 
 		$data = [];
 		$colCount = null;
-		foreach($this->getRawData(false, true) as $datarow ) {
+		foreach($this->getRawData($pars, false, true) as $datarow ) {
 			$row = [];
 
 			if( $colCount === null )
