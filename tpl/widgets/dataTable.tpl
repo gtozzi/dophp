@@ -1096,7 +1096,6 @@
 						type="text" placeholder="filtra - cerca" onkeyup="filterKeyUp(event);" onchange="filterChanged(this);"
 						data-timer="" data-coln="{{$c@index}}"
 						{{if $c->type==$customDateFilt}}
-							onfocus="filterShowDate(this);"
 							data-seltab=""
 							id="ag-dt-dtFilt-{{$c@index}}"
 						{{else}}
@@ -1104,11 +1103,18 @@
 						{{/if}}
 						{{if $c->search}}
 							value="{{$c->search|htmlentities}}"
-														data-lastval="{{$c->search|htmlentities}}"
+							data-lastval="{{$c->search|htmlentities}}"
 						{{else}}
 							data-lastval=""
 						{{/if}}
 					/>
+					{{if $c->type==$customDateFilt}}
+						<span class="input-group-btn">
+							<button class="date-modal-icon" type="button" tabindex="-1" onclick="filterShowDate($('#ag-dt-dtFilt-{{$c@index}}'));">
+								<span class="fa fa-calendar"></span>
+							</button>
+						</span>
+					{{/if}}
 				</th>
 			{{/foreach}}
 		</tr>
