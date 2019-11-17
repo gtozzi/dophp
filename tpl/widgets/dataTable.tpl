@@ -554,7 +554,7 @@
 				case "2":
 					$(".wp-mthUnit.wp-active").each(function(){
 						monthsList.push($(this).data("year-month"));
-						filterString = monthsList.join("{{$dFilterDivider}}");
+						filterString = monthsList.reverse().join("{{$dFilterDivider}}");
 					});
 				break;
 
@@ -562,7 +562,7 @@
 				case "3":
 					$(".wp-yeaUnit.wp-active").each(function(){
 						yearsList.push($(this).data("year"));
-						filterString = yearsList.join("{{$dFilterDivider}}");
+						filterString = yearsList.reverse().join("{{$dFilterDivider}}");
 					});
 				break;
 
@@ -573,12 +573,12 @@
 			var currFilter = document.getElementById("ag-dt-dtFilt-"+currColNo);
 
 			// fill given date filter with the search_string
-			$("#ag-dt-dtFilt-"+currColNo).val(filterString)
+			$("#ag-dt-dtFilt-"+currColNo).val(filterString);
 
 			// store the identifier of the used date_tab for the current used filter
 			$("#ag-dt-dtFilt-"+currColNo).attr("data-seltab",activeTab);
 
-			updateFilter(currFilter,filterString);
+			updateFilter(currFilter, filterString);
 
 		});
 
@@ -1044,7 +1044,7 @@
 				{{foreach from=$monthYearList item=myl_list key=myl_year}}
 					<div class="wp-date-monthBlck-title">{{$myl_year}}</div>
 					{{foreach from=$myl_list item=month}}
-						<div id="mthID-{{$myl_year}}-{{$month["number"]}}" class="wp-mthUnit" data-year-month="{{$myl_year}}-{{$month["number"]}}">{{$month["name"]}}</div>
+						<div id="mthID-{{$month["number"]}}-{{$myl_year}}" class="wp-mthUnit" data-year-month="{{$month["number"]}}-{{$myl_year}}">{{$month["name"]}}</div>
 					{{/foreach}}
 				{{/foreach}}
 			</div>
@@ -1104,7 +1104,7 @@
 						{{/if}}
 						{{if $c->search}}
 							value="{{$c->search|htmlentities}}"
-							data-lastval="{{$c->search|htmlentities}}"
+														data-lastval="{{$c->search|htmlentities}}"
 						{{else}}
 							data-lastval=""
 						{{/if}}
