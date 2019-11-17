@@ -157,7 +157,7 @@ abstract class TablePage extends \dophp\HybridRpcMethod {
 			// Run on low priority
 			proc_nice(9);
 
-			$spreadsheet = $this->_table->getXlsxData();
+			$spreadsheet = $this->_table->getXlsxData($_GET);
 			$writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
 			$data = \dophp\Spreadsheet::writeToString($writer);
 

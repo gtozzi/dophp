@@ -301,8 +301,10 @@
 
 		table.on( 'draw', function(){
 			$(".dtbl-buttons-container").html(
-				'<a class="dtbl-buttons-itm" href="{{$ajaxURL|htmlentities}}&amp;export=xlsx">'
+				'<a id="data-table-export-url" class="dtbl-buttons-itm">'
 				+ '<span class="fa fa-file-excel-o"></span> Esporta</a>');
+
+			updateDataTableExportUrl();
 		} );
 
 		// Custom selection handling
@@ -605,6 +607,29 @@
 	}
 
 	/**
+	 * Updates the export url when filter is changed
+	 */
+	function updateDataTableExportUrl() {
+		// Read the filter and put it in the $_GET url
+		let filters = {};
+		$('input.data-table-filter').each(function() {
+			let el = $(this);
+			let coln = el.data('coln');
+			let val = encodeURIComponent(el.val());
+			if( coln && val )
+				filters[coln] = val;;
+		});
+		let filterargs = '';
+		for( let coln in filters ) {
+			let val = filters[coln];
+			filterargs += `&columns[${coln}][search][value]=${val}`;
+		}
+
+		let href = {{$ajaxURL|json_encode}} + '&export=xlsx' + filterargs;
+		$('#data-table-export-url').attr('href', href);
+	}
+
+	/**
 	 * Called when it is time to update the filter
 	 */
 	function updateFilter(input, val) {
@@ -621,7 +646,6 @@
 		console.log('Applying new filter for col', coln, val);
 
 		table.column(coln).search(val).draw();
-
 	}
 
 	/**
@@ -1070,7 +1094,7 @@
 				<th class="data-table-filter">
 					<input class="data-table-filter {{if $c->type==$customDateFilt}}ag-dt-dtFilt{{/if}}"
 						type="text" placeholder="filtra - cerca" onkeyup="filterKeyUp(event);" onchange="filterChanged(this);"
-						data-lastval="" data-timer="" data-coln="{{$c@index}}"
+						data-timer="" data-coln="{{$c@index}}"
 						{{if $c->type==$customDateFilt}}
 							onfocus="filterShowDate(this);"
 							data-seltab=""
@@ -1080,6 +1104,9 @@
 						{{/if}}
 						{{if $c->search}}
 							value="{{$c->search|htmlentities}}"
+							data-lastval="{{$c->search|htmlentities}}"
+						{{else}}
+							data-lastval=""
 						{{/if}}
 					/>
 				</th>
