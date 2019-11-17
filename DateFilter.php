@@ -21,39 +21,76 @@ class DateFilter {
 	const PRECISON_DMY = 'dmy';
 	const DATE_SEPARATOR = ['.', '-', '/'];
 
-	protected $_startDate = null;
-	protected $_endDate = null;
+	protected $_startDate = null; 	// The date where filter start
+	protected $_endDate = null; 	// The date where filter end
+	protected $_valid = true;		// true if the dateFilter is valid
 
 	/**
 	* Constructs the DateFilter
 	*
-	* @param $startDate : The date where filter start
-	* @param $endDate : The date where filter end
+	* @param string $search The string defining the filter parameters ('10.2018,11.2018' '19' '01.10.2010')
+	*
 	*/
-	public function __construct(string $startDate = null, string $endDate = null) {
+	public function __construct(string $search, string $divider) {
 
-		if(!is_null($startDate))
+		// Parse the $search string, splitting in 1 or 2 dates
+		$count = substr_count($search, $divider);
+
+		switch($count) {
+			case 0:
+				$startDate = $search;
+				$endDate = null;
+			break;
+			case 1:
+				list($startDate, $endDate) = explode($divider, trim($search));
+			break;
+			default:
+				$this->_valid = false;
+				return;
+		}
+
+		// The filter set automatically the missing date, calculating it from the given date and precision
+		// If precion it's PRECISON_DMY, leave the missing date as null, to implement "from" and "until"
+
+		if((is_null($startDate) || $startDate == "")  && (is_null($endDate) || $endDate == ""))
+			throw new Exception("Date filter need at least one date");
+
+		if(is_null($startDate) || $startDate == "") {
+			$this->_startDate = self::strToDateWithPrecision($endDate, true);
+			if (!is_null($this->_startDate) && $this->_startDate->getPrecision() == self::PRECISON_DMY)
+				$this->_startDate = null;
+		}
+		else
 			$this->_startDate = self::strToDateWithPrecision($startDate, true);
-		if(!is_null($endDate))
+
+		if(is_null($endDate) || $endDate == "") {
+			$this->_endDate = self::strToDateWithPrecision($startDate, false);
+			if (!is_null($this->_endDate) && $this->_endDate->getPrecision() == self::PRECISON_DMY)
+				$this->_endDate = null;
+		}
+		else
 			$this->_endDate = self::strToDateWithPrecision($endDate, false);
 
-	}
+		if(is_null($this->_startDate) && is_null($this->_endDate))
+			$this->_valid = false;
+
+		}
+
 
 	public function getStartDate() {
 		return $this->_startDate;
 	}
 
-	public function setStartDate(DateWithPrecision $date) {
-		$this->_startDate = $date;
-	}
 
 	public function getEndDate() {
 		return $this->_EndDate;
 	}
 
-	public function setEndDate(DateWithPrecision $date) {
-		$this->_EndDate = $date;
+
+	public function isValid(){
+		return $this->_valid;
 	}
+
 
 	/**
 	 * Returns the date separator found in the given unformatted $date
@@ -71,6 +108,7 @@ class DateFilter {
 		return false;
 	}
 
+
 	/**
 	 * Returns an array of strings representing the given unformatted $date
 	 *
@@ -87,6 +125,7 @@ class DateFilter {
 		else
 			return [$date];
 	}
+
 
 	/**
 	 * Returns date precision as string from given $date
@@ -123,45 +162,154 @@ class DateFilter {
 		}
 	}
 
+
+	/**
+	 * Returns true if the given date it's well formed
+	 *
+	 * eg. true: '19', '1.18', '2-10-2018'
+	 * eg. false: '9', 'a', '10.209', '01-011-2019'
+	 *
+	 * @param string $date: The date to check validity (eg. 2018, 10.2018, 01-11-2018)
+	 * @param bool $precision: the date precision
+	 *
+	 * @return bool true if it's a supported date format, false otherwise
+	 *
+	 */
+
+
+	 protected static function isValidYear(string $year) : bool {
+		$len = \strlen($year);
+		// Check if the year is numeric and it's 2 o 4 digit
+		if(($len != 2 && $len != 4 ) || !\is_numeric($year))
+			return false;
+		return true;
+	 }
+
+
+	 protected static function isValidMonth(string $month) : bool {
+		// Check if $month is numeric
+		if(!\is_numeric($month))
+			return false;
+		// Check if the $month is 2 o 4 digit
+		$len = \strlen($month);
+		if($len < 1 || $len >2 )
+			return false;
+		$monthNum = \intval($month);
+		if($monthNum < 1 || $monthNum > 12)
+			return false;
+		return true;
+	}
+
+
+	protected static function isValidDay(string $day) : bool {
+		// Check if $day is numeric
+		if(!\is_numeric($day))
+			return false;
+		// Check if the $day is 2 o 4 digit
+		$len = \strlen($day);
+		if($len < 1 || $len >2 )
+			return false;
+		$dayNum = \intval($day);
+		if($dayNum < 1 || $dayNum > 31)
+			return false;
+		return true;
+	}
+
+
+	/**
+	 * Returns true if the given $date it's formatted like the supported formats
+	 *
+	 * @param string $date: The date to be validated (eg. 2018, 10.2018, 01-11-2018)
+	 * @param string $precision: The precisiono of the given $date
+	 *
+	 * @return bool: true if all the parts of the $date are in the right format
+	 *
+	 */
+
+	 protected static function validateFormat($date, $precision) : bool {
+
+		switch($precision) {
+			case self::PRECISON_Y :
+				return self::isValidYear($date);
+			break;
+
+			case self::PRECISON_MY :
+				$splitDate = self::getSplittedDate($date);
+				return self::isValidMonth($splitDate[0]) && self::isValidYear($splitDate[1]);
+			break;
+
+			case self::PRECISON_DMY :
+				$splitDate = self::getSplittedDate($date);
+				return
+					self::isValidDay($splitDate[0]) &&
+					self::isValidMonth($splitDate[1]) &&
+					self::isValidYear($splitDate[2]);
+			break;
+
+			default :
+				return false;
+		}
+
+	}
+
+
 	/**
 	 * Returns a new DateTime object from given string $date, according to $isStart parameter
 	 *
-	 * @param $date string: The unformatted filter date (eg. 2018, 10.2018, 01-11-2018)
-	 * @param $isStart bool: It's true if the $date have to be considered a start date
+	 * @param string $date: The unformatted filter date (eg. 2018, 10.2018, 01-11-2018)
+	 * @param bool $isStart: It's true if the $date have to be considered a start date
 	 *
-	 * @return DateTime object from the given $date according to $isStart parameter
+	 * @return DateTime object from the given $date according to $isStart parameter or
+	 * null if $date format is wrong or not supported
 	 *
 	 */
-	public static function formatDate(string $date, bool $isStart = true): \DateTime {
+	public static function formatDate(string $date, bool $isStart = true) {
 
 		// Supported date formats
-		// 18, 2018
-		// 1.18, 10.18, 1.2018, 10.2018
+		// 18, 2018, 1.18, 10.18, 1.2018, 10.2018
 		// 1.1.18, 1.10.18, 10.1.18, 10.10.18
-		// 1.1.2018, 1.10.2018, 10.1.2018, 10.10.2018
+		// 1.1.2018, 1.10.2018, 10/1/2018, 10-10-2018
 
 		$df = self::getDatePrecision($date);
 
+		// Check if $date it's well formed (eg. not well formed date 201.1.2019)
+		if(!self::validateFormat($date, $df))
+			return null;
+
 		switch($df) {
 			case self::PRECISON_Y :
+				$year = $date;
+				if(strlen($year) == 2)
+					$year = \DateTime::createFromFormat('y', $year)->format('Y');
 				return $isStart ?
-					new \DateTime('first day of January '.$date) :
-					new \DateTime('last day of December '.$date);
+					new \DateTime('first day of January '.$year) :
+					new \DateTime('last day of December '.$year);
 			break;
+
 			case self::PRECISON_MY :
-				$monthNum  = self::getSplittedDate($date)[0];
-				$dateObj   = \DateTime::createFromFormat('!m', $monthNum);
-				$monthName = $dateObj->format('F');
+				$splitDate = self::getSplittedDate($date);
+				$year = $splitDate[1];
+				if(strlen($year) == 2)
+					$year = \DateTime::createFromFormat('y', $year)->format('Y');
+				$monthName = \DateTime::createFromFormat('!m', $splitDate[0])->format('F');
+
 				return $isStart ?
-					new \DateTime('first day of '.$monthName.' '.$date) :
-					new \DateTime('last day of '.$monthName.' '.$date);
+					new \DateTime('first day of '.$monthName.' '. $year) :
+					new \DateTime('last day of '.$monthName.' '. $year);
 			break;
+
 			case self::PRECISON_DMY :
 				$splitDate = self::getSplittedDate($date);
-				return new \DateTime($splitDate[2].'-'.$splitDate[1].'-'.$splitDate[0]);
+				$year = $splitDate[2];
+				if(strlen($year) == 2)
+					$year = \DateTime::createFromFormat('y', $year)->format('Y');
+				$monthName = \DateTime::createFromFormat('!m', $splitDate[1])->format('F');
+				return \DateTime::createFromFormat('j-F-Y',  $splitDate[0]."-".$monthName."-".$year);
+
 			break;
 		}
 	}
+
 
 	/**
 	 * Returns a new DateWithPrecision object from given string $date, according to $isStart parameter
@@ -172,14 +320,15 @@ class DateFilter {
 	 * @return DateWithPrecision
 	 *
 	 */
-	public static function strToDateWithPrecision(string $date, bool $isStart): DateWithPrecision {
+	public static function strToDateWithPrecision(string $date, bool $isStart) {
 
 		$dateWithPrec = null;
 		$prec = self::getDatePrecision($date);
 		$formattedDate = self::formatDate($date, $isStart);
 
-		return new DateWithPrecision($formattedDate, $prec);
+		return !is_null($formattedDate) ? new DateWithPrecision($formattedDate, $prec) : null;
 	}
+
 
 	public function serializeJSON() {
 
@@ -193,8 +342,39 @@ class DateFilter {
 
 	}
 
+
+	public function getSearchFilter(string $columnName) {
+
+		// if the DateFilter it's not valid, avoid HAVING clause with "1"
+		if(!$this->isValid())
+			return "1";
+
+		$searchFilter = "( ";
+
+		if(isset($this->_startDate)){
+			$sd = $this->_startDate->format('Y-m-d');
+			$searchFilter .= $columnName.">='".$sd."'";
+			if(isset($this->_endDate))
+				$searchFilter .= ' && ';
+		}
+
+		if(isset($this->_endDate)){
+			$ed = $this->_endDate->format('Y-m-d');
+			$searchFilter .= $columnName."<='".$ed."'";
+		}
+
+		$searchFilter .= " )";
+
+		return $searchFilter;
+	}
+
 }
 
+
+/**
+* Define a date class with precision level
+*
+*/
 class DateWithPrecision extends Date {
 
 	const SUPPORTED_PRECISON = [
