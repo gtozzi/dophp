@@ -14,7 +14,7 @@ namespace dophp;
 * Define a date filter
 *
 */
-class DateFilter {
+class DateFilter implements \JsonSerializable {
 
 	const PRECISON_Y = 'y';
 	const PRECISON_MY = 'my';
@@ -50,12 +50,12 @@ class DateFilter {
 		}
 
 		// The filter set automatically the missing date, calculating it from the given date and precision
-		// If precion it's PRECISON_DMY, leave the missing date as null, to implement "from" and "until"
+		// If precion it's PRECISON_DMY, leave the missing date as null, to implement 'from' and 'until'
 
-		if((is_null($startDate) || $startDate == "")  && (is_null($endDate) || $endDate == ""))
-			throw new Exception("Date filter need at least one date");
+		if((is_null($startDate) || $startDate == '')  && (is_null($endDate) || $endDate == ''))
+			throw new Exception('Date filter need at least one date');
 
-		if(is_null($startDate) || $startDate == "") {
+		if(is_null($startDate) || $startDate == '') {
 			$this->_startDate = self::strToDateWithPrecision($endDate, true);
 			if (!is_null($this->_startDate) && $this->_startDate->getPrecision() == self::PRECISON_DMY)
 				$this->_startDate = null;
@@ -63,7 +63,7 @@ class DateFilter {
 		else
 			$this->_startDate = self::strToDateWithPrecision($startDate, true);
 
-		if(is_null($endDate) || $endDate == "") {
+		if(is_null($endDate) || $endDate == '') {
 			$this->_endDate = self::strToDateWithPrecision($startDate, false);
 			if (!is_null($this->_endDate) && $this->_endDate->getPrecision() == self::PRECISON_DMY)
 				$this->_endDate = null;
@@ -304,7 +304,7 @@ class DateFilter {
 				if(strlen($year) == 2)
 					$year = \DateTime::createFromFormat('y', $year)->format('Y');
 				$monthName = \DateTime::createFromFormat('!m', $splitDate[1])->format('F');
-				return \DateTime::createFromFormat('j-F-Y',  $splitDate[0]."-".$monthName."-".$year);
+				return \DateTime::createFromFormat('j-F-Y',  $splitDate[0].'-'.$monthName.'-'.$year);
 
 			break;
 		}
@@ -329,25 +329,19 @@ class DateFilter {
 		return !is_null($formattedDate) ? new DateWithPrecision($formattedDate, $prec) : null;
 	}
 
-
-	public function serializeJSON() {
-
-		$serialized = json_encode(
-			[
-				'startDate' => $this->_startDate,
-				'endDate' =>  $this->_endDate
-			]
-		);
-		return $serialized;
-
+	public function jsonSerialize() {
+		$json = array();
+		foreach($this as $key => $value) {
+			$json[$key] = $value;
+		}
+		return $json;
 	}
-
 
 	public function getSearchFilter(string $columnName) {
 
-		// if the DateFilter it's not valid, avoid HAVING clause with "1"
+		// if the DateFilter it's not valid, avoid HAVING clause with '1'
 		if(!$this->isValid())
-			return "1";
+			return '1';
 
 		$searchFilter = "( ";
 
@@ -375,7 +369,7 @@ class DateFilter {
 * Define a date class with precision level
 *
 */
-class DateWithPrecision extends Date {
+class DateWithPrecision extends Date implements \JsonSerializable {
 
 	const SUPPORTED_PRECISON = [
 		DateFilter::PRECISON_Y,
@@ -388,7 +382,7 @@ class DateWithPrecision extends Date {
 	public function __construct(\DateTime $date, string $precision) {
 
 		if(!in_array($precision, self::SUPPORTED_PRECISON))
-			throw new Exception("Unsupported Precision");
+			throw new Exception('Unsupported Precision');
 
 		$this->_precision = $precision;
 		parent::__construct($date);
@@ -400,8 +394,16 @@ class DateWithPrecision extends Date {
 
 	public function setPrecision($precision) {
 		if(!in_array($precision, self::SUPPORTED_PRECISON))
-			throw new Exception("Unsupported Precision");
+			throw new Exception('Unsupported Precision');
 		$this->_precision = $precision;
+	}
+
+	public function jsonSerialize() {
+		$json = array();
+		foreach($this as $key => $value) {
+			$json[$key] = $value;
+		}
+		return $json;
 	}
 
 }
