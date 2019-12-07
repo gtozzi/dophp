@@ -266,7 +266,16 @@ class Db {
 	* @return int: Number of found rows
 	*/
 	public function foundRows() {
-		$q = 'SELECT FOUND_ROWS() AS '.$this->quoteObj('fr');
+		switch( $this->_type ) {
+		case Db::TYPE_MYSQL:
+			$q = 'SELECT FOUND_ROWS() AS '.$this->quoteObj('fr');
+			break;
+		case Db::TYPE_MSSQL:
+			$q = 'SELECT @@ROWCOUNT AS '.$this->quoteObj('fr');
+			break;
+		default:
+			throw new NotImplementedException("Not Implemented DBMS {$this->_type}");
+		}
 
 		$res = $this->run($q)->fetch();
 		return $res['fr'] !== null ? (int)$res['fr'] : null;

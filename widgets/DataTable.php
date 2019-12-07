@@ -190,7 +190,10 @@ class DataTable extends BaseWidget {
 
 		// Cache failed, go retrieve it
 		list($q, $where, $p, $groupBy) = $this->_buildBaseQuery(false, false);
-		$q .= "\n LIMIT 0 \n";
+		if( $this->_db->type() == $this->_db::TYPE_MSSQL)
+			$q = preg_replace( '/^SELECT/', 'SELECT TOP 0', $q, 1 );
+		else
+			$q .= "\n LIMIT 0 \n";
 
 		$res = $this->_db->xrun($q);
 		$i = 0;
@@ -355,11 +358,11 @@ class DataTable extends BaseWidget {
 
 		$q = "
 			SELECT
-				`{$prefs['sortcol']}` AS sortcol,
-				`{$prefs['ordcol']}` AS sortord,
-				`{$prefs['sfcol']}` AS sf
-			FROM `{$prefs['table']}`
-			WHERE `{$prefs['uidcol']}` = ? AND `{$prefs['tablecol']}` = ?
+				" . $this->_db->quoteObj($prefs['sortcol']) . " AS sortcol,
+				" . $this->_db->quoteObj($prefs['ordcol']) . " AS sortord,
+				" . $this->_db->quoteObj($prefs['sfcol']) . " AS sf
+			FROM " . $this->_db->quoteObj($prefs['table']) . "
+			WHERE " . $this->_db->quoteObj($prefs['uidcol']) . " = ? AND " . $this->_db->quoteObj($prefs['tablecol']) . " = ?
 		";
 		$p = [ $this->_user->getUid(), $this->getClsId() ];
 		$t = [ 'sf' => \dophp\Table::DATA_TYPE_STRING ];
@@ -610,7 +613,7 @@ class DataTable extends BaseWidget {
 	 * @return [ $query, $where and array, $params array, $groupBy condition (may be null) ]
 	 */
 	protected function _buildBaseQuery($cnt=false, $calcFound=true) {
-		if( $cnt || ! $calcFound )
+		if( $cnt || ! $calcFound || $this->_db->type() != $this->_db::TYPE_MYSQL )
 			$q = "SELECT\n";
 		else
 			$q = "SELECT SQL_CALC_FOUND_ROWS\n";
@@ -618,9 +621,9 @@ class DataTable extends BaseWidget {
 		$cols = [];
 		foreach( $this->_cols as $c )
 			if( $c->qname )
-				$cols[] = "\t{$c->qname} AS `{$c->id}`";
+				$cols[] = "\t{$c->qname} AS " . $this->_db->quoteObj($c->id);
 			else
-				$cols[] = "\t`{$c->id}`";
+				$cols[] = "\t" . $this->_db->quoteObj($c->id);
 		$q .= implode(",\n", $cols) . "\n";
 
 		$q .= "FROM {$this->_from}\n";
@@ -767,7 +770,7 @@ class DataTable extends BaseWidget {
 
 		// Filter by limit, if given
 		if( isset($pars['length']) && $pars['length'] > 0 ) {
-			if( $this->_db->type() == $this->_db::TYPE_MSSQL)
+			if( $this->_db->type() == $this->_db::TYPE_MSSQL )
 				$q .= "\nOFFSET ". ( (int)$pars['start'] ) . ' ROWS FETCH NEXT ' . $pars['length'].' ROWS ONLY';
 			else
 				$q .= "\nLIMIT " . ( (int)$pars['start'] ) . ',' . $pars['length'];
@@ -912,7 +915,7 @@ class DataTable extends BaseWidget {
 		if( $groupBy )
 			$query .= "\nGROUP BY $groupBy";
 
-		$query = "SELECT COUNT(*) AS `cnt` FROM ( $query ) AS `q`";
+		$query = "SELECT COUNT(*) AS cnt FROM ( $query ) AS q";
 
 		$trans = $this->_db->beginTransaction(true);
 
