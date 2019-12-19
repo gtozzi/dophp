@@ -452,6 +452,7 @@ class Db {
 			list($sql, $p) = self::buildParams($params, ', ', $this->_type);
 			$q .= " SET $sql";
 		}
+
 		return array($q, $p);
 	}
 
@@ -494,6 +495,7 @@ class Db {
 	public static function processParams($params, $type=self::TYPE_MYSQL) {
 		if( ! $params )
 			return array([], []);
+
 		$cols = array();
 		$vals = array();
 		foreach( $params as $k => $v ) {
@@ -521,6 +523,16 @@ class Db {
 			}
 			$cols[$sqlCol] = $sqlPar;
 		}
+
+		// SQL Server driver fix
+		if( $type == self::TYPE_MSSQL ) {
+			foreach( $vals as &$v )
+				if( $v instanceof \DateTime )
+					$v = $v->format('Ymd H:i:s.v');
+
+			unset($v);
+		}
+
 		return array($cols, $vals);
 	}
 

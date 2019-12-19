@@ -385,8 +385,8 @@ class TextField extends InputField {
 
 	protected function _getValidationOptions(): array {
 		$vo = parent::_getValidationOptions();
-		if( $this->_maxlen )
-			$vo['length'] = [0,$this->_maxlen];
+		if( $this->_maxlen && ! isset($vo['len']) )
+			$vo['len'] = [0, $this->_maxlen];
 		return $vo;
 	}
 }
@@ -434,8 +434,8 @@ class DateField extends TextField {
 
 	protected function _getValidationOptions(): array {
 		$vo = parent::_getValidationOptions();
-		if( isset($vo['length']) )
-			unset($vo['length']);
+		if( isset($vo['len']) )
+			unset($vo['len']);
 		return $vo;
 	}
 
@@ -459,8 +459,8 @@ class TimeField extends TextField {
 
 	protected function _getValidationOptions(): array {
 		$vo = parent::_getValidationOptions();
-		if( isset($vo['length']) )
-			unset($vo['length']);
+		if( isset($vo['len']) )
+			unset($vo['len']);
 		return $vo;
 	}
 
