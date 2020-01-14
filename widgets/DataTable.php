@@ -747,9 +747,12 @@ class DataTable extends BaseWidget {
 		if( $groupBy )
 			$q .= "\nGROUP BY $groupBy";
 
-		// Apply having clause
+		// Apply having clause (in MS SQL, use where if no group)
 		if( $having )
-			$q .= "\nHAVING " . implode(' AND ', $having);
+			if( $this->_db->type() == $this->_db::TYPE_MSSQL && ! $groupBy )
+				$q .= ($where ? '' : "\nWHERE ") . implode(' AND ', $having);
+			else
+				$q .= "\nHAVING " . implode(' AND ', $having);
 
 		// Apply order, if given
 		if( isset($pars['order']) && isset($pars['order'][0]) && $pars['order'][0] ) {
