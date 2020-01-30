@@ -1224,7 +1224,9 @@ class Table {
 		case 'TINYBLOB':
 		case 'BLOB':
 		case 'MEDIUMBLOB':
+		case 'MEDIUM_BLOB':
 		case 'LONGBLOB':
+		case 'LONG_BLOB':
 		case 'TINYTEXT':
 		case 'TEXT':
 		case 'MEDIUMTEXT':
