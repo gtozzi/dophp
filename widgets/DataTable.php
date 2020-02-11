@@ -750,7 +750,7 @@ class DataTable extends BaseWidget {
 		// Apply having clause (in MS SQL, use where if no group)
 		if( $having )
 			if( $this->_db->type() == $this->_db::TYPE_MSSQL && ! $groupBy )
-				$q .= ($where ? '' : "\nWHERE ") . implode(' AND ', $having);
+				$q .= ($where ? "\nAND" : "\nWHERE") . ' (' . implode(' AND ', $having) . ')';
 			else
 				$q .= "\nHAVING " . implode(' AND ', $having);
 

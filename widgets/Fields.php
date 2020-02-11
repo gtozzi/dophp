@@ -67,6 +67,12 @@ interface Field extends FormWidget {
 	/** Gets the current validation feedback message */
 	public function getVFeedback();
 
+	/** Sets the validation status */
+	public function setVStatus(int $status);
+
+	/** Sets the validation feedback message */
+	public function setVFeedback(string $message);
+
 	/** Tells whether this field has valid data */
 	public function isValid(): bool;
 
@@ -229,6 +235,14 @@ abstract class BaseField extends BaseFormWidget implements Field {
 
 	public function getVFeedback() {
 		return $this->_vfeedback;
+	}
+
+	public function setVStatus(int $status) {
+		$this->_vstatus = $status;
+	}
+
+	public function setVFeedback(string $message) {
+		$this->_vfeedback = $message;
 	}
 
 	public function isValid(): bool {

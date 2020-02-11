@@ -116,7 +116,7 @@ class Db {
 	/**
 	* Prepares a statement, executes it with given parameters and returns it
 	*
-	* @param $query string: The query to be executed
+	* @param $query mixed: The query to be executed or SelectQuery
 	* @param $params mixed: Array containing the parameters or single parameter
 	* @param $vcharfix boolean: like $this->vcharfix, ovverides it when used
 	* @return \PDOStatement
@@ -132,6 +132,9 @@ class Db {
 			$params = array($params);
 		if( $vcharfix === null )
 			$vcharfix = $this->vcharfix;
+
+		if( $query instanceof SelectQuery )
+			$query = $query->asSql($this->_type);
 
 		// Modify the query to cast all params to varchar
 		if( $vcharfix )
@@ -181,7 +184,7 @@ class Db {
 	 * Like Db::run(), but returns a Result instead
 	 *
 	 * @see run()
-	 * @param $query string: The Query string
+	 * @param $query mixed: The Query string or SelectQuery
 	 * @param $params array: Associative array of params
 	 * @param $types array: Associative array name => type of requested return
 	 *                      types. Omitted ones will be guessed from PDO data.
@@ -1792,19 +1795,24 @@ class SelectQuery {
 	 * Returns the query as SQL
 	 *
 	 * @todo Use Caching
+	 * @param $type string: See Db::TYPE_* consts
 	 */
-	public function asSql(): string {
+	public function asSql(string $type): string {
 		foreach( $this->_cols as $name => $def )
 			$select[] = $def['qname'] . " AS $name";
 
-		$sql = 'SELECT ' . implode(', ', $select) . "\nFROM " . $this->_from;
+		$sql = 'SELECT';
+		if( $type == Db::TYPE_MSSQL && $this->_limit )
+			$sql .= " TOP {$this->_limit}";
+
+		$sql .= "\n" . implode(', ', $select) . "\nFROM " . $this->_from;
 		if( $this->_where )
 			$sql .= "\nWHERE {$this->_where}";
 		if( $this->_groupBy )
 			$sql .= "\nGROUP BY {$this->_groupBy}";
 		if( $this->_orderBy )
 			$sql .= "\nORDER BY {$this->_orderBy}";
-		if( $this->_limit )
+		if( $type != Db::TYPE_MSSQL && $this->_limit )
 			$sql .= "\nLIMIT {$this->_limit}";
 
 		return $sql;
@@ -1812,9 +1820,10 @@ class SelectQuery {
 
 	/**
 	 * @see self::asSql()
+	 * @deprecated Do not use, since it defaults to MySQL. Will be removed
 	 */
 	public function __toString() {
-		return $this->asSql();
+		return $this->asSql(Db::TYPE_MYSQL);
 	}
 
 	/**
