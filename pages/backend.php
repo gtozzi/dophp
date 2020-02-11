@@ -331,11 +331,23 @@ abstract class FormPage extends \dophp\PageSmarty {
 	/**
 	 * Message to be displayed on save
 	 * If null, a default is assigned at init time
+	 * @see _initMessages
 	 */
 	protected $_saveMessage = null;
 
-	/** Message to be displayed on cancel */
+	/**
+	 * Message to be displayed on cancel
+	 * If null, a default is assigned at init time
+	 * @see _initMessages
+	 */
 	protected $_cancelMessage = null;
+
+	/**
+	 * Message to be displayed before delete
+	 * If null, a default is assigned at init time
+	 * @see _initMessages
+	 */
+	protected $_deleteConfirmMessage = null;
 
 	/** Disables insert (useful for non-primary tabs) */
 	protected $_disableInsert = false;
@@ -373,6 +385,22 @@ abstract class FormPage extends \dophp\PageSmarty {
 	}
 
 	/**
+	 * Inits messages, overridable in child
+	 */
+	protected function _initMessages($id) {
+		if( $this->_saveMessage === null )
+			$this->_saveMessage = _('Saving') . '…';
+
+		if( $this->_cancelMessage === null )
+			$this->_cancelMessage = _('Canceling') . '…';
+
+		if( $this->_deleteConfirmMessage === null ) {
+			$letter = $this->_whatGender=='f' ? 'a' : 'o';
+			$this->_deleteConfirmMessage = "Confermi di voler eliminare definitivamente quest{$letter} {$this->_what}?";
+		}
+	}
+
+	/**
 	 * Returns ID from request args, may be null
 	 */
 	public static function getRequestId() {
@@ -391,11 +419,6 @@ abstract class FormPage extends \dophp\PageSmarty {
 	}
 
 	protected function _build() {
-		if( $this->_saveMessage === null )
-			$this->_saveMessage = _('Saving') . '…';
-		if( $this->_cancelMessage === null )
-			$this->_cancelMessage = _('Canceling') . '…';
-
 		$this->_buttons = new \dophp\buttons\ButtonBar();
 
 		// Determine the session data key and init it
@@ -414,6 +437,7 @@ abstract class FormPage extends \dophp\PageSmarty {
 
 		$this->_initBackendComponent();
 		$this->_initEarly($id);
+		$this->_initMessages($id);
 		$this->_initFields($id);
 
 		// Determine action
@@ -458,8 +482,9 @@ abstract class FormPage extends \dophp\PageSmarty {
 		$this->_formAction->args[\DoPhp::BASE_KEY] = $this->_name;
 
 		$this->_smarty->assign('formkey', self::POST_FORM_KEY);
-		$this->_smarty->assignByRef('savemessage', $this->_saveMessage);
-		$this->_smarty->assignByRef('cancelmessage', $this->_cancelMessage);
+		$this->_smarty->assignByRef('saveMessage', $this->_saveMessage);
+		$this->_smarty->assignByRef('cancelMessage', $this->_cancelMessage);
+		$this->_smarty->assignByRef('deleteConfirmMessage', $this->_deleteConfirmMessage);
 
 		// If custom template does not exist, use the generic one
 		$this->_templateFallback('backend/formpage.tpl');
