@@ -296,6 +296,7 @@ class Spreadsheet {
 	 * @param $heads array: Optional headers rows, Bidimensional array [ row, [ cell ] ]
 	 */
 	public static function fromArray(array $data, array $heads=[]): \PhpOffice\PhpSpreadsheet\Spreadsheet {
+
 		// Sets the advanced value binder, see
 		// https://phpspreadsheet.readthedocs.io/en/latest/topics/accessing-cells/#using-value-binders-to-facilitate-data-entry
 		\PhpOffice\PhpSpreadsheet\Cell\Cell::setValueBinder( new DoPhpValueBinder() );
@@ -303,11 +304,11 @@ class Spreadsheet {
 		$spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
 		$sheet = $spreadsheet->getActiveSheet();
 
-		for($row = 1; $row < count($heads) + count($data); $row++) {
+		for($row = 1; $row <= count($heads) + count($data); $row++) { //FIX #1089
 			if( $row <= count($heads) ) {
 				$outrow = $heads[$row - 1];
 				$header = true;
-			} else { 
+			} else {
 				$outrow = $data[$row - count($heads) - 1];
 				$header = false;
 			}
@@ -328,7 +329,6 @@ class Spreadsheet {
 			if( $row % 1000 == 0 )
 				set_time_limit(30);
 		}
-
 		return $spreadsheet;
 	}
 
