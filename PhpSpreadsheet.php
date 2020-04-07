@@ -304,7 +304,7 @@ class Spreadsheet {
 		$spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
 		$sheet = $spreadsheet->getActiveSheet();
 
-		for($row = 1; $row <= count($heads) + count($data); $row++) { //FIX #1089
+		for($row = 1; $row <= count($heads) + count($data); $row++) {
 			if( $row <= count($heads) ) {
 				$outrow = $heads[$row - 1];
 				$header = true;
