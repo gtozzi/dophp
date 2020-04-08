@@ -93,7 +93,8 @@ class LoginErrorAlert extends AlertBase {
 	}
 
 	public function getMessage() {
-		return $this->_exception->getMessage();
+		$mex = $this->_exception->getMessage();
+		return $mex ? $mex : _('Access denied');
 	}
 
 	/**

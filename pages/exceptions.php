@@ -18,6 +18,22 @@ require_once(__DIR__ . '/../Page.php');
 * Exception raised if something goes wrong during page rendering
 */
 class PageError extends \Exception {
+
+	protected $_debugData = null;
+
+	/**
+	 * Adds extra debug data to this exception
+	 */
+	public function setDebugData($data) {
+		$this->_debugData = $data;
+	}
+
+	/**
+	 * Returns debug data, if any
+	 */
+	public function getDebugData() {
+		return $this->_debugData;
+	}
 }
 
 /**

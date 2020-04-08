@@ -718,7 +718,9 @@ abstract class FormPage extends \dophp\PageSmarty {
 		if( array_intersect($this->_perm, $perm) )
 			return;
 
-		throw new \dophp\PageDenied();
+		$e = new \dophp\PageDenied(_('Missing required permissions'));
+		$e->setDebugData($perm);
+		throw $e;
 	}
 
 	/**
