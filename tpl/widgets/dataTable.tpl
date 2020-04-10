@@ -636,12 +636,34 @@
 
 		let el = $(input);
 		let coln = el.data('coln');
+		let type = el.data('type');
 
 		if(coln == undefined)
 			return;
 
+		// Convert search values
+		if( type == 'boolean' ) {
+			switch(val) {
+			case 'S':
+			case 'Si':
+			case 'Sì':
+			case 's':
+			case 'si':
+			case 'sì':
+				val = '1';
+				break;
+
+			case 'N':
+			case 'No':
+			case 'n':
+			case 'no':
+				val = '0';
+				break;
+			}
+		}
+
 		el.data('timer', '');
-		console.log("filtering...");
+		console.log("filtering...", val);
 
 		console.log('Applying new filter for col', coln, val);
 
@@ -1092,10 +1114,11 @@
 			<th style="width: 20px" class="data-table-filter"><a href="#" class="fa fa-columns" onclick="selectColumns('{{$id}}');return false;"></a></th>
 			{{foreach $cols as $c}}
 				<th class="data-table-filter">
-					<input class="data-table-filter {{if $c->type==$customDateFilt}}ag-dt-dtFilt{{/if}}"
+					<input
+						class="data-table-filter {{if $c->type == \dophp\Table::DATA_TYPE_DATE}}ag-dt-dtFilt{{/if}}"
 						type="text" placeholder="filtra - cerca" onkeyup="filterKeyUp(event);" onchange="filterChanged(this);"
-						data-timer="" data-coln="{{$c@index}}"
-						{{if $c->type==$customDateFilt}}
+						data-timer="" data-coln="{{$c@index}}" data-type="{{$c->type|htmlentities}}"
+						{{if $c->type == \dophp\Table::DATA_TYPE_DATE}}
 							onfocus="filterShowDate(this);"
 							data-seltab=""
 							id="ag-dt-dtFilt-{{$c@index}}"
