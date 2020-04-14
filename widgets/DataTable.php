@@ -39,8 +39,6 @@ class DataTable extends BaseWidget {
 		"ud" => "ud"
 	);
 
-	const DATA_TYPE_DATE =  \dophp\Table::DATA_TYPE_DATE;
-
 	const MEMCACHE_KEY_BASE = 'DoPhp::DataTable::';
 
 	/** Expire time for _count cache entries */
@@ -152,10 +150,9 @@ class DataTable extends BaseWidget {
 	protected function _earlyRetrieveType() {
 		$types = $this->_getColumnTypeInfo();
 
-		foreach( $this->_cols as $col ) {
-			if( ! isset($col->type) && $types[$col->id] == self::DATA_TYPE_DATE )
-				$col->type = self::DATA_TYPE_DATE;
-		}
+		foreach( $this->_cols as $col )
+			if( ! isset($col->type) )
+				$col->type = $types[$col->id];
 	}
 
 	/**
@@ -559,7 +556,6 @@ class DataTable extends BaseWidget {
 		$this->_smarty->assign("monthYearList",$this->getMonthYearList());
 		$this->_smarty->assign("yearList",$this->getYearList());
 		$this->_smarty->assign("dFilterDivider",self::DFILTER_DIVIDER);
-		$this->_smarty->assign("customDateFilt",self::DATA_TYPE_DATE);
 
 		$this->_smarty->assign('btns', $this->_btns);
 		$this->_smarty->assign('rbtns', $this->_rbtns);
@@ -705,7 +701,7 @@ class DataTable extends BaseWidget {
 			$saveFilter[$c->id] = $search;
 
 			// checks if filter is a date filter and calculate where clause
-			if($c->type==self::DATA_TYPE_DATE){
+			if($c->type == \dophp\Table::DATA_TYPE_DATE){
 
 				$firstElem = $search;
 				$isDateRange = false;
@@ -1015,7 +1011,7 @@ class DataTable extends BaseWidget {
 	public function getColClass($type=""){
 		$class="";
 		if((trim($type))!=""){
-			if($type==self::DATA_TYPE_DATE){
+			if($type == \dophp\Table::DATA_TYPE_DATE){
 				$class="ag-date-flt";
 			}
 		}

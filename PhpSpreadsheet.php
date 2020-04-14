@@ -344,7 +344,9 @@ class Spreadsheet {
 		set_time_limit(60 * 5);
 
 		$tmpfile = tempnam( sys_get_temp_dir(), 'dophp_spreadsheet_' );
+		Lang::pushLocale(LC_NUMERIC);
 		$writer->save($tmpfile);
+		Lang::popLocale();
 
 		$output = file_get_contents($tmpfile);
 
