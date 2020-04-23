@@ -145,7 +145,7 @@ class Imager {
 	public function stream() {
 		$out = $this->_getCachePath();
 		$finfo = new \finfo(FILEINFO_MIME_TYPE);
-		
+
 		header('Content-Type: ' . $finfo->file($out));
 		readfile($out);
 	}
@@ -159,7 +159,7 @@ class Imager {
 			header("HTTP/1.1 400 Bad Request");
 			throw new \Exception('Unvalid param count (' . count($exp) . '/' . count($names) . ')');
 		}
-		
+
 		return array_combine($names, $exp);
 	}
 

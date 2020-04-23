@@ -6,7 +6,7 @@
 * @package DoPhp
 * @see Page.php
 * @brief Old CRUD handling stuff
-* 
+*
 * @deprecated
 */
 

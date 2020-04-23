@@ -342,7 +342,7 @@ abstract class Model {
 					if( $v === null )
 						continue;
 
- 					$rinfo = $this->__analyzeRelation($this->_fields[$k]);
+					$rinfo = $this->__analyzeRelation($this->_fields[$k]);
 
 					// Normalize $v syntax: $v is now an array of associative arrays: $pk => [ extra fields ]
 					// Convert fields using the old syntax (array of pks) to the new one
@@ -743,20 +743,20 @@ abstract class Model {
 	*/
 	public function formatPk( $row ) {
 		$pk = $this->_table->getPk();
-		
+
 		foreach( $pk as $k )
 			if( ! isset($row[$k]) )
 				throw new \Exception("PK Column $k is not part of row");
-		
+
 		if( count($pk) < 2 )
 			return (string)$row[$pk[0]];
-		
+
 		$ret = '[';
 		foreach( $pk as $k )
 			$ret .= $row[$k] . ',';
 		rtrim($ret, ',');
 		$ret .= ']';
-		
+
 		return $ret;
 	}
 
