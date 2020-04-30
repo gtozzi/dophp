@@ -180,7 +180,7 @@
 										{{$m->getLabel()|htmlentities}}
 										</a>
 										{{if $childs}}
-											<div class="dropdown-menu {{if $childs|@count > 10}}multi-column columns-{{if $childs|@count > 20}}3{{else}}2{{/if}}{{/if}}" aria-labelledby="{{$m->getId()|htmlentities}}_a">
+											<div class="dropdown-menu {{if $childs|@count > 10}}multi-column columns-{{if $childs|@count > 20}}3{{else}}2{{/if}}{{/if}}" style="{{if $childs|@count > 10}}left:-100px{{/if}}" aria-labelledby="{{$m->getId()|htmlentities}}_a">
 												{{if $childs|@count > 10}}<div class="row">{{/if}}
 													{{assign var="contatore_item" value=0}}
 													{{foreach $childs as $c}}
