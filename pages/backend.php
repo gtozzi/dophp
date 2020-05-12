@@ -108,7 +108,7 @@ abstract class TablePage extends \dophp\HybridRpcMethod {
 	 * Inits the table object, by default inits a new _tableClass instance,
 	 * may be overridden
 	 */
-	protected function _initTable(): \dophp\widgets\DataTable {
+	protected function _initTable(): \dophp\widgets\DataTableInterface {
 		if( ! isset($this->_tableClass) )
 			throw new \Exception('Missing Table class');
 		return new $this->_tableClass($this);
