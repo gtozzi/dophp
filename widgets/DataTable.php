@@ -1441,6 +1441,8 @@ class DataTableColumn extends DataTableBaseColumn {
 
 	/** The user-friendly description */
 	public $descr;
+	/** The user-friendly extended explanation */
+	public $tooltip = null;
 	/** The name of the column inside the query */
 	public $qname;
 	/** The column explicit data type, if given */
@@ -1457,6 +1459,7 @@ class DataTableColumn extends DataTableBaseColumn {
 	 * @param $opt array: Associative array of options, possible keys:
 	 *             - descr: User-friendly description, will use ID with first
 	 *                      uppercase letter by default
+	 *             - tooltip: User-friendly extended tooltip description, optional
 	 *             - qname: Name to be used iside DB queries, by default use the
 	 *                      quoted version of the ID. If provided, shoudl contain
 	 *                      quotes
@@ -1479,6 +1482,8 @@ class DataTableColumn extends DataTableBaseColumn {
 			$this->visible = (bool)$opt['visible'];
 		if( isset($opt['pk']) )
 			$this->pk = (bool)$opt['pk'];
+		if( isset($opt['tooltip']) && $opt['tooltip'] )
+			$this->tooltip = $opt['tooltip'];
 	}
 
 }

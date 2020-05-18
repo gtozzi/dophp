@@ -1107,7 +1107,7 @@
 				{{/foreach}}
 			</th>
 			{{foreach $cols as $c}}
-				<th>{{$c->descr}}</th>
+				<th {{if $c->tooltip}}title="{{$c->tooltip|htmlentities}}"{{/if}}>{{$c->descr|htmlentities}}</th>
 			{{/foreach}}
 		</tr>
 		<tr>
