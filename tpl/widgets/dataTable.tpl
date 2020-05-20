@@ -170,32 +170,14 @@
 				type:        'POST',
 				data:        prapareServerData,
 			},
-			processing:     true,
-			serverSide:     true,
-			//scrollCollapse: true,
-			// Can't set to false or search will be ignored
-			//bFilter:        false,
-			//stateSave:      true,
-			dom:            'lrtip<"dtbl-buttons-container">',
 
-			// Scroller extension
-			scroller:       true,
-			deferRender:    true,
-			scrollY:        '400px',
-			scrollX:        true,
-			autoWidth:      true,
+			{{foreach $initOpts as $k => $v}}
+				{{$k|json_encode}}: {{$v|json_encode}},
+			{{/foreach}}
 
-			"language": {
-				"url": "{{$config['dophp']['url']}}/webcontent/DataTables/Italian.json"
-			},
-
-			ordering: true,
 			// Default order
 			order: {{$order|json_encode}},
 
-			//colReorder: true,
-
-			autoWidth : true,
 			columns: [
 				// Buttons column
 				{

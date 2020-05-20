@@ -43,6 +43,7 @@ interface DataTableInterface {
 	 * @see self::_encodeData
 	 */
 	public function getData( array $pars=[], bool $save=true, bool $useSaved=false ): array;
+
 }
 
 /**
@@ -198,6 +199,9 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 	 */
 	public function __construct(\dophp\PageInterface $page) {
 		parent::__construct();
+
+		// Sets the default template
+		$this->_template = 'widgets/dataTable.tpl';
 
 		$this->_page = $page;
 		$this->_db = $page->db();
@@ -514,6 +518,37 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 		return $this->_page;
 	}
 
+	/*
+	 * Returns default JS options
+	 */
+	protected function _getHtmlInitOptions(): array {
+		return [
+			'processing' => true,
+			'serverSide' => true,
+			//scrollCollapse: true,
+			// Can't set to false or search will be ignored
+			//bFilter:        false,
+			//stateSave:      true,
+			'dom' => 'lrtip<"dtbl-buttons-container">',
+
+			// Scroller extension
+			'scroller'    => true,
+			'deferRender' => true,
+			'scrollY'     => '400px',
+			'scrollX'     => true,
+			'autoWidth'   => true,
+
+			'language' => [
+				'url' => "{{$this->_config['dophp']['url']}}/webcontent/DataTables/Italian.json",
+			],
+
+			'ordering' => true,
+			//colReorder: true,
+
+			'autoWidth' => true,
+		];
+	}
+
 	public function getHTMLStructure(): string {
 		// Sets this prop for smarty compatibility
 		$this->_name = $this->_page->name();
@@ -521,12 +556,10 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 
 		$this->_ajaxURL = \dophp\Url::getToStr($_GET);
 
-		// By default, use the generic "admin" template
-		$this->_template = 'widgets/dataTable.tpl';
-
 		$this->_smarty->assign('id', $this->_id);
 		$this->_smarty->assign('cols', $this->_cols);
 		$this->_smarty->assign('order', $this->_getSavedOrder(true) ?? $this->_getDefaultOrder(true));
+		$this->_smarty->assign('initOpts', $this->_getHtmlInitOptions());
 
 		$this->_smarty->assign("getColClass",$this->getColClass());
 		$this->_smarty->assign("monthYearList",$this->getMonthYearList());
@@ -598,7 +631,7 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 	 * @param $limit DatatableDataLimit
 	 * @return \dophp\Result
 	 */
-	abstract protected function _getRawDataInternal( DataTableDataFilter $filter, DatatableDataOrder $order, DatatableDataLimit $limit ): array;
+	abstract protected function _getRawDataInternal( DataTableDataFilter $filter=null, DatatableDataOrder $order=null, DatatableDataLimit $limit=null ): array;
 
 	public function getRawData( $pars=[], $save=false, $useSaved=false ): array {
 		// Parses the super filter
@@ -833,7 +866,7 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 			/** See: https://datatables.net/manual/server-side */
 			'draw' => ['int', []],
 			'start' => ['int', ['min'=>0]],
-			'length' => ['int', ['min'=>1]],
+			'length' => ['int', ['min'=>-1]], // -1 = all
 			'order' => ['array', [
 				0 => [ [ 'array', [
 					'column' => [ 'int', ['min'=>0, 'max'=>count($this->_cols)-1] ],
@@ -1803,13 +1836,13 @@ class DataTable extends BaseDataTable {
 		return [ $q, $where, $pars, $this->_groupBy ];
 	}
 
-	protected function _getRawDataInternal( DataTableDataFilter $filter, DatatableDataOrder $order, DatatableDataLimit $limit ): array {
+	protected function _getRawDataInternal( DataTableDataFilter $filter=null, DatatableDataOrder $order=null, DatatableDataLimit $limit=null ): array {
 		// Base query
 		list($q, $where, $p, $groupBy) = $this->_buildBaseQuery();
 		$having = [];
 
 		// Calculate filter having clause
-		if( ! $filter->empty() )
+		if( $filter && ! $filter->empty() )
 			$having[] = '( ' . implode(' AND ', $filter->get()) . ' )';
 
 		// Apply where clause
@@ -2009,7 +2042,7 @@ class StaticCachedQueryDataTable extends BaseDataTable {
 		return $content;
 	}
 
-	protected function _getRawDataInternal( DataTableDataFilter $filter, DatatableDataOrder $order, DatatableDataLimit $limit ): array {
+	protected function _getRawDataInternal( DataTableDataFilter $filter=null, DatatableDataOrder $order=null, DatatableDataLimit $limit=null ): array {
 		//TODO: support filter, order, limit
 		return $this->_retrieveContent()['data'];
 	}
@@ -2028,5 +2061,20 @@ class StaticCachedQueryDataTable extends BaseDataTable {
 	 */
 	protected function _count(): int {
 		return $this->_retrieveContent()['foundRows'];
+	}
+
+	protected function _getHtmlInitOptions(): array {
+		$opt = parent::_getHtmlInitOptions();
+
+		$opt['scroller'] = false;
+		$opt['deferRender'] = false;
+		unset($opt['scrollY']);
+		unset($opt['scrollX']);
+
+		$opt['ordering'] = false;
+		$opt['paging'] = false;
+		$opt['info'] = false;
+
+		return $opt;
 	}
 }
