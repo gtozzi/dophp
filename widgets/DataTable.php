@@ -2004,6 +2004,11 @@ class StaticCachedQueryDataTable extends BaseDataTable {
 	protected $_queryCacheExpireSecs = 60 * 5;
 
 	/**
+	 * Local variable used for basic caching
+	 */
+	private $__content = null;
+
+	/**
 	 * Constructs the table object
 	 *
 	 * @param $page PageInterface: the parent page
@@ -2028,14 +2033,18 @@ class StaticCachedQueryDataTable extends BaseDataTable {
 	 * @return array [ 'data': the query result, 'foundRows': total count of found rows, 'colTypes': column types data ]
 	 */
 	protected function _retrieveContent() {
+		// Try local cache first
+		if( $this->__content )
+			return $this->__content;
+
 		$cache = \DoPhp::cache();
 		$cacheKey = static::MEMCACHE_KEY_BASE . $this->getFairlyUniqueIdentifier() . "::content";
 
-		// Try cache first
+		// Then try cache
 		if( $cache ) {
-			$info = $cache->get($cacheKey);
-			if( $info )
-				return $info;
+			$this->__content = $cache->get($cacheKey);
+			if( $this->__content )
+				return $this->__content;
 		}
 
 		$trans = $this->_db->beginTransaction(true);
@@ -2058,16 +2067,16 @@ class StaticCachedQueryDataTable extends BaseDataTable {
 		if( $trans )
 			$this->_db->commit();
 
-		$content = [
+		$this->__content = [
 			'data' => $data,
 			'foundRows' => $count,
 			'colTypes' => $types,
 		];
 
 		if( $cache )
-			$cache->set($cacheKey, $content, 0, $this->_queryCacheExpireSecs);
+			$cache->set($cacheKey, $this->__content, 0, $this->_queryCacheExpireSecs);
 
-		return $content;
+		return $this->__content;
 	}
 
 	protected function _getRawDataInternal( DataTableDataFilter $filter=null, DatatableDataOrder $order=null, DatatableDataLimit $limit=null ): array {
