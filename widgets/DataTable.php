@@ -55,6 +55,9 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 	/** Special data key for buttons */
 	const BTN_KEY = '~btns~';
 
+	/** Special data key for identifying totals row */
+	const TOT_KEY = '~istotals~';
+
 	/** asc keyword for order */
 	const ORDER_ASC = 'asc';
 	/** desc keyword for order */
@@ -134,6 +137,9 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 
 	/** Tells whether elements in this table can be selected */
 	public $selectable = false;
+
+	/** Should add a totals row? */
+	public $addTotals = false;
 
 	/**
 	 * Provides the query for the cache freshness check default implementation
@@ -539,7 +545,7 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 			'autoWidth'   => true,
 
 			'language' => [
-				'url' => "{{$this->_config['dophp']['url']}}/webcontent/DataTables/Italian.json",
+				'url' => "{$this->_config['dophp']['url']}/webcontent/DataTables/Italian.json",
 			],
 
 			'ordering' => true,
@@ -569,10 +575,12 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 		$this->_smarty->assign('btns', $this->_btns);
 		$this->_smarty->assign('rbtns', $this->_rbtns);
 		$this->_smarty->assign('btnKey', static::BTN_KEY);
+		$this->_smarty->assign('totKey', static::TOT_KEY);
 		$this->_smarty->assign('action', '?'.\DoPhp::BASE_KEY."={$this->_name}");
 		$this->_smarty->assign('sfilter', $this->_sfilter);
 		$this->_smarty->assign('ajaxURL', $this->_ajaxURL);
 		$this->_smarty->assign('selectable', $this->selectable);
+		$this->_smarty->assign('addTotals', $this->addTotals);
 
 		return $this->_smarty->fetch($this->_template);
 	}
@@ -725,15 +733,33 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 		// Retrieve data
 		$data = $this->getRawData($pars, $save, $useSaved);
 
-		// Add buttons
+		if( $this->addTotals ) {
+			$totals = [];
+			foreach( $this->_cols as $k => $c )
+				$totals[$k] = null;
+
+			$totals[static::TOT_KEY] = true;
+			$totals['DT_RowClass'] = 'totals';
+		}
+
+		// Add buttons / calculate totals
 		foreach( $data as &$d ) {
 			$d[static::BTN_KEY] = [];
 
 			foreach( $this->_rbtns as $k => $btn )
 				if( $btn->showInRow($d) )
 					$d[static::BTN_KEY][] = $k;
+
+			if( $this->addTotals )
+				foreach( $d as $k => $v )
+					if( is_int($v) || is_float($v) )
+						$totals[$k] += $v;
 		}
 		unset($d);
+
+		// Add totals row
+		if( isset($totals) )
+			$data[] = $totals;
 
 		$found = $this->_db->foundRows();
 
@@ -1964,6 +1990,8 @@ class DataTable extends BaseDataTable {
  * A data table that uses a single static query and caches is
  */
 class StaticCachedQueryDataTable extends BaseDataTable {
+
+	public $addTotals = true;
 
 	/**
 	 * The full query. Returned cols must match col name

@@ -184,6 +184,13 @@
 					orderable: false,
 					data: '{{$btnKey}}',
 					render: function( data, type, row, meta ) {
+						if( ! type ) // Datatable requests unmodified data
+							return data;
+
+						// No buttons in total by now
+						if( row[{{$totKey|json_encode}}] )
+							return 'Tot';
+
 						html = ''
 						{{if $selectable}}
 							let cls = table.isRowSelected(table.row(row)) ? selClass : deselClass;
@@ -218,6 +225,9 @@
 						visible: {{$c->visible|json_encode}},
 						//width: "200px",
 						render: function( data, type, row, meta ) {
+							if( ! type ) // Datatable requests unmodified data
+								return data;
+
 							// Cast data to user-friendly type
 
 							if( data === null ) {
@@ -1118,4 +1128,5 @@
 			{{/foreach}}
 		</tr>
 	</thead>
+	<tbody></tbody>
 </table>
