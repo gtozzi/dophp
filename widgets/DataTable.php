@@ -58,6 +58,12 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 	/** Special data key for identifying totals row */
 	const TOT_KEY = '~istotals~';
 
+	// Special datatable consts, see: https://datatables.net/manual/server-side
+	const DT_ROWID_KEY = 'DT_RowId';
+	const DT_ROWCLASS_KEY = 'DT_RowClass';
+	const DT_ROWDATA_KEY = 'DT_RowData';
+	const DT_ROWATTR_KEY = 'DT_RowAttr';
+
 	/** asc keyword for order */
 	const ORDER_ASC = 'asc';
 	/** desc keyword for order */
@@ -189,6 +195,21 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 		$cls = $this->getClsId();
 		$colHash = sha1(serialize(array_keys($this->_cols)));
 		return "{$cls}_{$colHash}";
+	}
+
+	/**
+	 * Given a result, returns column type info
+	 */
+	protected function _extractColumnTypesFromRes(\dophp\Result $res): array {
+		$i = 0;
+		$types = [];
+		foreach( $this->_cols as $col ) {
+			$info = $res->getColumnInfo($i);
+			$types[$col->id] = $info->type;
+
+			$i++;
+		}
+		return $types;
 	}
 
 	/**
@@ -733,14 +754,8 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 		// Retrieve data
 		$data = $this->getRawData($pars, $save, $useSaved);
 
-		if( $this->addTotals ) {
-			$totals = [];
-			foreach( $this->_cols as $k => $c )
-				$totals[$k] = null;
-
-			$totals[static::TOT_KEY] = true;
-			$totals['DT_RowClass'] = 'totals';
-		}
+		if( $this->addTotals )
+			$totals = new DataTableTotalsUtil($this->_cols);
 
 		// Add buttons / calculate totals
 		foreach( $data as &$d ) {
@@ -751,15 +766,16 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 					$d[static::BTN_KEY][] = $k;
 
 			if( $this->addTotals )
-				foreach( $d as $k => $v )
-					if( is_int($v) || is_float($v) )
-						$totals[$k] += $v;
+				$totals->addRow($d);
 		}
 		unset($d);
 
 		// Add totals row
-		if( isset($totals) )
-			$data[] = $totals;
+		if( isset($totals) ) {
+			$totrow = $totals->get();
+			$totrow[DataTable::TOT_KEY] = true;
+			$data[] = $totrow;
+		}
 
 		$found = $this->_db->foundRows();
 
@@ -1735,6 +1751,34 @@ class DatatableDataOrder {
 
 
 /**
+ * Utility class for calculating totals
+ */
+class DataTableTotalsUtil {
+
+	/**
+	 * The totals row array
+	 */
+	protected $_totals = [];
+
+	public function __construct(array $cols) {
+		foreach( $cols as $k => $c )
+			$this->_totals[$k] = null;
+
+		$this->_totals[DataTable::DT_ROWCLASS_KEY] = 'totals';
+	}
+
+	public function addRow(array $row) {
+		foreach( $row as $k => $v )
+			if( is_int($v) || is_float($v) )
+				$this->_totals[$k] += $v;
+	}
+
+	public function get(): array {
+		return $this->_totals;
+	}
+}
+
+/**
  * The datatable limit
  */
 class DatatableDataLimit {
@@ -1928,14 +1972,7 @@ class DataTable extends BaseDataTable {
 			$q .= "\n LIMIT 0 \n";
 
 		$res = $this->_db->xrun($q);
-		$i = 0;
-		$types = [];
-		foreach( $this->_cols as $col ) {
-			$info = $res->getColumnInfo($i);
-			$types[$col->id] = $info->type;
-
-			$i++;
-		}
+		$types = $this->_extractColumnTypesFromRes($res);
 
 		if( $cache )
 			$cache->set($cacheKey, $types, 0, static::COLTYPES_CACHE_EXPIRE);
@@ -2028,6 +2065,19 @@ class StaticCachedQueryDataTable extends BaseDataTable {
 	}
 
 	/**
+	 * Internal function to run the query, may be overridden in child to run muliple queries
+	 *
+	 * @return array [ [data], [types] ]
+	 */
+	protected function _runQuery(): array {
+		$res = $this->_db->xrun($this->_query, $this->params, $this->_getColumnExplicitTypes());
+		$types = $this->_extractColumnTypesFromRes($res);
+		$data = $res->fetchAll();
+
+		return [ $data, $types ];
+	}
+
+	/**
 	 * Runs the query and updates the cache (if needed)
 	 *
 	 * @return array [ 'data': the query result, 'foundRows': total count of found rows, 'colTypes': column types data ]
@@ -2050,19 +2100,10 @@ class StaticCachedQueryDataTable extends BaseDataTable {
 		$trans = $this->_db->beginTransaction(true);
 
 		// TODO: access filter
-		$res = $this->_db->xrun($this->_query, $this->params, $this->_getColumnExplicitTypes());
-		$i = 0;
-		$types = [];
-		foreach( $this->_cols as $col ) {
-			$info = $res->getColumnInfo($i);
-			$types[$col->id] = $info->type;
-
-			$i++;
-		}
-		$data = $res->fetchAll();
+		list($data, $types) = $this->_runQuery();
 
 		// No hit in cache, run the query
-		$count = $this->_db->foundRows();
+		$count = count($data);
 
 		if( $trans )
 			$this->_db->commit();

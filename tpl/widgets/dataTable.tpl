@@ -230,6 +230,10 @@
 
 							// Cast data to user-friendly type
 
+							if( data === undefined ) {
+								// Server omitted the cell
+								return '';
+							}
 							if( data === null ) {
 								// Null is considered object in JS
 								return '-';
