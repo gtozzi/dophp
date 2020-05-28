@@ -1110,24 +1110,26 @@
 			<th style="width: 20px" class="data-table-filter"><a href="#" class="fa fa-columns" onclick="selectColumns('{{$id}}');return false;"></a></th>
 			{{foreach $cols as $c}}
 				<th class="data-table-filter">
-					<input
-						class="data-table-filter {{if $c->type == \dophp\Table::DATA_TYPE_DATE}}ag-dt-dtFilt{{/if}}"
-						type="text" placeholder="filtra - cerca" onkeyup="filterKeyUp(event);" onchange="filterChanged(this);"
-						data-timer="" data-coln="{{$c@index}}" data-type="{{$c->type|htmlentities}}"
-						{{if $c->type == \dophp\Table::DATA_TYPE_DATE}}
-							onfocus="filterShowDate(this);"
-							data-seltab=""
-							id="ag-dt-dtFilt-{{$c@index}}"
-						{{else}}
-							onfocus="wpHideDateWidget()"
-						{{/if}}
-						{{if $c->search}}
-							value="{{$c->search|htmlentities}}"
-							data-lastval="{{$c->search|htmlentities}}"
-						{{else}}
-							data-lastval=""
-						{{/if}}
-					/>
+					{{if $c->filter}}
+						<input
+							class="data-table-filter {{if $c->type == \dophp\Table::DATA_TYPE_DATE}}ag-dt-dtFilt{{/if}}"
+							type="text" placeholder="filtra - cerca" onkeyup="filterKeyUp(event);" onchange="filterChanged(this);"
+							data-timer="" data-coln="{{$c@index}}" data-type="{{$c->type|htmlentities}}"
+							{{if $c->type == \dophp\Table::DATA_TYPE_DATE}}
+								onfocus="filterShowDate(this);"
+								data-seltab=""
+								id="ag-dt-dtFilt-{{$c@index}}"
+							{{else}}
+								onfocus="wpHideDateWidget()"
+							{{/if}}
+							{{if $c->search}}
+								value="{{$c->search|htmlentities}}"
+								data-lastval="{{$c->search|htmlentities}}"
+							{{else}}
+								data-lastval=""
+							{{/if}}
+						/>
+					{{/if}}
 				</th>
 			{{/foreach}}
 		</tr>

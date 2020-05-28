@@ -1526,6 +1526,8 @@ class DataTableColumn extends DataTableBaseColumn {
 	public $format = null;
 	/** Whether this column is part of the PK */
 	public $pk = false;
+	/** Whether to allow filtering on this column */
+	public $filter = true;
 
 	/**
 	 * Creates the column definition
@@ -1544,6 +1546,7 @@ class DataTableColumn extends DataTableBaseColumn {
 	 *             - visible: Default visibility, boolean.
 	 *             - pk:    Tells if this column is part of the PK,
 	 *                      default: false
+	 *             - filter: enable/disable filtering on this column
 	 */
 	public function __construct(string $id, array $opt) {
 		parent::__construct($id);
@@ -1557,6 +1560,8 @@ class DataTableColumn extends DataTableBaseColumn {
 			$this->visible = (bool)$opt['visible'];
 		if( isset($opt['pk']) )
 			$this->pk = (bool)$opt['pk'];
+		if( isset($opt['filter']) )
+			$this->filter = (bool)$opt['filter'];
 		if( isset($opt['tooltip']) && $opt['tooltip'] )
 			$this->tooltip = $opt['tooltip'];
 	}
@@ -2056,6 +2061,11 @@ class StaticCachedQueryDataTable extends BaseDataTable {
 			throw new \Exception('Missing or invalid Query definition');
 
 		parent::__construct($page);
+
+		// Filters are not supported, so disable all of them
+		foreach( $this->_cols as &$c )
+			$c->filter = false;
+		unset($c);
 	}
 
 	public function getFairlyUniqueIdentifier(): string {
