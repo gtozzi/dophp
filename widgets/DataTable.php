@@ -670,6 +670,7 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 
 		// Calculate filter clause
 		$filter = [];
+		$filterArgs = [];
 		$saveFilter = [];
 		$idx = -1;
 		foreach( $this->_cols as $c ) {
@@ -712,11 +713,11 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 				}
 			} else {
 				$filter[] = "{$c->qname} LIKE :f$idx";
-				$p[":f$idx"] = "%$search%";
+				$filterArgs[":f$idx"] = "%$search%";
 			}
 
 		}
-		$filter = new DataTableDataFilter($filter);
+		$filter = new DataTableDataFilter($filter, $filterArgs);
 		// Save the search filter
 		if( $save )
 			$this->_saveSearchFilter($saveFilter);
@@ -1700,18 +1701,25 @@ class DataTableRowButton extends DataTableButton {
 class DataTableDataFilter {
 
 	protected $_filter;
+	protected $_args;
 
 	/**
 	 * Construct the filter
 	 *
 	 * @param $filter array: Array of SQL AND conditions
+	 * @param $args array: Associative array of arguments to bound
 	 */
-	public function __construct(array $filter = []) {
+	public function __construct(array $filter = [], array $args = []) {
 		$this->_filter = $filter;
+		$this->_args = $args;
 	}
 
-	public function get(): array {
+	public function getFilter(): array {
 		return $this->_filter;
+	}
+
+	public function getArgs(): array {
+		return $this->_args;
 	}
 
 	public function empty(): bool {
@@ -1917,8 +1925,10 @@ class DataTable extends BaseDataTable {
 		$having = [];
 
 		// Calculate filter having clause
-		if( $filter && ! $filter->empty() )
-			$having[] = '( ' . implode(' AND ', $filter->get()) . ' )';
+		if( $filter && ! $filter->empty() ) {
+			$having[] = '( ' . implode(' AND ', $filter->getFilter()) . ' )';
+			$p = array_merge($p, $filter->getArgs());
+		}
 
 		// Apply where clause
 		if( $where )
