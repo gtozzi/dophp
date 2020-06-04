@@ -247,6 +247,7 @@ class Url {
 						$key .= $n;
 					else
 						$key .= "[$n]";
+				$key .= "[$nn]";
 				$ret[] = urlencode($key) . '=' . urlencode($vv);
 			}
 		return $ret;
