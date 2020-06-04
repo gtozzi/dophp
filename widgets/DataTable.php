@@ -223,8 +223,9 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 	 * Constructs the table object
 	 *
 	 * @param $page PageInterface: the parent page
+	 * @param $params array: Default parameters (see $this->params)
 	 */
-	public function __construct(\dophp\PageInterface $page) {
+	public function __construct(\dophp\PageInterface $page, array $params = null) {
 		parent::__construct();
 
 		// Sets the default template
@@ -234,6 +235,9 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 		$this->_db = $page->db();
 		$this->_config = $page->config();
 		$this->_user = $page->user();
+
+		if( isset($params) )
+			$this->params = $params;
 
 		$this->_initProps();
 
@@ -276,7 +280,8 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 		unset($col);
 
 		// Retrieves column types for the query
-		$this->_earlyRetrieveType();
+		//TODO: double-check, why?
+		//$this->_earlyRetrieveType();
 
 		// Makes sure PK is valid
 		$this->_getPkName();
@@ -2080,7 +2085,7 @@ class StaticCachedQueryDataTable extends BaseDataTable {
 
 	public function getFairlyUniqueIdentifier(): string {
 		$cls = $this->getClsId();
-		$hash = sha1(serialize([array_keys($this->_cols), $this->_query]));
+		$hash = sha1(serialize([array_keys($this->_cols), $this->_query, $this->params]));
 		return "{$cls}_{$hash}";
 	}
 
