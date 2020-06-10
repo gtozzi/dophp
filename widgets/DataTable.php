@@ -722,6 +722,8 @@ class DataTable extends BaseWidget {
 				else{
 					$filter[] = " FALSE ";
 				}
+			} elseif ($search == '-') {
+				$filter[] = "{$c->qname} IS NULL";
 			} else {
 				$filter[] = "{$c->qname} LIKE :f$idx";
 				$p[":f$idx"] = "%$search%";
