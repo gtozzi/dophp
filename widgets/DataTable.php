@@ -859,7 +859,11 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 
 				if( $colCount === null )
 					$cc++;
-				$row[] = $v;
+
+				if( $v instanceof DataTableCell )
+					$row[] = $v->value;
+				else
+					$row[] = $v;
 			}
 			if( $colCount === null )
 				$colCount = $cc;
@@ -1697,6 +1701,49 @@ class DataTableRowButton extends DataTableButton {
 
 		return (bool)$this->show;
 	}
+}
+
+
+/**
+ * Advanced data container
+ */
+class DataTableCell implements \JsonSerializable {
+
+	public $value;
+	public $repr = null;
+	public $class = null;
+	public $href = null;
+
+	/**
+	 * Constructs the advanced value
+	 *
+	 * @param $value mixed: The real value
+	 * @param $repr string: The string representation (optional)
+	 * @param $class string: The data class (optional)
+	 * @param $href string: The url to link to (optional)
+	 */
+	public function __construct($value, string $repr = null, string $class = null, string $href = null) {
+		$this->value = $value;
+		$this->repr = $repr;
+		$this->class = $class;
+		$this->href = $href;
+	}
+
+	public function jsonSerialize() {
+		if( $this->repr === null && $this->class === null && $this->href === null )
+			return $this->value;
+
+		$ret = [ 'value' => $this->value ];
+		if( $this->repr !== null )
+			$ret['repr'] = $this->repr;
+		if( $this->class !== null )
+			$ret['class'] = $this->class;
+		if( $this->href !== null )
+			$ret['href'] = $this->href;
+
+		return $ret;
+	}
+
 }
 
 

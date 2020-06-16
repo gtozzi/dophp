@@ -66,22 +66,40 @@
 	/**
 	 * Parses an encoded object into a user-friendly string
 	 */
-	function getObjectRepr(data) {
-		if( typeof data === 'undefined' ) {
-			console.error('undefined', data);
+	function getValueRepr(value) {
+		switch( typeof value ) {
+		case 'string':
+			return value;
+		case 'boolean':
+			return value ? 'Sì' : 'No';
+		case 'number':
+			return value.toLocaleString();
+		case 'undefined':
 			return '[err:undefined]';
+		case 'object':
+			return '[err:object]';
+		default:
+			return '[err:n/i]';
 		}
+	}
 
-		if( typeof data == 'number' ) {
-			return data.toLocaleString();
-		}
-
+	function getObjectRepr(data) {
 		if( data.repr )
 			return data.repr;
 
-		// Unsupported object will be represented as [object]
-		console.error('norepr', data);
-		return '[err:norepr]';
+		let html = '';
+		if( data.href )
+			html += '<a href="' + data.href + '">';
+
+		if( data.value === undefined )
+			html += '[err:noval]';
+		else
+			html += getValueRepr(data.value);
+
+		if( data.href )
+			html += '</a>';
+
+		return html;
 	}
 
 	/**
@@ -248,6 +266,7 @@
 								return data ? 'Sì' : 'No';
 							case 'number':
 							case 'undefined':
+								return getValueRepr(data);
 							case 'object':
 								return getObjectRepr(data);
 							case 'currency':
