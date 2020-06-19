@@ -716,6 +716,8 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 				else{
 					$filter[] = " FALSE ";
 				}
+			} elseif ($search == '-') {
+				$filter[] = "{$c->qname} IS NULL";
 			} else {
 				$filter[] = "{$c->qname} LIKE :f$idx";
 				$filterArgs[":f$idx"] = "%$search%";

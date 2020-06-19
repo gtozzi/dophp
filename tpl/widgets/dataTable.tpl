@@ -658,23 +658,11 @@
 
 		// Convert search values
 		if( type == 'boolean' ) {
-			switch(val) {
-			case 'S':
-			case 'Si':
-			case 'Sì':
-			case 's':
-			case 'si':
-			case 'sì':
+			val = val.toLowerCase();
+			if (['s', 'si', 'sì', 'y', 'ye', 'yes'].includes(val))
 				val = '1';
-				break;
-
-			case 'N':
-			case 'No':
-			case 'n':
-			case 'no':
+			else if (['n', 'no'].includes(val))
 				val = '0';
-				break;
-			}
 		}
 
 		el.data('timer', '');
