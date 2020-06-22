@@ -1830,8 +1830,6 @@ class DataTableTotalsUtil {
 	public function __construct(array $cols) {
 		foreach( $cols as $k => $c )
 			$this->_totals[$k] = null;
-
-		$this->_totals[DataTable::DT_ROWCLASS_KEY] = 'totals';
 	}
 
 	public function addRow(array $row) {
@@ -1841,7 +1839,20 @@ class DataTableTotalsUtil {
 	}
 
 	public function get(): array {
-		return $this->_totals;
+		return array_merge($this->_totals, [
+			DataTable::DT_ROWCLASS_KEY => 'totals',
+		]);
+	}
+
+	/**
+	 * Returns true when all totals are zero
+	 */
+	public function allZero(): bool {
+		foreach( $this->_totals as $v )
+			if( $v )
+				return false;
+
+		return true;
 	}
 }
 
