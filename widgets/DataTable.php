@@ -175,12 +175,17 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 	/**
 	 * Get field types from the DBMS and set the field type for the Date type
 	 */
-	protected function _earlyRetrieveType() {
-		$types = $this->_getColumnTypeInfo();
+	protected function _fillMissingColumnTypeInfo() {
+		$types = null;
 
 		foreach( $this->_cols as $col )
-			if( ! isset($col->type) )
+			if( ! isset($col->type) ) {
+				// Only retrieve types when needed
+				if( $types === null )
+					$types = $this->_getColumnTypeInfo();
+
 				$col->type = $types[$col->id];
+			}
 	}
 
 	/**
@@ -279,9 +284,14 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 		}
 		unset($col);
 
-		// Retrieves column types for the query
-		//TODO: double-check, why?
-		//$this->_earlyRetrieveType();
+		// Early retrieve column type info for the filter to be built correctly
+		// only needed if at least one column has filter enabled and missing type
+		foreach( $this->_cols as $col )
+			if( $col->filter && ! isset($col->type) ) {
+				// Trigger retrieve for all columns, then break
+				$this->_fillMissingColumnTypeInfo();
+				break;
+			}
 
 		// Makes sure PK is valid
 		$this->_getPkName();
