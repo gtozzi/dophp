@@ -2145,12 +2145,12 @@ class StaticCachedQueryDataTable extends BaseDataTable {
 		if( ! isset($this->_query) || ! is_string($this->_query) )
 			throw new \Exception('Missing or invalid Query definition');
 
-		parent::__construct($page);
-
 		// Filters are not supported, so disable all of them
 		foreach( $this->_cols as &$c )
-			$c->filter = false;
+			$c['filter'] = false;
 		unset($c);
+
+		parent::__construct($page);
 	}
 
 	public function getFairlyUniqueIdentifier(): string {
