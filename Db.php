@@ -862,6 +862,7 @@ class Table {
 	const DATA_TYPE_DATE     = 'Date';
 	const DATA_TYPE_DATETIME = 'DateTime';
 	const DATA_TYPE_TIME     = 'Time';
+	const DATA_TYPE_JSON     = 'JSON';
 	const DATA_TYPE_NULL     = 'null'; // Rare always null columns
 
 	/** Database table name, may be overridden in sub-class or passed by constructor */
@@ -1245,6 +1246,8 @@ class Table {
 			return self::DATA_TYPE_DATETIME;
 		case 'TIME':
 			return self::DATA_TYPE_TIME;
+		case 'JSON':
+			return self::DATA_TYPE_JSON;
 		case 'NULL':
 			// Rare always-null columns
 			return self::DATA_TYPE_NULL;
@@ -1342,6 +1345,8 @@ class Table {
 			return new \DateTime($val);
 		case self::DATA_TYPE_TIME:
 			return new Time($val);
+		case self::DATA_TYPE_JSON:
+			return json_decode($val, true);
 		case self::DATA_TYPE_NULL:
 			throw new \LogicException('Value should have been null');
 		}
