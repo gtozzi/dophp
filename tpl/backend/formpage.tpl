@@ -164,9 +164,7 @@
 			}
 
 			function confirmDelete() {
-				{{$letter=($whatGender=='f')?'a':'o'}}
-				if( window.confirm('Confermi di voler eliminare definitivamente quest{{$letter}} '+{{$what|json_encode}}+'?'))
-				{
+				if( window.confirm({{$deleteConfirmMessage|json_encode}})) {
 					$.ajax({
 						url: {{$form->action()->asString()|json_encode}},
 						type: "DELETE",
@@ -200,13 +198,13 @@
 
 			$(".save-button").click(function() {
 				formModified = new Set();
-				$('#processingModalText').text({{$savemessage|json_encode}});
+				$('#processingModalText').text({{$saveMessage|json_encode}});
 				$('#processingModalProgress').removeClass('bg-warning');
 				$('#processingModal').modal('show')
 			});
 			$(".cancel-button").click(function() {
 				formModified = new Set();
-				$('#processingModalText').text({{$cancelmessage|json_encode}});
+				$('#processingModalText').text({{$cancelMessage|json_encode}});
 				$('#processingModalProgress').addClass('bg-warning');
 				$('#processingModal').modal('show')
 				window.location.reload();

@@ -31,7 +31,7 @@ class Url {
 	public $args = [];
 	/** The url fragment (anchor), after the hashmark # */
 	public $fragment;
-	
+
 
 	/**
 	 * Constructs the URL based on given partial URL and current one
@@ -247,6 +247,7 @@ class Url {
 						$key .= $n;
 					else
 						$key .= "[$n]";
+				$key .= "[$nn]";
 				$ret[] = urlencode($key) . '=' . urlencode($vv);
 			}
 		return $ret;

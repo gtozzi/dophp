@@ -6,8 +6,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: DoPhp\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-09-27 10:31+0200\n"
-"PO-Revision-Date: 2019-09-27 10:34+0200\n"
+"POT-Creation-Date: 2020-04-09 00:02+0200\n"
+"PO-Revision-Date: 2020-04-09 00:03+0200\n"
 "Last-Translator: Gabriele Tozzi <gabriele@tozzi.eu>\n"
 "Language-Team: Gabriele Tozzi <tozzi@despammed.com>\n"
 "Language: it\n"
@@ -15,19 +15,23 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
-"X-Generator: Poedit 2.2.1\n"
+"X-Generator: Poedit 2.2.4\n"
 "X-Poedit-SourceCharset: UTF-8\n"
 "X-Poedit-Basepath: ../../..\n"
 
-#: DoPhp.php:851
-msgid "Internal Server Error, please contact support or try again later"
-msgstr ""
-"Errore interno del server, per favore contatta il supporto o riprova più "
-"tardi"
+#: Alert.php:97
+msgid "Access denied"
+msgstr "Accesso negato"
 
 #: Model.php:579
 msgid "item is in use"
 msgstr "l'elemento è in uso"
+
+#: DoPhp.php:857
+msgid "Internal Server Error, please contact support or try again later"
+msgstr ""
+"Errore interno del server, per favore contatta il supporto o riprova più "
+"tardi"
 
 #: Utils.php:166
 msgid "Yes"
@@ -105,16 +109,12 @@ msgstr "Tipo file non supportato"
 msgid "Must be an array"
 msgstr "Deve essere un array"
 
-#: pages/base.php:199
-msgid "Invalid credentials"
-msgstr "Credenziali non valide"
-
 #: pages/crud.php:77 pages/crud.php:108 pages/crud.php:195
 msgid "Edit"
 msgstr "Modifica"
 
 #: pages/crud.php:78 pages/crud.php:142 pages/crud.php:163
-#: pages/backend.php:658
+#: pages/backend.php:732
 msgid "Insert"
 msgstr "Inserisci"
 
@@ -198,29 +198,37 @@ msgstr "Non posso cancellare"
 msgid "element(s)"
 msgstr "elemento/i"
 
-#: pages/backend.php:183
+#: pages/backend.php:197
 msgid "List"
 msgstr "Elenco"
 
-#: pages/backend.php:372
+#: pages/backend.php:392
 msgid "Saving"
 msgstr "Salvataggio"
 
-#: pages/backend.php:374
+#: pages/backend.php:395
 msgid "Canceling"
 msgstr "Annullamento"
 
-#: pages/backend.php:657
+#: pages/backend.php:721
+msgid "Missing required permissions"
+msgstr "Autorizzazioni non sufficienti"
+
+#: pages/backend.php:731
 msgid "(f)new"
 msgstr "nuova"
 
-#: pages/backend.php:657
+#: pages/backend.php:731
 msgid "(m)new"
 msgstr "nuovo"
 
-#: pages/backend.php:770
+#: pages/backend.php:844
 msgid "Delete succesful"
 msgstr "Cancellazione avvenuta"
+
+#: pages/base.php:199
+msgid "Invalid credentials"
+msgstr "Credenziali non valide"
 
 #: /tmp/dophp_tpl_strings.php:2
 msgid "Logout"

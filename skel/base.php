@@ -28,6 +28,7 @@ $config =  [
 			'uidcol' => 'user',
 			'sortcol' => 'sort_col',
 			'ordcol' => 'sort_ord',
+			'sfcol' => 'search_filter',
 		],
 	],
 	*/

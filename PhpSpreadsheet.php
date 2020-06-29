@@ -248,6 +248,41 @@ require_once __DIR__ . '/phpspreadsheet/Writer/Xlsx/Worksheet.php';
 
 
 /**
+ * Just like \PhpOffice\PhpSpreadsheet\Cell\AdvancedValueBinder, but supports DoPhp specific objects
+ */
+class DoPhpValueBinder extends \PhpOffice\PhpSpreadsheet\Cell\AdvancedValueBinder {
+
+	public function bindValue(\PhpOffice\PhpSpreadsheet\Cell\Cell $cell, $value = null) {
+
+		// Custom check for \dophp\Date and \DateTime
+		if( $value instanceof \dophp\Date ) {
+			$d = \PhpOffice\PhpSpreadsheet\Shared\Date::stringToExcel($value->format('Y-m-d'));
+			$cell->setValueExplicit($d, \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_NUMERIC);
+
+			$cell->getWorksheet()->getStyle($cell->getCoordinate())
+			->getNumberFormat()->setFormatCode('yyyy-mm-dd');
+
+			return true;
+		} elseif( $value instanceof \DateTime ) {
+			$d = \PhpOffice\PhpSpreadsheet\Shared\Date::stringToExcel($value->format('Y-m-d h:i:s'));
+			$cell->setValueExplicit($d, \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_NUMERIC);
+
+			$cell->getWorksheet()->getStyle($cell->getCoordinate())
+			->getNumberFormat()->setFormatCode('yyyy-mm-dd h:mm');
+
+			return true;
+		}
+
+		// Custom check for \dophp\Decimal
+		if( $value instanceof \dophp\Decimal )
+			return parent::bindValue($cell, $value->toDouble());
+
+		return parent::bindValue($cell, $value);
+	}
+}
+
+
+/**
  * Utility class for Spreadsheet creation
  */
 class Spreadsheet {
@@ -261,14 +296,19 @@ class Spreadsheet {
 	 * @param $heads array: Optional headers rows, Bidimensional array [ row, [ cell ] ]
 	 */
 	public static function fromArray(array $data, array $heads=[]): \PhpOffice\PhpSpreadsheet\Spreadsheet {
+
+		// Sets the advanced value binder, see
+		// https://phpspreadsheet.readthedocs.io/en/latest/topics/accessing-cells/#using-value-binders-to-facilitate-data-entry
+		\PhpOffice\PhpSpreadsheet\Cell\Cell::setValueBinder( new DoPhpValueBinder() );
+
 		$spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
 		$sheet = $spreadsheet->getActiveSheet();
 
-		for($row = 1; $row < count($heads) + count($data); $row++) {
+		for($row = 1; $row <= count($heads) + count($data); $row++) {
 			if( $row <= count($heads) ) {
 				$outrow = $heads[$row - 1];
 				$header = true;
-			} else { 
+			} else {
 				$outrow = $data[$row - count($heads) - 1];
 				$header = false;
 			}
@@ -289,7 +329,6 @@ class Spreadsheet {
 			if( $row % 1000 == 0 )
 				set_time_limit(30);
 		}
-
 		return $spreadsheet;
 	}
 
@@ -305,7 +344,9 @@ class Spreadsheet {
 		set_time_limit(60 * 5);
 
 		$tmpfile = tempnam( sys_get_temp_dir(), 'dophp_spreadsheet_' );
+		Lang::pushLocale(LC_NUMERIC);
 		$writer->save($tmpfile);
+		Lang::popLocale();
 
 		$output = file_get_contents($tmpfile);
 
