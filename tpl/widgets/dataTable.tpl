@@ -66,22 +66,40 @@
 	/**
 	 * Parses an encoded object into a user-friendly string
 	 */
-	function getObjectRepr(data) {
-		if( typeof data === 'undefined' ) {
-			console.error('undefined', data);
+	function getValueRepr(value) {
+		switch( typeof value ) {
+		case 'string':
+			return value;
+		case 'boolean':
+			return value ? 'Sì' : 'No';
+		case 'number':
+			return value.toLocaleString();
+		case 'undefined':
 			return '[err:undefined]';
+		case 'object':
+			return '[err:object]';
+		default:
+			return '[err:n/i]';
 		}
+	}
 
-		if( typeof data == 'number' ) {
-			return data.toLocaleString();
-		}
-
+	function getObjectRepr(data) {
 		if( data.repr )
 			return data.repr;
 
-		// Unsupported object will be represented as [object]
-		console.error('norepr', data);
-		return '[err:norepr]';
+		let html = '';
+		if( data.href )
+			html += '<a href="' + data.href + '">';
+
+		if( data.value === undefined )
+			html += '[err:noval]';
+		else
+			html += getValueRepr(data.value);
+
+		if( data.href )
+			html += '</a>';
+
+		return html;
 	}
 
 	/**
@@ -170,38 +188,27 @@
 				type:        'POST',
 				data:        prapareServerData,
 			},
-			processing:     true,
-			serverSide:     true,
-			//scrollCollapse: true,
-			// Can't set to false or search will be ignored
-			//bFilter:        false,
-			//stateSave:      true,
-			dom:            'lrtip<"dtbl-buttons-container">',
 
-			// Scroller extension
-			scroller:       true,
-			deferRender:    true,
-			scrollY:        'calc( 100vh - 300px )',
-			scrollX:        true,
-			autoWidth:      true,
+			{{foreach $initOpts as $k => $v}}
+				{{$k|json_encode}}: {{$v|json_encode}},
+			{{/foreach}}
 
-			"language": {
-				"url": "{{$config['dophp']['url']}}/webcontent/DataTables/Italian.json"
-			},
-
-			ordering: true,
 			// Default order
 			order: {{$order|json_encode}},
 
-			//colReorder: true,
-
-			autoWidth : true,
 			columns: [
 				// Buttons column
 				{
 					orderable: false,
 					data: '{{$btnKey}}',
 					render: function( data, type, row, meta ) {
+						if( ! type ) // Datatable requests unmodified data
+							return data;
+
+						// No buttons in total by now
+						if( row[{{$totKey|json_encode}}] )
+							return 'Tot';
+
 						html = ''
 						{{if $selectable}}
 							let cls = table.isRowSelected(table.row(row)) ? selClass : deselClass;
@@ -236,8 +243,15 @@
 						visible: {{$c->visible|json_encode}},
 						//width: "200px",
 						render: function( data, type, row, meta ) {
+							if( ! type ) // Datatable requests unmodified data
+								return data;
+
 							// Cast data to user-friendly type
 
+							if( data === undefined ) {
+								// Server omitted the cell
+								return '';
+							}
 							if( data === null ) {
 								// Null is considered object in JS
 								return '-';
@@ -252,6 +266,7 @@
 								return data ? 'Sì' : 'No';
 							case 'number':
 							case 'undefined':
+								return getValueRepr(data);
 							case 'object':
 								return getObjectRepr(data);
 							case 'currency':
@@ -301,9 +316,21 @@
 
 		table.on( 'draw', function(){
 			$(".dtbl-buttons-container").html(
-				'<a class="dtbl-buttons-itm" href="{{$ajaxURL|htmlentities}}&amp;export=xlsx">'
+				'<a id="data-table-export-url" class="dtbl-buttons-itm">'
 				+ '<span class="fa fa-file-excel-o"></span> Esporta</a>');
+
+			updateDataTableExportUrl();
 		} );
+
+		// change opacity for table body while processing data
+		table.on('processing.dt', function (e, settings, processing) {
+			let tableID=table.tables().nodes().to$().attr('id');
+			if (processing) {
+				$("#"+tableID+"_wrapper .dataTables_scroll tbody").css("opacity","0.2");
+			} else {
+				$("#"+tableID+"_wrapper .dataTables_scroll tbody").css("opacity","1");
+			}
+		});
 
 		// Custom selection handling
 		table.selectedItems = new Set();
@@ -605,23 +632,55 @@
 	}
 
 	/**
+	 * Updates the export url when filter is changed
+	 */
+	function updateDataTableExportUrl() {
+		// Read the filter and put it in the $_GET url
+		let filters = {};
+		$('input.data-table-filter').each(function() {
+			let el = $(this);
+			let coln = el.data('coln');
+			let val = encodeURIComponent(el.val());
+			if( coln && val )
+				filters[coln] = val;;
+		});
+		let filterargs = '';
+		for( let coln in filters ) {
+			let val = filters[coln];
+			filterargs += `&columns[${coln}][search][value]=${val}`;
+		}
+
+		let href = {{$ajaxURL|json_encode}} + '&export=xlsx' + filterargs;
+		$('#data-table-export-url').attr('href', href);
+	}
+
+	/**
 	 * Called when it is time to update the filter
 	 */
 	function updateFilter(input, val) {
 
 		let el = $(input);
 		let coln = el.data('coln');
+		let type = el.data('type');
 
 		if(coln == undefined)
 			return;
 
+		// Convert search values
+		if( type == 'boolean' ) {
+			val = val.toLowerCase();
+			if (['s', 'si', 'sì', 'y', 'ye', 'yes'].includes(val))
+				val = '1';
+			else if (['n', 'no'].includes(val))
+				val = '0';
+		}
+
 		el.data('timer', '');
-		console.log("filtering...");
+		console.log("filtering...", val);
 
 		console.log('Applying new filter for col', coln, val);
 
 		table.column(coln).search(val).draw();
-
 	}
 
 	/**
@@ -1061,29 +1120,36 @@
 				{{/foreach}}
 			</th>
 			{{foreach $cols as $c}}
-				<th>{{$c->descr}}</th>
+				<th {{if $c->tooltip}}title="{{$c->tooltip|htmlentities}}"{{/if}}>{{$c->descr|htmlentities}}</th>
 			{{/foreach}}
 		</tr>
 		<tr>
 			<th style="width: 20px" class="data-table-filter"><a href="#" class="fa fa-columns" onclick="selectColumns('{{$id}}');return false;"></a></th>
 			{{foreach $cols as $c}}
 				<th class="data-table-filter">
-					<input class="data-table-filter {{if $c->type==$customDateFilt}}ag-dt-dtFilt{{/if}}"
-						type="text" placeholder="filtra - cerca" onkeyup="filterKeyUp(event);" onchange="filterChanged(this);"
-						data-lastval="" data-timer="" data-coln="{{$c@index}}"
-						{{if $c->type==$customDateFilt}}
-							onfocus="filterShowDate(this);"
-							data-seltab=""
-							id="ag-dt-dtFilt-{{$c@index}}"
-						{{else}}
-							onfocus="wpHideDateWidget()"
-						{{/if}}
-						{{if $c->search}}
-							value="{{$c->search|htmlentities}}"
-						{{/if}}
-					/>
+					{{if $c->filter}}
+						<input
+							class="data-table-filter {{if $c->type == \dophp\Table::DATA_TYPE_DATE}}ag-dt-dtFilt{{/if}}"
+							type="text" placeholder="filtra - cerca" onkeyup="filterKeyUp(event);" onchange="filterChanged(this);"
+							data-timer="" data-coln="{{$c@index}}" data-type="{{$c->type|htmlentities}}"
+							{{if $c->type == \dophp\Table::DATA_TYPE_DATE}}
+								onfocus="filterShowDate(this);"
+								data-seltab=""
+								id="ag-dt-dtFilt-{{$c@index}}"
+							{{else}}
+								onfocus="wpHideDateWidget()"
+							{{/if}}
+							{{if $c->search}}
+								value="{{$c->search|htmlentities}}"
+								data-lastval="{{$c->search|htmlentities}}"
+							{{else}}
+								data-lastval=""
+							{{/if}}
+						/>
+					{{/if}}
 				</th>
 			{{/foreach}}
 		</tr>
 	</thead>
+	<tbody></tbody>
 </table>
