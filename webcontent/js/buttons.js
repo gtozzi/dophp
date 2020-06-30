@@ -9,6 +9,7 @@
 function dophpPostButton(element) {
 	let btn = $(element);
 	let url = btn.data('url');
+	let confirm = btn.data('confirm');
 	let newtab = Boolean(btn.data('newtab'));
 	let post = btn.data('post');
 
@@ -16,6 +17,9 @@ function dophpPostButton(element) {
 		window.alert('Software error: missing URL');
 		return;
 	}
+
+	if( confirm && ! window.confirm(confirm) )
+		return;
 
 	let form = $('<form method="POST">');
 	form.attr('action', url);
@@ -36,12 +40,16 @@ $(document).ready(function() {
 	$('.btnc-linkbutton').click(function() {
 		let btn = $(this);
 		let url = btn.data('url');
+		let confirm = btn.data('confirm');
 		let newtab = Boolean(btn.data('newtab'));
 
 		if (! url) {
 			window.alert('Software error: missing URL');
 			return;
 		}
+
+		if( confirm && ! window.confirm(confirm) )
+			return;
 
 		if (newtab)
 			window.open(url, '_blank');

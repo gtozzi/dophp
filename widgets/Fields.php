@@ -67,6 +67,12 @@ interface Field extends FormWidget {
 	/** Gets the current validation feedback message */
 	public function getVFeedback();
 
+	/** Sets the validation status */
+	public function setVStatus(int $status);
+
+	/** Sets the validation feedback message */
+	public function setVFeedback(string $message);
+
 	/** Tells whether this field has valid data */
 	public function isValid(): bool;
 
@@ -231,6 +237,14 @@ abstract class BaseField extends BaseFormWidget implements Field {
 		return $this->_vfeedback;
 	}
 
+	public function setVStatus(int $status) {
+		$this->_vstatus = $status;
+	}
+
+	public function setVFeedback(string $message) {
+		$this->_vfeedback = $message;
+	}
+
 	public function isValid(): bool {
 		switch( $this->_vstatus ) {
 		case Field::V_SUCCESS:
@@ -288,6 +302,19 @@ class HiddenField extends BaseField {
 
 	public function __construct($name, array $namespace = []) {
 		parent::__construct($name, $namespace);
+	}
+}
+
+
+/**
+ * A simple non-editable label
+ */
+class LabelField extends BaseField {
+
+	protected $_type = 'label';
+
+	public function __construct($name, array $namespace = [], array $opts = []) {
+		parent::__construct($name, $namespace, $opts['label'] ?? null);
 	}
 }
 
@@ -372,8 +399,8 @@ class TextField extends InputField {
 
 	protected function _getValidationOptions(): array {
 		$vo = parent::_getValidationOptions();
-		if( $this->_maxlen )
-			$vo['length'] = [0,$this->_maxlen];
+		if( $this->_maxlen && ! isset($vo['len']) )
+			$vo['len'] = [0, $this->_maxlen];
 		return $vo;
 	}
 }
@@ -421,8 +448,8 @@ class DateField extends TextField {
 
 	protected function _getValidationOptions(): array {
 		$vo = parent::_getValidationOptions();
-		if( isset($vo['length']) )
-			unset($vo['length']);
+		if( isset($vo['len']) )
+			unset($vo['len']);
 		return $vo;
 	}
 
@@ -446,8 +473,8 @@ class TimeField extends TextField {
 
 	protected function _getValidationOptions(): array {
 		$vo = parent::_getValidationOptions();
-		if( isset($vo['length']) )
-			unset($vo['length']);
+		if( isset($vo['len']) )
+			unset($vo['len']);
 		return $vo;
 	}
 
@@ -1382,11 +1409,25 @@ class TableField extends BaseField {
 		foreach( $this->_cols as $k => $o ) {
 			if( $k == self::ID_KEY )
 				continue;
-			$cols[$this->_name . ".\${idx}.$k"] = $o;
+			$cols[$this->_fieldTplName($k)] = $o;
 		}
 		$this->_tpl = new Form($cols, $this->_namespace);
 
 		$this->_iv = [];
+	}
+
+	/**
+	 * Returns name of the key column
+	 */
+	public function key(): string {
+		return self::ID_KEY;
+	}
+
+	/**
+	 * Returns field template name form single field name
+	 */
+	protected function _fieldTplName(string $name) {
+		return $this->_name . ".\${idx}.$name";
 	}
 
 	public function format($value) {
@@ -1425,7 +1466,7 @@ class TableField extends BaseField {
 				$data[$fname] = $rowData[$x];
 			}
 
-			$row = new Form($cols, $this->_namespace);
+			$row = new Form($cols, $this->_namespace, $this->getForm() ? $this->getForm()->action() : null);
 			$row->setInternalValues($data);
 			$this->_iv[$k] = $row;
 		}
@@ -1443,4 +1484,34 @@ class TableField extends BaseField {
 		return $this->_tpl->fields();
 	}
 
+	/**
+	 * Returns table headers
+	 *
+	 * @return array associative array of table headers
+	 */
+	public function getHeaders(): array {
+		$heads = [];
+
+		foreach( $this->_cols as $k => $o ) {
+			if( $k == self::ID_KEY )
+				continue;
+
+			$heads[$k] = $this->_tpl->field($this->_fieldTplName($k))->getLabel();
+		}
+
+		return $heads;
+	}
+
+	/**
+	 * Returns list of child fields
+	 *
+	 * @return array associative array name => field
+	 */
+	public function childs(): array {
+		$ret = [];
+		foreach( $this->_iv as $form )
+			foreach( $form->fields() as $name => $field )
+				$ret[$name] = $field;
+		return $ret;
+	}
 }

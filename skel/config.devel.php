@@ -22,4 +22,10 @@ $config = array_merge($config, [
 	'debug' => true,
 	'strict' => true,
 	'testserver' => true,
+	/*
+	'dophp' => [
+		//'url' => 'lib/dophp',
+		//'path' => ,
+	],
+	*/
 ]);

@@ -31,7 +31,7 @@ class Url {
 	public $args = [];
 	/** The url fragment (anchor), after the hashmark # */
 	public $fragment;
-	
+
 
 	/**
 	 * Constructs the URL based on given partial URL and current one
@@ -163,7 +163,7 @@ class Url {
 		if( ! isset($url['scheme']) )
 			$url['scheme'] = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS']=='on' ? 'https' : 'http';
 		if( ! isset($url['host']) ) {
-			$url['host'] = isset($_SERVER['HTTP_X_FORWARDED_HOST']) ? $_SERVER['HTTP_X_FORWARDED_HOST'] : isset($_SERVER['HTTP_HOST'])?$_SERVER['HTTP_HOST']:$_SERVER['SERVER_NAME'];
+			$url['host'] = isset($_SERVER['HTTP_X_FORWARDED_HOST']) ? $_SERVER['HTTP_X_FORWARDED_HOST'] : (isset($_SERVER['HTTP_HOST'])?$_SERVER['HTTP_HOST']:$_SERVER['SERVER_NAME']);
 			$url['host'] = explode(':', $url['host']);
 			$url['host'] = $url['host'][0];
 		}
@@ -247,6 +247,7 @@ class Url {
 						$key .= $n;
 					else
 						$key .= "[$n]";
+				$key .= "[$nn]";
 				$ret[] = urlencode($key) . '=' . urlencode($vv);
 			}
 		return $ret;

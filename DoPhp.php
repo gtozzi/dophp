@@ -25,6 +25,7 @@ require_once(__DIR__ . '/Buttons.php');
 require_once(__DIR__ . '/Widgets.php');
 require_once(__DIR__ . '/Model.php');
 require_once(__DIR__ . '/smarty/libs/Smarty.class.php');
+require_once(__DIR__ . '/PhpSpreadsheet.php');
 
 
 /**

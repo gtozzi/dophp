@@ -1,6 +1,6 @@
 {{$currow=null}}
 {{foreach $container->fields() as $f}}
-	{{if $ungroupedOnly && $f->getGroup()}}
+	{{if isset($ungroupedOnly) && $ungroupedOnly && $f->getGroup()}}
 		{{continue}}
 	{{/if}}
 

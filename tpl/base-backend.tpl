@@ -88,7 +88,7 @@
 		<script src="{{$config['dophp']['url']}}/webcontent/js/form.js"></script>
 		<script src="{{$config['dophp']['url']}}/webcontent/js/buttons.js"></script>
 
-		<!-- DoPhp font -->		
+		<!-- DoPhp font -->
 		<link rel="stylesheet" type="text/css" href="{{$config['dophp']['url']}}/webcontent/css/mgmt-glyph.css"/>
 	{{/block}}
 
@@ -125,7 +125,7 @@
 							{{if isset($menu) && $user->getUid()}}
 								{{foreach $menu->getChilds() as $m}}
 									{{$childs=$m->getChilds()}}
-									<li class="nav-item {{if $childs}}dropdown{{/if}} {{if $m->isActive()}}active{{/if}} ag-mmexp-targ">
+									<li class="nav-item {{if $childs}}dropdown{{/if}} {{if $m->isActive()}}active{{/if}} ag-mmexp-targ nowrap">
 										<a
 										class="nav-link {{if $childs}}dropdown-toggle{{else}}menu-link{{/if}}"
 											href="{{$m->getUrl()}}"
@@ -136,21 +136,27 @@
 											aria-haspopup="true"
 											aria-expanded="false"
 										{{/if}}
-									>
+										>
 										{{if $m->getIcon()}}<span class="fa {{$m->getIcon()}}"></span>{{/if}}
 										{{$m->getLabel()|htmlentities}}
 										</a>
 										{{if $childs}}
-											<div class="dropdown-menu" aria-labelledby="{{$m->getId()|htmlentities}}_a">
-												{{foreach $childs as $c}}
-													{{if $c->getUrl() || $c->getLabel()}}
-														<a class="dropdown-item menu-link" href="{{$c->getUrl()}}"
-															data-label={{$m->getLabel()|json_encode}}
-														>{{$c->getLabel()|htmlentities}}</a>
-													{{else}}
-														<div class="dropdown-divider"></div>
-													{{/if}}
-												{{/foreach}}
+											<div class="dropdown-menu {{if $childs|@count > 10}}multi-column columns-{{if $childs|@count > 20}}3{{else}}2{{/if}}{{/if}}" aria-labelledby="{{$m->getId()|htmlentities}}_a">
+												{{if $childs|@count > 10}}<div class="row">{{/if}}
+													{{assign var="contatore_item" value=0}}
+													{{foreach $childs as $c}}
+														{{assign var="contatore_item" value=$contatore_item+1}}
+														{{if $childs|@count > 10 && $childs|@count < 21 && ($contatore_item == 1 || $contatore_item == 11)}}<div class="col-sm-6">{{elseif $childs|@count > 20 && ($contatore_item == 1 || $contatore_item == 11 || $contatore_item == 21)}}<div class="col-sm-4">{{/if}}
+														{{if $c->getUrl() || $c->getLabel()}}
+															<a class="dropdown-item menu-link" href="{{$c->getUrl()}}"
+																data-label={{$m->getLabel()|json_encode}}
+															>{{$c->getLabel()|htmlentities}}</a>
+														{{else}}
+															<div class="dropdown-divider"></div>
+														{{/if}}
+														{{if $childs|@count > 10 && ($contatore_item == 10 || $contatore_item == 20 || $contatore_item == 30)}}</div>{{/if}}
+													{{/foreach}}
+												{{if $childs|@count > 10}}</div>{{/if}}
 											</div>
 										{{/if}}
 									</li>
