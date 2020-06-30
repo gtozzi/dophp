@@ -67,6 +67,12 @@ interface Field extends FormWidget {
 	/** Gets the current validation feedback message */
 	public function getVFeedback();
 
+	/** Sets the validation status */
+	public function setVStatus(int $status);
+
+	/** Sets the validation feedback message */
+	public function setVFeedback(string $message);
+
 	/** Tells whether this field has valid data */
 	public function isValid(): bool;
 
@@ -231,6 +237,14 @@ abstract class BaseField extends BaseFormWidget implements Field {
 		return $this->_vfeedback;
 	}
 
+	public function setVStatus(int $status) {
+		$this->_vstatus = $status;
+	}
+
+	public function setVFeedback(string $message) {
+		$this->_vfeedback = $message;
+	}
+
 	public function isValid(): bool {
 		switch( $this->_vstatus ) {
 		case Field::V_SUCCESS:
@@ -385,8 +399,8 @@ class TextField extends InputField {
 
 	protected function _getValidationOptions(): array {
 		$vo = parent::_getValidationOptions();
-		if( $this->_maxlen )
-			$vo['length'] = [0,$this->_maxlen];
+		if( $this->_maxlen && ! isset($vo['len']) )
+			$vo['len'] = [0, $this->_maxlen];
 		return $vo;
 	}
 }
@@ -434,8 +448,8 @@ class DateField extends TextField {
 
 	protected function _getValidationOptions(): array {
 		$vo = parent::_getValidationOptions();
-		if( isset($vo['length']) )
-			unset($vo['length']);
+		if( isset($vo['len']) )
+			unset($vo['len']);
 		return $vo;
 	}
 
@@ -459,8 +473,8 @@ class TimeField extends TextField {
 
 	protected function _getValidationOptions(): array {
 		$vo = parent::_getValidationOptions();
-		if( isset($vo['length']) )
-			unset($vo['length']);
+		if( isset($vo['len']) )
+			unset($vo['len']);
 		return $vo;
 	}
 

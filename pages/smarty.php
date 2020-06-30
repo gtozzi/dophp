@@ -90,7 +90,7 @@ trait SmartyFunctionalities {
 
 		// Init default template name
 		$base_file = basename($_SERVER['PHP_SELF'], '.php');
-		if( isset($this->_name) )
+		if( ! isset($this->_template) && isset($this->_name) )
 			$this->_template = "$base_file.{$this->_name}.tpl";
 	}
 
@@ -133,6 +133,12 @@ trait SmartyFunctionalities {
 		die(var_dump($var));
 	}
 
+	/**
+	 * Sets a new template path
+	 */
+	public function setTemplate(string $path) {
+		$this->_template = $path;
+	}
 }
 
 

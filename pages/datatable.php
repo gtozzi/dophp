@@ -11,7 +11,7 @@ class DataTableMethod extends \dophp\HybridRpcMethod {
 	/** The data table */
 	protected $_table;
 
-	public function setTable(\dophp\widgets\DataTable $table) {
+	public function setTable(\dophp\widgets\DataTableInterface $table) {
 		$this->_table = $table;
 	}
 

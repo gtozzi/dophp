@@ -291,7 +291,7 @@ class Lang {
 	*/
 	public function newText($text) {
 		$id = $this->_idxTable->insert(array($this->_idxTable->getPk()[0] => null));
-		
+
 		foreach( $text as $lang => $txt ) {
 			$par = array_combine($this->_txtTable->getPk(), array($id,$lang));
 			$par[self::TEXT_COL] = $txt;
