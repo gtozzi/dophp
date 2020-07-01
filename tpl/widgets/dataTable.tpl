@@ -637,12 +637,16 @@
 	function updateDataTableExportUrl() {
 		// Read the filter and put it in the $_GET url
 		let filters = {};
+		let iter = 1;
+		let nFilters = $('input.data-table-filter').length
 		$('input.data-table-filter').each(function() {
+			if (iter > nFilters/2)
+				return false;
 			let el = $(this);
 			let coln = el.data('coln');
 			let val = encodeURIComponent(el.val());
-			if( coln && val )
-				filters[coln] = val;;
+			if( coln && val)
+				filters[coln] = val;
 		});
 		let filterargs = '';
 		for( let coln in filters ) {
