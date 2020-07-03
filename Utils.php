@@ -9,6 +9,7 @@
 
 namespace dophp;
 
+use ZipArchive;
 
 require_once 'Exceptions.php';
 
@@ -17,6 +18,43 @@ class Utils {
 
 	/** Formatted version of NULL, for internal usage */
 	const NULL_FMT = '-';
+
+	/** Octet Stream MIME Type */
+	const MIME_OCTET_STREAM = 'application/octet-stream';
+
+	/** Proper DOCX MIME Type */
+	const MIME_DOCX = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+
+	/**
+	* Given a file by its path, it retrieves the MIME content type using the
+	* default php mime_content_type(). The latter however could return
+	* self::MIME_OCTET_STREAM in case of a .docx file path is passed. This gets
+	* fixed by opening the file as a zip archive and checking if it contains
+	* all the required stuff for having a MIME type such as self:MIME_DOCX and
+	* in that case, it returns it.
+	*
+	* @param  $filePath string: Path of the file
+	* @return string: The file's MIME type
+	*/
+	public static function mime_content_type(string $filePath) : string {
+		$mime = mime_content_type($filePath);
+		if ( $mime != self::MIME_OCTET_STREAM)
+			return $mime;
+
+		$zip = new ZipArchive();
+		if ( $zip->open($filePath) !== true )
+			return $mime;
+		$foundFolder = false;
+		$foundFile = false;
+		for ( $i = 0; $i < $zip->numFiles && ( ! $foundFolder || ! $foundFile ); $i++) {
+			$elementName = $zip->getNameIndex($i);
+			if ( substr($elementName, 0, 5) === 'word/' )
+				$foundFolder = true;
+			elseif ( $elementName === '[Content_Types].xml' )
+				$foundFile = true;
+		}
+		return $foundFolder && $foundFile ? self::MIME_DOCX : $mime;
+	}
 
 	/** Default ports used for URL protocols */
 	public static $DEFAULT_PORTS = array(
