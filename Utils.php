@@ -9,8 +9,6 @@
 
 namespace dophp;
 
-use ZipArchive;
-
 require_once 'Exceptions.php';
 
 
@@ -41,7 +39,7 @@ class Utils {
 		if ( $mime != self::MIME_OCTET_STREAM)
 			return $mime;
 
-		$zip = new ZipArchive();
+		$zip = new \ZipArchive();
 		if ( $zip->open($filePath) !== true )
 			return $mime;
 		$foundFolder = false;
