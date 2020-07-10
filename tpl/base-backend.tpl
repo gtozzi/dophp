@@ -133,7 +133,7 @@
 
 	{{block name='head'}}{{/block}}
 </head>
-<body {{if isset($config['testserver']) && $config['testserver']}}class="bframe-cont"{{/if}}>
+<body {{if isset($config['testserver']) && $config['testserver']}}style="border: 22px solid red;"{{/if}}>
 {{block name='body'}}
 
 	{{if isset($config['testserver']) && $config['testserver']}}
