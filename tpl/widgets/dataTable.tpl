@@ -655,39 +655,7 @@
 		}
 
 		let href = {{$ajaxURL|json_encode}} + '&export=xlsx' + filterargs;
-		$('th.data-table-buthead > a[title="Valida"]').attr('href', 'javascript:validateServices()');// '?do=validazione.next' + filterargs);
 		$('#data-table-export-url').attr('href', href);
-	}
-
-	function validateServices() {
-		let msg = 'Sei sicuro di voler aggiungere tutti i servizi mostrati nella tabella alla coda di validazione?';
-		if( ! window.confirm(msg) )
-			return;
-		let filters = {};
-		let iter = 1;
-		let nFilters = $('input.data-table-filter').length
-		$('input.data-table-filter').each(function() {
-			if (iter > nFilters/2)
-				return false;
-			let el = $(this);
-			let coln = el.data('coln');
-			let val = encodeURIComponent(el.val());
-			if( coln && val)
-				filters[coln] = val;
-		});
-		let filterargs = {};
-		for( let coln in filters ) {
-			let val = filters[coln];
-			filterargs[coln] = val;
-		}
-		$.ajax({
-			type: "POST",
-			url: "?do=validazione.next",
-			data: filterargs,
-			success: function() {
-				alert("Lista di servizi aggiunta alla coda personale.");
-			}
-		});
 	}
 
 	/**
