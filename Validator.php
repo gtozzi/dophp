@@ -192,7 +192,7 @@ abstract class base_validator implements field_validator {
 				return $err;
 		}
 		if( isset($o['choices']) && ! in_array($v, $o['choices']) )
-			return _('Field must be one of') . ' "' . implode($o['choices'],',') . '".';
+			return _('Field must be one of') . ' "' . implode(',',$o['choices']) . '".';
 
 		// Perform specific validation tasks
 		$err = $this->do_validate($v, $o);

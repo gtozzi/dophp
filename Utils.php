@@ -9,7 +9,6 @@
 
 namespace dophp;
 
-
 require_once 'Exceptions.php';
 
 
@@ -17,6 +16,43 @@ class Utils {
 
 	/** Formatted version of NULL, for internal usage */
 	const NULL_FMT = '-';
+
+	/** Octet Stream MIME Type */
+	const MIME_OCTET_STREAM = 'application/octet-stream';
+
+	/** Proper DOCX MIME Type */
+	const MIME_DOCX = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+
+	/**
+	* Given a file by its path, it retrieves the MIME content type using the
+	* default php mime_content_type(). The latter however could return
+	* self::MIME_OCTET_STREAM in case of a .docx file path is passed. This gets
+	* fixed by opening the file as a zip archive and checking if it contains
+	* all the required stuff for having a MIME type such as self:MIME_DOCX and
+	* in that case, it returns it.
+	*
+	* @param  $filePath string: Path of the file
+	* @return string: The file's MIME type
+	*/
+	public static function mime_content_type(string $filePath) : string {
+		$mime = mime_content_type($filePath);
+		if ( $mime != self::MIME_OCTET_STREAM)
+			return $mime;
+
+		$zip = new \ZipArchive();
+		if ( $zip->open($filePath) !== true )
+			return $mime;
+		$foundFolder = false;
+		$foundFile = false;
+		for ( $i = 0; $i < $zip->numFiles && ( ! $foundFolder || ! $foundFile ); $i++) {
+			$elementName = $zip->getNameIndex($i);
+			if ( substr($elementName, 0, 5) === 'word/' )
+				$foundFolder = true;
+			elseif ( $elementName === '[Content_Types].xml' )
+				$foundFile = true;
+		}
+		return $foundFolder && $foundFile ? self::MIME_DOCX : $mime;
+	}
 
 	/** Default ports used for URL protocols */
 	public static $DEFAULT_PORTS = array(
@@ -182,12 +218,12 @@ class Utils {
 			return self::NULL_FMT;
 
 		$err =
-			'<h3>' . htmlentities(get_class($exception)) . "</h3>\n" .
-			'<p>&quot;' . htmlentities($exception->getCode()) . '.' . htmlentities($exception->getMessage()) . "&quot;</p>\n" .
+			'<h3>' . self::strAsHTML(get_class($exception)) . "</h3>\n" .
+			'<p>&quot;' . self::strAsHTML($exception->getCode()) . '.' . self::strAsHTML($exception->getMessage()) . "&quot;</p>\n" .
 			'<ul>' .
-			'<li><b>File:</b> ' . htmlentities($exception->getFile()) . "</li>\n" .
-			'<li><b>Line:</b> ' . htmlentities($exception->getLine()) . "</li>\n" .
-			'<li><b>Trace:</b> ' . nl2br(htmlentities($exception->getTraceAsString())) . "</li>";
+			'<li><b>File:</b> ' . self::strAsHTML($exception->getFile()) . "</li>\n" .
+			'<li><b>Line:</b> ' . self::strAsHTML($exception->getLine()) . "</li>\n" .
+			'<li><b>Trace:</b> ' . self::strAsHTML($exception->getTraceAsString()) . "</li>";
 
 		// Add extra useful information
 		try {
@@ -198,8 +234,8 @@ class Utils {
 
 		if( $db && ( $exception instanceof \PDOException
 				|| $exception instanceof \dophp\StatementExecuteError ) ) {
-			$err .= "\n<li><b>Last Query:</b> " . $db->lastQuery . "</li>\n" .
-				'<li><b>Last Params:</b> ' . nl2br(print_r($db->lastParams,true)) . "</li>\n";
+			$err .= "\n<li><b>Last Query:</b> " . self::strAsHTML($db->lastQuery) . "</li>\n" .
+				'<li><b>Last Params:</b> ' . self::strAsHTML(print_r($db->lastParams,true)) . "</li>\n";
 		}
 
 		$err .= '</ul>';
@@ -632,5 +668,14 @@ class Utils {
 		}
 
 		return $memory_limit / 1024 ** 2;
+	}
+
+	/**
+	 * Convert a raw text string into its HTML representation
+	 */
+	public static function strAsHTML(string $str): string {
+		$str = nl2br(htmlentities($str));
+		$str = str_replace("\t", '&emsp;', $str);
+		return $str;
 	}
 }

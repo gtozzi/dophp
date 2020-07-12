@@ -83,6 +83,11 @@ abstract class TablePage extends \dophp\HybridRpcMethod {
 	use BackendComponent;
 	use \dophp\SmartyFunctionalities;
 
+	// Possible sub-actions
+	const ACTION_JSON = 'json';
+	const ACTION_XLSX = 'xlsx';
+	const ACTION_HTML = 'html';
+
 	protected $_compress = -1;
 
 	/** The data query, must be overridden in the child
@@ -108,7 +113,7 @@ abstract class TablePage extends \dophp\HybridRpcMethod {
 	 * Inits the table object, by default inits a new _tableClass instance,
 	 * may be overridden
 	 */
-	protected function _initTable(): \dophp\widgets\DataTable {
+	protected function _initTable(): \dophp\widgets\DataTableInterface {
 		if( ! isset($this->_tableClass) )
 			throw new \Exception('Missing Table class');
 		return new $this->_tableClass($this);
@@ -124,6 +129,14 @@ abstract class TablePage extends \dophp\HybridRpcMethod {
 	 * Inits the menu (when interactive), may be overridden in child
 	 */
 	protected function _initMenu() {
+	}
+
+	/**
+	 * Called before running the action, may be overridden in child
+	 *
+	 * @param $action string: See ACTION_ consts
+	 */
+	protected function _beforeAction(string $action) {
 	}
 
 	/**
@@ -147,10 +160,22 @@ abstract class TablePage extends \dophp\HybridRpcMethod {
 			break;
 		}
 
-		if( \dophp\Utils::isAcceptedEncoding('application/json') ) {
-			// Returning JSON data
+		if( \dophp\Utils::isAcceptedEncoding('application/json') )
+			$action = self::ACTION_JSON;
+		elseif( isset($_GET['export']) )
+			$action = self::ACTION_XLSX;
+		else
+			$action = self::ACTION_HTML;
+
+		$this->_beforeAction($action);
+
+		switch( $action ) {
+		case self::ACTION_JSON:
+			// Return JSON data
 			return parent::run();
-		} elseif( isset($_GET['export']) ) {
+
+		case self::ACTION_XLSX:
+			// Return XLSX export
 			if( $_GET['export'] != 'xlsx' )
 				throw new \dophp\PageError('Only xlsx export is supported');
 
@@ -166,7 +191,9 @@ abstract class TablePage extends \dophp\HybridRpcMethod {
 			$this->_headers = array_merge($this->_headers, $fh);
 
 			return $data;
-		} else {
+
+		case self::ACTION_HTML:
+			// Return HTML page
 			$this->_headers['Content-type'] = 'text/html';
 
 			// Returning HTML page
@@ -178,6 +205,9 @@ abstract class TablePage extends \dophp\HybridRpcMethod {
 
 			// Run smarty
 			return $this->_compress($this->_smarty->fetch($this->_template));
+
+		default:
+			throw new \dophp\NotImplementedException("Invalid action $action");
 		}
 	}
 
