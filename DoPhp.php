@@ -363,20 +363,24 @@ class DoPhp {
 			$origin = $reqHeads['Origin'];
 			$preflight = $_SERVER['REQUEST_METHOD'] == 'OPTIONS';
 
-			// Set the Access-Control-Allow-Origin header
-			$oh = null;
-			if( $this->__conf['cors']['origins'] == '*' )
-				$oh = $origin;
-			else {
-				header('Vary: Origin');
-				foreach( $this->__conf['cors']['origins'] as $o )
-					if( $o == $origin ) {
-						$oh = $o;
-						break;
-					}
+			// Sanity check on the header, just to be extra-sure
+			// Origin: <scheme> "://" <hostname> [ ":" <port> ]
+			if( preg_match('/^http(s)?:\/\/[a-zA-Z0-9-.]+(:[0-9]{1,5})?$/', $origin) ) {
+				// Set the Access-Control-Allow-Origin header
+				$oh = null;
+				if( $this->__conf['cors']['origins'] == '*' )
+					$oh = $origin;
+				else {
+					header('Vary: Origin');
+					foreach( $this->__conf['cors']['origins'] as $o )
+						if( $o == $origin ) {
+							$oh = $o;
+							break;
+						}
+				}
+				if( $oh )
+					header("Access-Control-Allow-Origin: $oh");
 			}
-			if( $oh )
-				header("Access-Control-Allow-Origin: $oh");
 
 			// Set the Access-Control-Request-Headers header
 			$hh = null;
