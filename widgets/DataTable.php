@@ -1640,7 +1640,11 @@ class DataTableButton {
 		}
 
 		$this->_params = $params;
-		$this->_params['base'] = $this->_table->getPage()->getBase();
+
+		//TODO: this should probably implemented with an interface or injected
+		//      at runtime by a parent class
+		if( method_exists($this->_table->getPage(), 'getBase') )
+			$this->_params['base'] = $this->_table->getPage()->getBase();
 	}
 
 	/**
