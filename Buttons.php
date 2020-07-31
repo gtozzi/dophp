@@ -57,7 +57,7 @@ class ButtonBar {
 		if( ! array_key_exists($id, $this->_buttons) ) {
 			if( $ignoreMissing )
 				return false;
-			throw new \Exception("Trying to remove missing button \"$id\"");
+			throw new \UnexpectedValueException("Trying to remove missing button \"$id\"");
 		}
 
 		unset( $this->_buttons[$id] );
