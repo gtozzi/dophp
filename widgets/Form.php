@@ -136,11 +136,11 @@ class Form extends BaseWidget {
 	 */
 	public function addField(Field $field, string $groupName = null): Field {
 		if( array_key_exists($field->getName(), $this->_fields) )
-			throw new \Exception('Duplicate field ' . $field->getName());
+			throw new \UnexpectedValueException('Duplicate field ' . $field->getName());
 		if( $field->getForm() )
-			throw new \Exception('Field ' . $field->getName() . ' already has a form');
+			throw new \UnexpectedValueException('Field ' . $field->getName() . ' already has a form');
 		if( $groupName && ! array_key_exists($groupName, $this->_fieldGroups) )
-			throw new \Exception("Unknown group $groupName");
+			throw new \UnexpectedValueException("Unknown group $groupName");
 
 		$this->_fields[$field->getName()] = $field;
 		$field->setForm($this);
@@ -167,7 +167,7 @@ class Form extends BaseWidget {
 			$group = $this->_defaultFieldGroup;
 
 		if( ! isset($def['type']) )
-			throw new \Exception("Missing field type for field \"$name\"");
+			throw new \UnexpectedValueException("Missing field type for field \"$name\"");
 
 		$cn = ucfirst($def['type']);
 		$cls = '\\widgets\\' . $cn . 'Field';
@@ -185,9 +185,9 @@ class Form extends BaseWidget {
 	 */
 	public function addFieldGroup(FieldGroup $fieldGroup) {
 		if( array_key_exists($fieldGroup->getName(), $this->_fieldGroups) )
-			throw new \Exception('Duplicate field group ' . $fieldGroup->getName());
+			throw new \UnexpectedValueException('Duplicate field group ' . $fieldGroup->getName());
 		if( $fieldGroup->getForm() )
-			throw new \Exception('Field group ' . $fieldGroup->getName() . ' already has a form');
+			throw new \UnexpectedValueException('Field group ' . $fieldGroup->getName() . ' already has a form');
 
 		$this->_fieldGroups[$fieldGroup->getName()] = $fieldGroup;
 		$fieldGroup->setForm($this);
@@ -204,7 +204,7 @@ class Form extends BaseWidget {
 			if( $missingOk )
 				return;
 			else
-				throw new \Exception("Missing field group $name");
+				throw new \UnexpectedValueException("Missing field group $name");
 
 		$fg = $this->_fieldGroups[$name];
 		foreach( $fg->fields() as $field )
@@ -228,7 +228,7 @@ class Form extends BaseWidget {
 			}
 
 			if( ! is_array($f) )
-				throw new \Exception("Invalid field \"$name\" definition");
+				throw new \UnexpectedValueException("Invalid field \"$name\" definition");
 
 			$this->addFieldFromArray($name, $f);
 		}
@@ -249,7 +249,7 @@ class Form extends BaseWidget {
 			}
 
 			if( ! is_array($fg) )
-				throw new \Exception("Invalid field group \"$name\" definition");
+				throw new \UnexpectedValueException("Invalid field group \"$name\" definition");
 
 			if( isset($fg['default']) ) {
 				$default = (bool)$fg['default'];
@@ -296,7 +296,7 @@ class Form extends BaseWidget {
 	 */
 	public function field(string $name): Field {
 		if( ! isset($this->_fields[$name] ) )
-			throw new \Exception("Field \"$name\" not found");
+			throw new \UnexpectedValueException("Field \"$name\" not found");
 		return $this->_fields[$name];
 	}
 

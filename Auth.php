@@ -328,7 +328,7 @@ class AuthSign extends AuthBase {
 		if( ! $user || ! $sign || ! $pwd )
 			return null;
 
-		$countersign = sha1($user . self::SEP . $pwd . self::SEP . $data);
+		$countersign = hash('sha512', $user . self::SEP . $pwd . self::SEP . $data);
 		if( $sign !== $countersign )
 			return null;
 
