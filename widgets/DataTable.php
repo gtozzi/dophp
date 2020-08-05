@@ -1658,7 +1658,8 @@ class DataTableButton {
 		$replaces = [];
 		foreach( array_merge($this->_table->params, $this->_params) as $name => $val ) {
 			$searches[] = static::PARAM_START . $name . static::PARAM_END;
-			$replaces[] = $val;
+			// TODO: Proper conversion to machine format?
+			$replaces[] = \dophp\Utils::format($val);
 		}
 		return str_replace($searches, $replaces, $this->url);
 	}
