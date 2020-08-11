@@ -35,11 +35,11 @@ class Imager {
 		$this->_cacheFolder = $cacheFolder;
 		if( ! is_dir($this->_imgFolder) ) {
 			header("HTTP/1.1 500 Internal Server Error");
-			throw new \Exception('Unvalid image folder');
+			throw new \LogicException('Invalid image folder');
 		}
 		if( ! is_dir($this->_cacheFolder) ) {
 			header("HTTP/1.1 500 Internal Server Error");
-			throw new \Exception('Unvalid cache folder');
+			throw new \LogicException('Invalid cache folder');
 		}
 	}
 
@@ -55,7 +55,7 @@ class Imager {
 	public function process(& $get) {
 		if( ! isset($get['name']) ) {
 			header("HTTP/1.1 400 Bad Request");
-			throw new \Exception('Missing image name');
+			throw new \LogicException('Missing image name');
 		}
 		$this->_imgName = $get['name'];
 		if( substr($this->_imgName, 0, strlen($this->_imgFolder)) == $this->_imgFolder)
@@ -63,11 +63,11 @@ class Imager {
 		$path = $this->_imgFolder . '/' . $this->_imgName;
 		if( ! is_file($path) ) {
 			header("HTTP/1.1 404 Not Found");
-			throw new \Exception('Image not found');
+			throw new \UnexpectedValueException('Image not found');
 		}
 		if( strpos(realpath($path), realpath($this->_imgFolder)) !== 0 ) {
 			header("HTTP/1.1 403 Forbidden");
-			throw new \Exception('Image is out of authorized path');
+			throw new \UnexpectedValueException('Image is out of authorized path');
 		}
 
 		// Check if image is cached, if yes, does nothing
@@ -85,11 +85,11 @@ class Imager {
 			break;
 		default:
 			header("HTTP/1.1 415 Unsupported Media Type");
-			throw new \Exception("Unsupported image type {$finfo['mime']}");
+			throw new \dophp\NotImplementedException("Unsupported image type {$finfo['mime']}");
 		}
 		if( ! $img ) {
 			header("HTTP/1.1 500 Internal Server Error");
-			throw new \Exception('Error loading image');
+			throw new \RuntimeException('Error loading image');
 		}
 
 		// Parses parameters
@@ -119,11 +119,11 @@ class Imager {
 				$col = imagecolorallocatealpha($img, $c[0], $c[1], $c[2], $c[3]);
 				if( $col === false ) {
 					header("HTTP/1.1 500 Internal Server Error");
-					throw new \Exception("Color ($c[0],$c[1],$c[2],$c[3]) allocation failed");
+					throw new \RuntimeException("Color ($c[0],$c[1],$c[2],$c[3]) allocation failed");
 				}
 				if( ! imagefilledrectangle($img, $x1, $y, $x2, $y+1, $col) ) {
 					header("HTTP/1.1 500 Internal Server Error");
-					throw new \Exception('Fill failed');
+					throw new \RuntimeException('Fill failed');
 				}
 			}
 		}
@@ -135,7 +135,7 @@ class Imager {
 			return;
 		default:
 			header("HTTP/1.1 415 Unsupported Media Type");
-			throw new \Exception("Unsupported image type {$finfo['mime']}");
+			throw new \dophp\NotImplementedException("Unsupported image type {$finfo['mime']}");
 		}
 	}
 
@@ -157,7 +157,7 @@ class Imager {
 		$exp = explode(',', $value);
 		if( count($exp) != count($names) ) {
 			header("HTTP/1.1 400 Bad Request");
-			throw new \Exception('Unvalid param count (' . count($exp) . '/' . count($names) . ')');
+			throw new \InvalidArgumentException('Invalid param count (' . count($exp) . '/' . count($names) . ')');
 		}
 
 		return array_combine($names, $exp);
@@ -181,7 +181,7 @@ class Imager {
 		$hex = strtolower($hex);
 		if( strlen($hex) != 8 ) {
 			header("HTTP/1.1 400 Bad Request");
-			throw new \Exception('Unvalid color');
+			throw new \UnexpectedValueException('Invalid color');
 		}
 		$ret = array_map(hexdec, str_split($hex, 2));
 		$ret[3] = floor($ret[3] / 2);
@@ -193,7 +193,7 @@ class Imager {
 	*/
 	protected function _getCachePath() {
 		if( ! $this->_imgName )
-			throw new \Exception('Must process() first');
+			throw new \LogicException('Must process() first');
 		$pinfo = pathinfo($this->_imgName);
 		$fname = $this->_sanitize($pinfo['filename']);
 		$query = array();
