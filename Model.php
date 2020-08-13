@@ -90,15 +90,15 @@ abstract class Model {
 			$this->_filter = new NullAccessFilter();
 		elseif( gettype($this->_filter) == 'object' ) {
 			if( ! $this->_filter instanceof AccessFilterInterface )
-				throw new \Exception('Unvalid filter class');
+				throw new \InvalidArgumentException('Invalid filter class');
 		} elseif( ! is_array($this->_filter) )
-			throw new \Exception('Unvalid filter format');
+			throw new \UnexpectedValueException('Invalid filter format');
 		else
 			$this->_filter = new SimpleAccessFilter($this->_filter);
 
 		// Clean and validate the fields array
 		if( ! $this->_fields || ! is_array($this->_fields) )
-			throw new \Exception('Unvalid fields');
+			throw new \InvalidArgumentException('Invalid fields');
 		foreach( $this->_fields as $f => & $d )
 			if( ! $d instanceof FieldDefinition )
 				if( is_array($d) ) {
@@ -106,7 +106,7 @@ abstract class Model {
 						$d['name'] = $f;
 					$d = new FieldDefinition($d);
 				} else {
-					throw new \Exception('Every field must be array or FieldDefinition');
+					throw new \InvalidArgumentException('Every field must be array or FieldDefinition');
 				}
 		unset($d);
 	}
@@ -119,7 +119,7 @@ abstract class Model {
 	* @see $_fields
 	*/
 	protected function initFields() {
-		throw new \Exception('Unimplemented');
+		throw new \dophp\NotImplementedException('Unimplemented');
 	}
 
 	/**
@@ -131,7 +131,7 @@ abstract class Model {
 	* @see $_names
 	*/
 	protected function initNames() {
-		throw new \Exception('Unimplemented');
+		throw new \dophp\NotImplementedException('Unimplemented');
 	}
 
 	/**
@@ -278,7 +278,7 @@ abstract class Model {
 			$related = array();
 			if( ! $errors ) {
 				if( ! $this->isAllowed($data, true) )
-					throw new \Exception('Saving forbidden data');
+					throw new \RuntimeException('Saving forbidden data');
 
 				foreach( $this->_fields as $k => $f ) {
 
@@ -335,7 +335,7 @@ abstract class Model {
 					unset($v);
 					$pk = $this->_table->insert($data);
 				} else
-					throw new \Exception('This should never happen');
+					throw new \LogicException('This should never happen');
 
 				// Update related data, if needed
 				foreach( $related as $k => $v ) {
@@ -417,7 +417,7 @@ abstract class Model {
 					}
 
 			if( ! $this->isAllowed($record, true) )
-				throw new \Exception('Loading forbidden data');
+				throw new \RuntimeException('Loading forbidden data');
 		}
 
 		// Build fields array
@@ -456,14 +456,14 @@ abstract class Model {
 	*/
 	public function read($pk) {
 		if( ! $pk )
-			throw new \Exception('Unvalid or missing pk');
+			throw new \UnexpectedValueException('Unvalid or missing pk');
 
 		list($data, $count) = $this->__readData('view', new Where($this->_table->parsePkArgs($pk)));
 
 		if( ! $data )
-			throw new \Exception('Loading forbidden data');
+			throw new \RuntimeException('Loading forbidden data');
 		if( count($data) != 1 )
-			throw new \Exception('Received too many data rows: ' . count($data) . '/' . $count);
+			throw new \RuntimeException('Received too many data rows: ' . count($data) . '/' . $count);
 
 		return array_shift($data);
 	}
@@ -492,9 +492,9 @@ abstract class Model {
 	*/
 	private function __readData($action, Where $pk=null) {
 		if( $action != 'admin' && $action != 'view' )
-			throw new \Exception("Unvalid action $action");
+			throw new \UnexpectedValueException("Invalid action $action");
 		if( $action == 'view' && ! $pk )
-			throw new \Exception("Must provide a PK for view action");
+			throw new \UnexpectedValueException("Must provide a PK for view action");
 
 		// Init variables
 		$cols = array();
@@ -562,7 +562,7 @@ abstract class Model {
 	*/
 	public function delete($pk) {
 		if( ! $pk )
-			throw new \Exception('Unvalid or missing pk');
+			throw new \UnexpectedValueException('Unvalid or missing pk');
 
 		$this->_db->beginTransaction();
 
@@ -610,7 +610,7 @@ abstract class Model {
 				$data = $f->ropts['data'];
 			else {
 				if( ! isset($f->ropts['refer']) )
-					throw New \Exception("Need refer or data for $k field");
+					throw New \UnexpectedValueException("Need refer or data for $k field");
 				$rmodel = \DoPhp::model($f->ropts['refer']['model']);
 				$data = $rmodel->summary($f->ropts['refer']['filter'], $f->ropts['refer']['summary']);
 				if( isset($f->ropts['group']) )
@@ -679,7 +679,7 @@ abstract class Model {
 	*/
 	private function __analyzeRelation($field) {
 		if( ! isset($field->ropts['refer']) )
-			throw new \Exception('Can\'t analize an unspecified relation');
+			throw new \UnexpectedValueException('Can\'t analize an unspecified relation');
 
 		// Use caching to avoid multiple long queries
 		if( isset($this->__relsCache[$field->name]) )
@@ -690,11 +690,11 @@ abstract class Model {
 		$nm = new Table($this->_db, $field->nmtab);
 		$npk = $this->_table->getPk();
 		if( count($npk) != 1 )
-			throw new \Exception('Unsupported composed or missing PK');
+			throw new \dophp\NotImplementedException('Unsupported composed or missing PK');
 		$npk = $npk[0];
 		$mpk = $refer->getTable()->getPk();
 		if( count($mpk) != 1 )
-			throw new \Exception('Unsupported composed or missing PK');
+			throw new \dophp\NotImplementedException('Unsupported composed or missing PK');
 		$mpk = $mpk[0];
 		$ncol = null; // Name of the column referring my table in n:m
 		$mcol = null; // Name of the column referring other table in n:m
@@ -709,15 +709,15 @@ abstract class Model {
 		}
 
 		if( ! $ncol || ! $mcol )
-			throw new \Exception('Couldn\'t find relations on n:m table ' . $nm->getName() . ' referred by ' . $refer->getTable()->getName());
+			throw new \RuntimeException('Couldn\'t find relations on n:m table ' . $nm->getName() . ' referred by ' . $refer->getTable()->getName());
 		$nmpk = $nm->getPk();
 		if( count($nmpk) < 2 )
-			throw new \Exception('m:m table must have a composite PK');
+			throw new \RuntimeException('m:m table must have a composite PK');
 		elseif( count($nmpk) != 2 )
-			throw new \Exception('Unsupported PK in n:m table');
+			throw new \dophp\NotImplementedException('Unsupported PK in n:m table');
 
 		if( array_search($ncol, $nmpk) === false || array_search($mcol, $nmpk) === false )
-			throw new \Exception('Couldn\'t find columns in relation');
+			throw new \RuntimeException('Couldn\'t find columns in relation');
 
 		$this->__relsCache[$field->name] = array(
 			'refer' => $refer,
@@ -746,7 +746,7 @@ abstract class Model {
 
 		foreach( $pk as $k )
 			if( ! isset($row[$k]) )
-				throw new \Exception("PK Column $k is not part of row");
+				throw new \UnexpectedValueException("PK Column $k is not part of row");
 
 		if( count($pk) < 2 )
 			return (string)$row[$pk[0]];
@@ -809,7 +809,7 @@ abstract class Model {
 
 		if( $pk ) {
 			if( count($ret) > 1 )
-				throw new \Exception('More than one row returned when filtering by PK');
+				throw new \RuntimeException('More than one row returned when filtering by PK');
 			return array_shift($ret);
 		}
 		return $ret;
@@ -881,7 +881,7 @@ abstract class Model {
 	* @return Mixed: the value to store in the database
 	*/
 	protected function _saveFile($name, $data) {
-		throw new \Exception('saveFile not implemented');
+		throw new \dophp\NotImplementedException('saveFile not implemented');
 	}
 
 	/**
@@ -1083,7 +1083,7 @@ class FieldDefinition {
 	public function __construct($array) {
 		foreach( $array as $k => $v ) {
 			if( ! property_exists($this, $k) )
-				throw new \Exception("Unknown property $k");
+				throw new \UnexpectedValueException("Unknown property $k");
 			$this->$k = $v;
 		}
 
@@ -1101,13 +1101,13 @@ class FieldDefinition {
 
 		// Perform some sanity checks
 		if( $this->name === null && $this->rtype !== null )
-			throw new \Exception('Fields without a name cannot be rendered');
+			throw new \UnexpectedValueException('Fields without a name cannot be rendered');
 		if( ($this->rtype=='select' || $this->rtype=='auto') && ! (isset($this->ropts['refer']['model']) || array_key_exists('data',$this->ropts)) )
-			throw new \Exception('Missing referred model or data for select or auto field');
+			throw new \UnexpectedValueException('Missing referred model or data for select or auto field');
 		if( array_key_exists('data',$this->ropts) && ! is_array($this->ropts['data']) )
-			throw new \Exception('Unvalid referred data');
+			throw new \UnexpectedValueException('Unvalid referred data');
 		if( array_key_exists('data',$this->ropts) && array_key_exists('refer',$this->ropts) )
-			throw new \Exception('"refer" and "data" options are mutually exclusive');
+			throw new \UnexpectedValueException('"refer" and "data" options are mutually exclusive');
 	}
 
 	/**
@@ -1255,7 +1255,7 @@ class RenderedField extends Field {
 	*/
 	public function __construct(& $row, FieldDefinition $def) {
 		if( ! isset($def->ropts['func']) || ! is_callable($def->ropts['func']) )
-			throw new \Exception('RenderedField must have a callable "func" option');
+			throw new \UnexpectedValueException('RenderedField must have a callable "func" option');
 
 		$func = & $def->ropts['func'];
 		parent::__construct($func($row), $def);

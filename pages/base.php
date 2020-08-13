@@ -279,7 +279,7 @@ abstract class PageBase {
 		$this->_jsonSerialize($res);
 		$encoded = json_encode($res, $opts);
 		if( $encoded === false )
-			throw new \Exception(json_last_error_msg(), json_last_error());
+			throw new \UnexpectedValueException(json_last_error_msg(), json_last_error());
 		return $encoded;
 	}
 }

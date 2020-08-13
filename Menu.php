@@ -127,7 +127,7 @@ class Menu implements MenuInterface {
 		if( $item === null )
 			return $this->_createChild(array());
 		if( ! is_array($item) )
-			throw new \Exception('Unvalid item data');
+			throw new \InvalidArgumentException('Invalid item data');
 
 		$el = $this->_createChild($item);
 

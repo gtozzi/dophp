@@ -363,20 +363,24 @@ class DoPhp {
 			$origin = $reqHeads['Origin'];
 			$preflight = $_SERVER['REQUEST_METHOD'] == 'OPTIONS';
 
-			// Set the Access-Control-Allow-Origin header
-			$oh = null;
-			if( $this->__conf['cors']['origins'] == '*' )
-				$oh = $origin;
-			else {
-				header('Vary: Origin');
-				foreach( $this->__conf['cors']['origins'] as $o )
-					if( $o == $origin ) {
-						$oh = $o;
-						break;
-					}
+			// Sanity check on the header, just to be extra-sure
+			// Origin: <scheme> "://" <hostname> [ ":" <port> ]
+			if( preg_match('/^http(s)?:\/\/[a-zA-Z0-9-.]+(:[0-9]{1,5})?$/', $origin) ) {
+				// Set the Access-Control-Allow-Origin header
+				$oh = null;
+				if( $this->__conf['cors']['origins'] == '*' )
+					$oh = $origin;
+				else {
+					header('Vary: Origin');
+					foreach( $this->__conf['cors']['origins'] as $o )
+						if( $o == $origin ) {
+							$oh = $o;
+							break;
+						}
+				}
+				if( $oh )
+					header("Access-Control-Allow-Origin: $oh");
 			}
-			if( $oh )
-				header("Access-Control-Allow-Origin: $oh");
 
 			// Set the Access-Control-Request-Headers header
 			$hh = null;
@@ -419,9 +423,9 @@ class DoPhp {
 			$classname = \dophp\Utils::findClass($findName);
 			if( ! $classname )
 				if( $this->__conf['debug'] )
-					throw new Exception("Page class \"$findName\" not found in file \"$inc_file\"");
+					throw new \RuntimeException("Page class \"$findName\" not found in file \"$inc_file\"");
 				else
-					throw new Exception('Page class not found');
+					throw new \RuntimeException('Page class not found');
 			$pobj = new $classname($this->__conf, $this->__db, $this->__auth, $page, $path );
 
 			// Inject the debug object
@@ -492,7 +496,7 @@ class DoPhp {
 	*/
 	private function __pagePaths($conf, $page) {
 		if( strpos('/', $page) !== false || strpos('\\', $page) !== false )
-			throw new \Exception('Page name can\'t include slashes');
+			throw new \UnexpectedValueException('Page name can\'t include slashes');
 
 		$base_file = basename($_SERVER['PHP_SELF'], '.php');
 		$base_name = "$base_file.$page";
@@ -534,7 +538,7 @@ class DoPhp {
 	 */
 	private function __runPage($page, $depth = 1, $maxDepth = 10) {
 		if( ! $page instanceof \dophp\PageInterface )
-			throw new Exception('Wrong page type');
+			throw new \InvalidArgumentException('Invalid page class');
 
 		// First attempt to retrieve data from the cache
 		if( $this->__cache !== null ) {
@@ -554,7 +558,7 @@ class DoPhp {
 			$headers = $page->headers();
 		} catch( \dophp\PageRedirect $e ) {
 			if( $depth >= $maxDepth )
-				throw new \Exception("Maximum internal redirect depth of $maxDepth reached");
+				throw new \RuntimeException("Maximum internal redirect depth of $maxDepth reached");
 			return $this->__runPage($e->getPage(), $depth + 1);
 		} catch( \dophp\UrlRedirect $e ) {
 			$out = $e->body();
@@ -581,7 +585,7 @@ class DoPhp {
 	 */
 	public static function requirePhpExt($name) {
 		if ( ! extension_loaded($name))
-			throw new \Exception("Required PHP extension \"$name\" is not loaded");
+			throw new \RuntimeException("Required PHP extension \"$name\" is not loaded");
 	}
 
 	/**
@@ -670,17 +674,17 @@ class DoPhp {
 		if( ! self::$__instance )
 			throw new \dophp\DoPhpNotInitedException();
 		if( ! $name )
-			throw new Exception('Must give a model name');
+			throw new \InvalidArgumentException('Must give a model name');
 
 		// Use caching if available, load the model instead
 		if( ! isset(self::$__instance->__models[$name]) ) {
 			require_once self::$__instance->__conf['paths']['mod'] . '/' . ucfirst($name) . '.php';
 			$classname = dophp\Utils::findClass(self::MODEL_PREFIX . $name);
 			if( ! $classname )
-				throw new Exception('Model class not found');
+				throw new \UnexpectedValueException('Model class not found');
 			$mobj = new $classname(self::$__instance->__db);
 			if( ! $mobj instanceof dophp\Model )
-				throw new Exception('Wrong model type');
+				throw new \InvalidArgumentException('Wrong model type');
 
 			self::$__instance->__models[$name] = $mobj;
 		}
@@ -768,7 +772,7 @@ class DoPhp {
 			throw new \dophp\DoPhpNotInitedException();
 
 		if( ! is_callable($callable) )
-			throw new \Exception('Custom exception printer must be callable');
+			throw new \InvalidArgumentException('Custom exception printer must be callable');
 
 		self::$__instance->__customExceptionPrinter = $callable;
 	}

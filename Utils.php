@@ -372,6 +372,9 @@ class Utils {
 	* @return mixed: The correctly typed value
 	*/
 	public static function cleanValue(& $value, $type) {
+		if( $type === null )
+			return null;
+
 		switch($type) {
 		case 'string':
 			return (string)$value;
@@ -381,8 +384,6 @@ class Utils {
 			return (double)$value;
 		case 'bool':
 			return (bool)$value;
-		case null:
-			return null;
 		default:
 			throw new NotImplementedException("Uknown type $t");
 		}

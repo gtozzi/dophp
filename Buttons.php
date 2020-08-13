@@ -57,7 +57,7 @@ class ButtonBar {
 		if( ! array_key_exists($id, $this->_buttons) ) {
 			if( $ignoreMissing )
 				return false;
-			throw new \Exception("Trying to remove missing button \"$id\"");
+			throw new \UnexpectedValueException("Trying to remove missing button \"$id\"");
 		}
 
 		unset( $this->_buttons[$id] );
@@ -136,8 +136,10 @@ abstract class Button extends \dophp\widgets\BaseWidget {
 	 *        - confirm: A string to ask confirmation before proceeding
 	 */
 	public function __construct(string $id, string $label, string $icon, array $options=[]) {
-		assert(! isset($options['class']) || is_string($options['class']));
-		assert(! isset($options['type']) || is_string($options['type']));
+		if( isset($options['class']) && ! is_string($options['class']) )
+			throw new \UnexpectedValueException('class must be string');
+		if( isset($options['type']) && ! is_string($options['type']) )
+			throw new \UnexpectedValueException('type must be string');
 
 		parent::__construct();
 
