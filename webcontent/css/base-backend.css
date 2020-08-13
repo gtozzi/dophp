@@ -4,40 +4,25 @@
 	display:none;
 }
 
-/** Body frame*/
-.bframe-cont{
-	padding-top: 95px;
-	border: 15px solid #f00;
-	border-bottom: 45px solid #f00;
-	margin-bottom: 0px;
-	padding-bottom: 75px;
-	position: absolute;
-	min-height: 100%;
-	width: 100%;
+/** Body frame (test server) */
+body.testserver {
+	background: red;
 }
 
-.bframe-cont .bframe-top {
-	background: #f00;
-	position: fixed;
-	display: table;
-	min-height: 75px;
-	width: calc( 100% - 30px );
-	top: 0px;
-	z-index: 999999;
-	padding: 15px;
+#bodyDiv {
+	background: white;
 }
 
-.bframe-cont .bframe-top div {
-	display: table-cell;
-	vertical-align: middle;
+#bodyDiv.testserver {
+	margin: 10px;
 }
 
-.bframe-cont .bframe-top{
-	color: #fbff01
-}
-
-.bframe-cont .footer {
-	border-bottom: 75px solid #f00;
+.testserver-top {
+	background-color: red;
+	color: yellow;
+	text-align: center;
+	padding: 5px;
+	padding-bottom: 0;
 }
 
 /** Navbar */

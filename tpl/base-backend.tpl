@@ -94,17 +94,15 @@
 
 	{{block name='head'}}{{/block}}
 </head>
-<body {{if isset($config['testserver']) && $config['testserver']}}style="border: 22px solid red;"{{/if}}>
+{{$testServer=isset($config['testserver']) && $config['testserver']}}
+<body {{if $testServer}}class="testserver"{{/if}}>
+{{if $testServer}}
+	<div class="testserver-top">
+		Attenzione! Questo è un server di test. Tutti i dati inseriti potrebbero essere cancellati senza preavviso.
+	</div>
+{{/if}}
+<div id="bodyDiv" {{if $testServer}}class="testserver"{{/if}}>
 {{block name='body'}}
-
-	{{if isset($config['testserver']) && $config['testserver']}}
-		<div class="bframe-top">
-			<div>
-				Attenzione! Questo è un server di test. Tutti i dati inseriti potrebbero essere cancellati senza preavviso.
-			</div>
-		</div>
-	{{/if}}
-
 	{{block name='navbar'}}
 		{{if isset($user) && $user->getUid()}}
 
@@ -256,5 +254,6 @@
 		<!-- End Piwik Code -->
 	{{/if}}
 {{/block}}
+</div>
 </body>
 </html>
