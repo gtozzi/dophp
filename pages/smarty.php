@@ -119,7 +119,7 @@ trait SmartyFunctionalities {
 
 		$out = preg_replace('/\s+/m', ' ', $content);
 		if ( $out === null )
-			throw new \Exception('Error in estrip block');
+			throw new \RuntimeException('Error in estrip block');
 
 		return $out;
 	}

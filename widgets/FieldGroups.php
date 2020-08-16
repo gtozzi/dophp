@@ -29,11 +29,11 @@ abstract class BaseFieldGroup extends BaseFormWidget implements FieldGroup {
 
 	public function addField(Field $field) {
 		if( array_key_exists($field->getName(), $this->_fields) )
-			throw new \Exception('Field ' . $field->getName() . ' is already in group ' . $this->getName());
+			throw new \UnexpectedValueException('Field ' . $field->getName() . ' is already in group ' . $this->getName());
 		if( $field->getForm() !== $this->getForm() )
-			throw new \Exception('Field ' . $field->getName() . ' is not in same form as group ' . $this->getName());
+			throw new \UnexpectedValueException('Field ' . $field->getName() . ' is not in same form as group ' . $this->getName());
 		if( $field->getGroup() )
-			throw new \Exception('Field ' . $field->getName() . ' already has a group');
+			throw new \UnexpectedValueException('Field ' . $field->getName() . ' already has a group');
 
 		$this->_fields[$field->getName()] = $field;
 		$field->setGroup($this);

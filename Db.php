@@ -1864,7 +1864,7 @@ class SelectQuery {
 	 * @param $orderBy string: The clause to prepend, wihout ORDER BY keyword
 	 */
 	public function prependOrderBy(string $orderBy) {
-		if( $this->_orderBy == null ) {
+		if( $this->_orderBy === null ) {
 			$this->_orderBy = $orderBy;
 			return;
 		}

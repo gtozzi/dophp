@@ -248,13 +248,13 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 
 		// Deprecation checks
 		if( isset($this->_pk) )
-			throw new \Exception('Deprecated PK specification');
+			throw new \LogicException('Deprecated PK specification');
 		if( isset($this->_cntquery) )
-			throw new \Exception('Deprecated CntQuery specification');
+			throw new \LogicException('Deprecated CntQuery specification');
 
 		// Checks for data validity
 		if( ! isset($this->_cols) || ! is_array($this->_cols) )
-			throw new \Exception('Missing or invalid Cols definition');
+			throw new \LogicException('Missing or invalid Cols definition');
 
 		// Builds the super filter
 		foreach( $this->_sfilter as $name => &$field ) {
@@ -264,7 +264,7 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 				$opts['label'] = $field['label'];
 
 			if( ! isset($field['filter']) )
-				throw new \Exception("Missing filter query in filter field \"$name\"");
+				throw new \LogicException("Missing filter query in filter field \"$name\"");
 			$filter = $field['filter'];
 
 			$field = new BoolField($name, $opts);
@@ -280,7 +280,7 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 			} elseif( is_array($col) )
 				$col = new DataTableColumn($k, $col);
 			else
-				throw new \Exception('Invalid column definition: ' . gettype($col));
+				throw new \LogicException('Invalid column definition: ' . gettype($col));
 		}
 		unset($col);
 
@@ -336,7 +336,7 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 			if( $c->visible )
 				return [ $asIdx ? $this->colIdToIdx($c->id) : $c->id, static::ORDER_ASC ];
 
-		throw new \Exception('No visible column');
+		throw new \RuntimeException('No visible column');
 	}
 
 	/**
@@ -499,12 +499,12 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 	 */
 	public function colIdxToId( int $idx ): string {
 		if( $idx < 1 )
-			throw new \Exception('Min idx is 1');
+			throw new \UnexpectedValueException('Min idx is 1');
 		$idx--;
 
 		$ids = array_keys($this->_cols);
 		if( ! array_key_exists($idx, $ids) )
-			throw new \Exception("IDX $idx out of range");
+			throw new \UnexpectedValueException("IDX $idx out of range");
 		return $ids[$idx];
 	}
 
@@ -517,7 +517,7 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 	public function colIdToIdx( string $id ): int {
 		$idx = array_search($id, array_keys($this->_cols), true);
 		if( $idx === false )
-			throw new \Exception("ID $id not found");
+			throw new \UnexpectedValueException("ID $id not found");
 
 		return $idx + 1;
 	}
@@ -639,15 +639,15 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 		$pk = [];
 		foreach( $this->_cols as $k => $c ) {
 			if( $k != $c->id )
-				throw new \Exception('K and ID mismatch');
+				throw new \LogicException('K and ID mismatch');
 			if( $c->pk )
 				$pk[] = $c->id;
 		}
 
 		if( count($pk) < 1 )
-			throw new \Exception('PK is not defined');
+			throw new \LogicException('PK is not defined');
 		if( count($pk) > 2 )
-			throw new \Exception('Composite PK is not supported');
+			throw new \dophp\NotImplementedException('Composite PK is not supported');
 
 		return $pk[0];
 	}
@@ -913,7 +913,7 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 	 */
 	protected function _getCountCacheFreshnessCheckVal(): string {
 		if( ! $this->_countCacheFreshQuery )
-			throw new \Exception('Cache fresh query is not defined');
+			throw new \LogicException('Cache fresh query is not defined');
 
 		$r = $this->_db->run($this->_countCacheFreshQuery)->fetch();
 		return (string)array_shift($r);
@@ -1635,7 +1635,7 @@ class DataTableButton {
 
 		foreach( $opt as $k => $v ) {
 			if( ! property_exists($this, $k) )
-				throw new \Exception("Invalid property $k");
+				throw new \UnexpectedValueException("Invalid property $k");
 			$this->$k = $v;
 		}
 
@@ -1936,9 +1936,9 @@ class DataTable extends BaseDataTable {
 	public function __construct(\dophp\PageInterface $page) {
 		// Checks for data validity
 		if( isset($this->_query) )
-			throw new \Exception('Deprecated Query specification');
+			throw new \LogicException('Deprecated Query specification');
 		if( ! isset($this->_from) || ! is_string($this->_from) )
-			throw new \Exception('Missing or invalid From definition');
+			throw new \LogicException('Missing or invalid From definition');
 
 		parent::__construct($page);
 	}
@@ -1987,10 +1987,10 @@ class DataTable extends BaseDataTable {
 		$afilter = $this->_getAccessFilter();
 		if( $afilter !== null ) {
 			if( ! is_array($afilter) )
-				throw new \Exception('Invalid access filter');
+				throw new \LogicException('Invalid access filter');
 			list($awhere, $apars) = $afilter;
 			if( ! is_string($awhere) || ! is_array($apars) )
-				throw new \Exception('Invalid access filter');
+				throw new \LogicException('Invalid access filter');
 
 			$where[] = '( ' . $awhere . ' )';
 			$pars = array_merge($pars, $apars);
@@ -2148,7 +2148,7 @@ class StaticCachedQueryDataTable extends BaseDataTable {
 	public function __construct(\dophp\PageInterface $page) {
 		// Checks for data validity
 		if( ! isset($this->_query) || ! is_string($this->_query) )
-			throw new \Exception('Missing or invalid Query definition');
+			throw new \LogicException('Missing or invalid Query definition');
 
 		// Filters are not supported, so disable all of them
 		foreach( $this->_cols as &$c )

@@ -89,7 +89,7 @@ class Url {
 	public static function parseUrl($url) {
 		$parsed = parse_url($url);
 		if( $parsed === false )
-			throw new \Exception('Seriously malformed URL');
+			throw new \UnexpectedValueException('Seriously malformed URL');
 
 		if( isset($parsed['query']) ) {
 			$arr = array();

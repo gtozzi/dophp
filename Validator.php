@@ -45,7 +45,7 @@ class Validator {
 		$multi = array();
 		foreach( $rules as $f => $r ) {
 			if( ! is_array($r) || array_keys($r) !== array(0,1) )
-				throw new \Exception("Unvalid rule format for $f:\n" . print_r($r,true));
+				throw new \UnexpectedValueException("Invalid rule format for $f:\n" . print_r($r,true));
 
 			if( $f===0 && array_key_exists('multiple',$r[1]) && $r[1]['multiple'] )
 				foreach($post as $k => $v)
@@ -75,7 +75,7 @@ class Validator {
 			list($type, $options) = $v;
 
 			if( is_array($type) )
-				throw new \Exception('Deprecated old sub-validator syntax');
+				throw new \UnexpectedValueException('Deprecated old sub-validator syntax');
 
 			$vname = 'dophp\\' . $type . '_validator';
 

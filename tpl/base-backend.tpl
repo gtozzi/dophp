@@ -94,17 +94,15 @@
 
 	{{block name='head'}}{{/block}}
 </head>
-<body {{if isset($config['testserver']) && $config['testserver']}}class="bframe-cont"{{/if}}>
+{{$testServer=isset($config['testserver']) && $config['testserver']}}
+<body {{if $testServer}}class="testserver"{{/if}}>
+{{if $testServer}}
+	<div class="testserver-top">
+		Attenzione! Questo è un server di test. Tutti i dati inseriti potrebbero essere cancellati senza preavviso.
+	</div>
+{{/if}}
+<div id="bodyDiv" {{if $testServer}}class="testserver"{{/if}}>
 {{block name='body'}}
-
-	{{if isset($config['testserver']) && $config['testserver']}}
-		<div class="bframe-top">
-			<div>
-				Attenzione! Questo è un server di test. Tutti i dati inseriti potrebbero essere cancellati senza preavviso.
-			</div>
-		</div>
-	{{/if}}
-
 	{{block name='navbar'}}
 		{{if isset($user) && $user->getUid()}}
 
@@ -141,7 +139,7 @@
 										{{$m->getLabel()|htmlentities}}
 										</a>
 										{{if $childs}}
-											<div class="dropdown-menu {{if $childs|@count > 10}}multi-column columns-{{if $childs|@count > 20}}3{{else}}2{{/if}}{{/if}}" aria-labelledby="{{$m->getId()|htmlentities}}_a">
+											<div class="dropdown-menu {{if $childs|@count > 10}}multi-column columns-{{if $childs|@count > 20}}3{{else}}2{{/if}}{{/if}}" style="{{if $childs|@count > 10}}left:-100px{{/if}}" aria-labelledby="{{$m->getId()|htmlentities}}_a">
 												{{if $childs|@count > 10}}<div class="row">{{/if}}
 													{{assign var="contatore_item" value=0}}
 													{{foreach $childs as $c}}
@@ -256,5 +254,6 @@
 		<!-- End Piwik Code -->
 	{{/if}}
 {{/block}}
+</div>
 </body>
 </html>
