@@ -463,7 +463,7 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 			$prefs['tablecol'] => $this->getClsId(),
 			$prefs['sortcol'] => $colId,
 			$prefs['ordcol'] => $ascDesc,
-		]);
+		], [$prefs['tablecol'], $prefs['uidcol']]);
 
 		// Invalidate cache
 		$this->_prefsCache = null;
@@ -485,7 +485,7 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 			$prefs['uidcol'] => $this->_user->getUid(),
 			$prefs['tablecol'] => $this->getClsId(),
 			$prefs['sfcol'] => json_encode($filter, JSON_FORCE_OBJECT),
-		]);
+		], [$prefs['tablecol'], $prefs['uidcol']]);
 
 		// Invalidate cache
 		$this->_prefsCache = null;
