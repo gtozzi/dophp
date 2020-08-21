@@ -5,9 +5,11 @@
 * @author Gabriele Tozzi <gabriele@tozzi.eu>
 * @package DoPhp
 * @brief Class used to represent a DoPhp Model and related classes
-* @warning Classes in this file are still a work in progress, some functions are
+* @deprecated Classes in this file where work in progress, some functions are
 *          incomplete and backward compatibility could be broken without notice
-*          in future versions
+*          in future versions. It will not be completed anytime soon and may even
+*          be removed.
+*          The new backend, form and field classes are replacing it.
 */
 
 namespace dophp;
@@ -17,6 +19,8 @@ namespace dophp;
 * A model extends a database table handling the conversion of the data from
 * machine to human-friendly format. It takes care about labels, number and date
 * formatting, defining "virtual" columns, etc...
+*
+* @deprecated See the new backend, form and field classes
 */
 abstract class Model {
 
@@ -963,6 +967,8 @@ abstract class Model {
 
 /**
 * Defines the characteristics for a field
+*
+* @deprecated See the new backend, form and field classes
 */
 class FieldDefinition {
 
@@ -1125,6 +1131,8 @@ class FieldDefinition {
 
 /**
 * Represents a data field, carrying a raw value
+*
+* @deprecated See the new backend, form and field classes
 */
 class Field {
 
@@ -1244,6 +1252,8 @@ class Field {
 
 /**
 * Represents a rendered field
+*
+* @deprecated See the new backend, form and field classes
 */
 class RenderedField extends Field {
 
@@ -1266,6 +1276,8 @@ class RenderedField extends Field {
 
 /**
 * Represents a form field
+*
+* @deprecated See the new backend, form and field classes
 */
 class FormField extends Field {
 
@@ -1300,6 +1312,8 @@ class FormField extends Field {
 
 /**
 * Data for a form field
+*
+* @deprecated See the new backend, form and field classes
 */
 class FormFieldData {
 
@@ -1331,6 +1345,8 @@ class FormFieldData {
 
 /**
 * Interface for bullding custom filter classes
+*
+* @deprecated See the new backend, form and field classes
 */
 interface AccessFilterInterface {
 
@@ -1354,6 +1370,8 @@ interface AccessFilterInterface {
 
 /**
 * Simple basic access filter implementation
+*
+* @deprecated See the new backend, form and field classes
 */
 class SimpleAccessFilter implements AccessFilterInterface {
 
@@ -1415,6 +1433,8 @@ class SimpleAccessFilter implements AccessFilterInterface {
 
 /**
 * This filter simply does nothing
+*
+* @deprecated See the new backend, form and field classes
 */
 class NullAccessFilter implements AccessFilterInterface {
 

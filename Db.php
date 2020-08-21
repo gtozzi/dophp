@@ -1580,7 +1580,7 @@ class SelectQuery {
 	 *                Every index is the unique column name (alias).
 	 *                Possible keys in definition array:
 	 *                - qname: Name of the column as defined in the query
-	 *                  (ie. `a`.`id`). Mandatory. This will be the only field
+	 *                  (ie. a.id). Mandatory. This will be the only field
 	 *                  if a string is given
 	 *                - pk: Tells whether this column is part of the PK
 	 *        - from: The FROM part of the query, without the FROM keyword.
