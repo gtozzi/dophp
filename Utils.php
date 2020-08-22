@@ -679,4 +679,23 @@ class Utils {
 		$str = str_replace("\t", '&emsp;', $str);
 		return $str;
 	}
+
+	/**
+	 * Returns true if a string starts with another string
+	 *
+	 * @param $haystack string: The string to search into
+	 * @param $needle string: The string to search for
+	 * @return true when $haystack starts with $needle, always false when $haystack is null
+	 */
+	public static function startsWith(string $haystack=null, string $needle): bool {
+		if( $haystack === null )
+			return false;
+
+		$nlen = strlen($needle);
+
+		if( substr($haystack, 0, $nlen) == $needle )
+			return true;
+
+		return false;
+	}
 }
