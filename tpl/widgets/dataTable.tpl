@@ -637,9 +637,10 @@
 	function updateDataTableUrls() {
 		// Read the filter and put it in the $_GET url
 		let filters = {};
-		let iter = 1;
+		let iter = 0;
 		let nFilters = $('input.data-table-filter').length
 		$('input.data-table-filter').each(function() {
+			iter++;
 			if (iter > nFilters/2)
 				return false;
 			let el = $(this);
