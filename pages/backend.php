@@ -46,10 +46,10 @@ trait BackendComponent {
 		// Checks for a valid class name and split it into base and action
 		$cls = get_called_class();
 		if( substr($cls,0,strlen(\DoPhp::BASE_KEY)) != \DoPhp::BASE_KEY )
-			throw new \Exception('Unexpected abnormal base key ');
+			throw new \LogicException('Unexpected abnormal base key ');
 		$p = explode('_', substr($cls, strlen(\DoPhp::BASE_KEY)), 2);
 		if( count($p) != 2 )
-			throw new \Exception("Invalid class name \"$cls\"");
+			throw new \LogicException("Invalid class name \"$cls\"");
 		list($base, $action) = $p;
 		$this->_base = lcfirst($base);
 		$this->_action = lcfirst($action);
@@ -60,7 +60,7 @@ trait BackendComponent {
 	 */
 	public function getBase(): string {
 		if( ! $this->_base )
-			throw new \Exception('Backend CRUD not inited');
+			throw new \LogicException('Backend CRUD not inited');
 		return $this->_base;
 	}
 
@@ -69,7 +69,7 @@ trait BackendComponent {
 	 */
 	public function getAction(): string {
 		if( ! $this->_action )
-			throw new \Exception('Backend CRUD not inited');
+			throw new \LogicException('Backend CRUD not inited');
 		return $this->_action;
 	}
 }
@@ -82,6 +82,11 @@ abstract class TablePage extends \dophp\HybridRpcMethod {
 
 	use BackendComponent;
 	use \dophp\SmartyFunctionalities;
+
+	// Possible sub-actions
+	const ACTION_JSON = 'json';
+	const ACTION_XLSX = 'xlsx';
+	const ACTION_HTML = 'html';
 
 	protected $_compress = -1;
 
@@ -108,9 +113,9 @@ abstract class TablePage extends \dophp\HybridRpcMethod {
 	 * Inits the table object, by default inits a new _tableClass instance,
 	 * may be overridden
 	 */
-	protected function _initTable(): \dophp\widgets\DataTable {
+	protected function _initTable(): \dophp\widgets\DataTableInterface {
 		if( ! isset($this->_tableClass) )
-			throw new \Exception('Missing Table class');
+			throw new \LogicException('Missing Table class');
 		return new $this->_tableClass($this);
 	}
 
@@ -124,6 +129,14 @@ abstract class TablePage extends \dophp\HybridRpcMethod {
 	 * Inits the menu (when interactive), may be overridden in child
 	 */
 	protected function _initMenu() {
+	}
+
+	/**
+	 * Called before running the action, may be overridden in child
+	 *
+	 * @param $action string: See ACTION_ consts
+	 */
+	protected function _beforeAction(string $action) {
 	}
 
 	/**
@@ -147,10 +160,22 @@ abstract class TablePage extends \dophp\HybridRpcMethod {
 			break;
 		}
 
-		if( \dophp\Utils::isAcceptedEncoding('application/json') ) {
-			// Returning JSON data
+		if( \dophp\Utils::isAcceptedEncoding('application/json') )
+			$action = self::ACTION_JSON;
+		elseif( isset($_GET['export']) )
+			$action = self::ACTION_XLSX;
+		else
+			$action = self::ACTION_HTML;
+
+		$this->_beforeAction($action);
+
+		switch( $action ) {
+		case self::ACTION_JSON:
+			// Return JSON data
 			return parent::run();
-		} elseif( isset($_GET['export']) ) {
+
+		case self::ACTION_XLSX:
+			// Return XLSX export
 			if( $_GET['export'] != 'xlsx' )
 				throw new \dophp\PageError('Only xlsx export is supported');
 
@@ -166,7 +191,9 @@ abstract class TablePage extends \dophp\HybridRpcMethod {
 			$this->_headers = array_merge($this->_headers, $fh);
 
 			return $data;
-		} else {
+
+		case self::ACTION_HTML:
+			// Return HTML page
 			$this->_headers['Content-type'] = 'text/html';
 
 			// Returning HTML page
@@ -178,6 +205,9 @@ abstract class TablePage extends \dophp\HybridRpcMethod {
 
 			// Run smarty
 			return $this->_compress($this->_smarty->fetch($this->_template));
+
+		default:
+			throw new \dophp\NotImplementedException("Invalid action $action");
 		}
 	}
 
@@ -331,11 +361,23 @@ abstract class FormPage extends \dophp\PageSmarty {
 	/**
 	 * Message to be displayed on save
 	 * If null, a default is assigned at init time
+	 * @see _initMessages
 	 */
 	protected $_saveMessage = null;
 
-	/** Message to be displayed on cancel */
+	/**
+	 * Message to be displayed on cancel
+	 * If null, a default is assigned at init time
+	 * @see _initMessages
+	 */
 	protected $_cancelMessage = null;
+
+	/**
+	 * Message to be displayed before delete
+	 * If null, a default is assigned at init time
+	 * @see _initMessages
+	 */
+	protected $_deleteConfirmMessage = null;
 
 	/** Disables insert (useful for non-primary tabs) */
 	protected $_disableInsert = false;
@@ -373,6 +415,22 @@ abstract class FormPage extends \dophp\PageSmarty {
 	}
 
 	/**
+	 * Inits messages, overridable in child
+	 */
+	protected function _initMessages($id) {
+		if( $this->_saveMessage === null )
+			$this->_saveMessage = _('Saving') . '…';
+
+		if( $this->_cancelMessage === null )
+			$this->_cancelMessage = _('Canceling') . '…';
+
+		if( $this->_deleteConfirmMessage === null ) {
+			$letter = $this->_whatGender=='f' ? 'a' : 'o';
+			$this->_deleteConfirmMessage = "Confermi di voler eliminare definitivamente quest{$letter} {$this->_what}?";
+		}
+	}
+
+	/**
 	 * Returns ID from request args, may be null
 	 */
 	public static function getRequestId() {
@@ -391,11 +449,6 @@ abstract class FormPage extends \dophp\PageSmarty {
 	}
 
 	protected function _build() {
-		if( $this->_saveMessage === null )
-			$this->_saveMessage = _('Saving') . '…';
-		if( $this->_cancelMessage === null )
-			$this->_cancelMessage = _('Canceling') . '…';
-
 		$this->_buttons = new \dophp\buttons\ButtonBar();
 
 		// Determine the session data key and init it
@@ -414,6 +467,7 @@ abstract class FormPage extends \dophp\PageSmarty {
 
 		$this->_initBackendComponent();
 		$this->_initEarly($id);
+		$this->_initMessages($id);
 		$this->_initFields($id);
 
 		// Determine action
@@ -427,21 +481,21 @@ abstract class FormPage extends \dophp\PageSmarty {
 		switch( $action ) {
 		case self::ACT_INS:
 			if( $this->_disableInsert )
-				throw new \Exception('Insert is disabled');
+				throw new \dophp\PageGone('Insert is disabled');
 			$perm = self::PERM_INS;
 			break;
 		case self::ACT_EDIT:
 			if( $this->_disableEdit )
-				throw new \Exception('Edit is disabled');
+				throw new \dophp\PageGone('Edit is disabled');
 			$perm = [ self::PERM_EDIT, self::PERM_VIEW ];
 			break;
 		case self::ACT_DEL:
 			if( $this->_disableDelete )
-				throw new \Exception('Delete is disabled');
+				throw new \dophp\PageGone('Delete is disabled');
 			$perm = self::PERM_DEL;
 			break;
 		default:
-			throw new \Exception("Action $action not supported");
+			throw new \dophp\NotImplementedException("Action $action not supported");
 		}
 		$this->needPerm($perm);
 
@@ -458,8 +512,9 @@ abstract class FormPage extends \dophp\PageSmarty {
 		$this->_formAction->args[\DoPhp::BASE_KEY] = $this->_name;
 
 		$this->_smarty->assign('formkey', self::POST_FORM_KEY);
-		$this->_smarty->assignByRef('savemessage', $this->_saveMessage);
-		$this->_smarty->assignByRef('cancelmessage', $this->_cancelMessage);
+		$this->_smarty->assignByRef('saveMessage', $this->_saveMessage);
+		$this->_smarty->assignByRef('cancelMessage', $this->_cancelMessage);
+		$this->_smarty->assignByRef('deleteConfirmMessage', $this->_deleteConfirmMessage);
 
 		// If custom template does not exist, use the generic one
 		$this->_templateFallback('backend/formpage.tpl');
@@ -502,11 +557,11 @@ abstract class FormPage extends \dophp\PageSmarty {
 				break;
 			}
 			if( $data[self::POST_FORM_KEY] != $this->_form->getId() )
-				throw new \Exception('Form ID mismatch; expected ' . $this->_form->getId() . ', got ' . $data[self::POST_FORM_KEY]);
+				throw new \RuntimeException('Form ID mismatch; expected ' . $this->_form->getId() . ', got ' . $data[self::POST_FORM_KEY]);
 
 			// Update the form
 			if( ! isset($data[self::POST_DATA_KEY]) )
-				throw new \Exception('Missing data key');
+				throw new \RuntimeException('Missing data key');
 			$this->_form->setDisplayValues($data[self::POST_DATA_KEY]);
 
 			if ($_SERVER['REQUEST_METHOD'] == 'PATCH' ) {
@@ -555,7 +610,7 @@ abstract class FormPage extends \dophp\PageSmarty {
 			}
 			break;
 		default:
-			throw new \Exception("Unsupported method {$_SERVER['REQUEST_METHOD']}");
+			throw new \dophp\NotImplementedException("Unsupported method {$_SERVER['REQUEST_METHOD']}");
 		}
 
 		if( isset($this->_form) ) {
@@ -596,7 +651,7 @@ abstract class FormPage extends \dophp\PageSmarty {
 			}
 			break;
 		default:
-			throw new \Exception("Action $action not supported");
+			throw new \dophp\NotImplementedException("Action $action not supported");
 		}
 
 		return $res;
@@ -621,10 +676,10 @@ abstract class FormPage extends \dophp\PageSmarty {
 	 */
 	protected function _loadFormFromSession() {
 		if( ! isset($_SESSION[$this->_sesskey][self::SESS_FORM]) )
-			throw new \Exception('Form not found');
+			throw new \RuntimeException('Form not found');
 		$this->_form = $_SESSION[$this->_sesskey][self::SESS_FORM];
 		if( ! ($this->_form instanceof \dophp\widgets\Form) )
-			throw new \Exception('Invalid form class');
+			throw new \RuntimeException('Invalid form class');
 	}
 
 	/**
@@ -693,7 +748,9 @@ abstract class FormPage extends \dophp\PageSmarty {
 		if( array_intersect($this->_perm, $perm) )
 			return;
 
-		throw new \dophp\PageDenied();
+		$e = new \dophp\PageDenied(_('Missing required permissions'));
+		$e->setDebugData($perm);
+		throw $e;
 	}
 
 	/**
@@ -835,7 +892,7 @@ abstract class FormPage extends \dophp\PageSmarty {
 	 */
 	private function __getTable() : \dophp\Table {
 		if( ! isset($this->_table) )
-			throw new \Exception('Table is not defined');
+			throw new \LogicException('Table is not defined');
 
 		return new \dophp\Table($this->_db, $this->_table);
 	}
@@ -852,12 +909,12 @@ abstract class FormPage extends \dophp\PageSmarty {
 		$pk = $t->getPk();
 
 		if( count($pk) != 1 )
-			throw new \Exception('Composed PK not yet implemented');
+			throw new \dophp\NotImplementedException('Composed PK not yet implemented');
 		$p = [ $pk[0] => $id ];
 
 		foreach( $t->select($p) as $r )
 			return $r;
-		throw new \Exception("Element $id not found");
+		throw new \UnexpectedValueException("Element $id not found");
 	}
 
 	/**

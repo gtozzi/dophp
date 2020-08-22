@@ -249,7 +249,7 @@ class AuthBasic extends AuthBase {
 /**
 * Class for username/password authentication
 *
-* First checks for X-Auth-User and X-Auth-Pass headers, if not found, then 
+* First checks for X-Auth-User and X-Auth-Pass headers, if not found, then
 * checks $_REQUEST for 'username' and 'password' variables. 'login' must be true
 * for security reasons
 *
@@ -328,7 +328,7 @@ class AuthSign extends AuthBase {
 		if( ! $user || ! $sign || ! $pwd )
 			return null;
 
-		$countersign = sha1($user . self::SEP . $pwd . self::SEP . $data);
+		$countersign = hash('sha512', $user . self::SEP . $pwd . self::SEP . $data);
 		if( $sign !== $countersign )
 			return null;
 

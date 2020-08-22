@@ -16,7 +16,7 @@ namespace dophp\widgets;
 interface FormWidget extends Widget {
 
 	/** Returns parent form object, may be null */
-	public function getForm() /** TODO:PHP 7.2 :?Form */;
+	public function getForm() : ?Form;
 
 	/** Sets the parent form object */
 	public function setForm(Form $form);
@@ -65,7 +65,7 @@ abstract class BaseFormWidget extends BaseWidget implements FormWidget {
 		$this->_label = $label ?? str_replace('_', ' ', ucfirst($name));
 	}
 
-	public function getForm() /** TODO:PHP 7.2 :?Form */ {
+	public function getForm() : ?Form {
 		return $this->_form;
 	}
 

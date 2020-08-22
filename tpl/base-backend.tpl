@@ -88,23 +88,21 @@
 		<script src="{{$config['dophp']['url']}}/webcontent/js/form.js"></script>
 		<script src="{{$config['dophp']['url']}}/webcontent/js/buttons.js"></script>
 
-		<!-- DoPhp font -->		
+		<!-- DoPhp font -->
 		<link rel="stylesheet" type="text/css" href="{{$config['dophp']['url']}}/webcontent/css/mgmt-glyph.css"/>
 	{{/block}}
 
 	{{block name='head'}}{{/block}}
 </head>
-<body {{if isset($config['testserver']) && $config['testserver']}}class="bframe-cont"{{/if}}>
+{{$testServer=isset($config['testserver']) && $config['testserver']}}
+<body {{if $testServer}}class="testserver"{{/if}}>
+{{if $testServer}}
+	<div class="testserver-top">
+		Attenzione! Questo è un server di test. Tutti i dati inseriti potrebbero essere cancellati senza preavviso.
+	</div>
+{{/if}}
+<div id="bodyDiv" {{if $testServer}}class="testserver"{{/if}}>
 {{block name='body'}}
-
-	{{if isset($config['testserver']) && $config['testserver']}}
-		<div class="bframe-top">
-			<div>
-				Attenzione! Questo è un server di test. Tutti i dati inseriti potrebbero essere cancellati senza preavviso.
-			</div>
-		</div>
-	{{/if}}
-
 	{{block name='navbar'}}
 		{{if isset($user) && $user->getUid()}}
 
@@ -141,16 +139,22 @@
 										{{$m->getLabel()|htmlentities}}
 										</a>
 										{{if $childs}}
-											<div class="dropdown-menu" aria-labelledby="{{$m->getId()|htmlentities}}_a">
-												{{foreach $childs as $c}}
-													{{if $c->getUrl() || $c->getLabel()}}
-														<a class="dropdown-item menu-link" href="{{$c->getUrl()}}"
-															data-label={{$m->getLabel()|json_encode}}
-														>{{$c->getLabel()|htmlentities}}</a>
-													{{else}}
-														<div class="dropdown-divider"></div>
-													{{/if}}
-												{{/foreach}}
+											<div class="dropdown-menu {{if $childs|@count > 10}}multi-column columns-{{if $childs|@count > 20}}3{{else}}2{{/if}}{{/if}}" style="{{if $childs|@count > 10}}left:-100px{{/if}}" aria-labelledby="{{$m->getId()|htmlentities}}_a">
+												{{if $childs|@count > 10}}<div class="row">{{/if}}
+													{{assign var="contatore_item" value=0}}
+													{{foreach $childs as $c}}
+														{{assign var="contatore_item" value=$contatore_item+1}}
+														{{if $childs|@count > 10 && $childs|@count < 21 && ($contatore_item == 1 || $contatore_item == 11)}}<div class="col-sm-6">{{elseif $childs|@count > 20 && ($contatore_item == 1 || $contatore_item == 11 || $contatore_item == 21)}}<div class="col-sm-4">{{/if}}
+														{{if $c->getUrl() || $c->getLabel()}}
+															<a class="dropdown-item menu-link" href="{{$c->getUrl()}}"
+																data-label={{$m->getLabel()|json_encode}}
+															>{{$c->getLabel()|htmlentities}}</a>
+														{{else}}
+															<div class="dropdown-divider"></div>
+														{{/if}}
+														{{if $childs|@count > 10 && ($contatore_item == 10 || $contatore_item == 20 || $contatore_item == 30)}}</div>{{/if}}
+													{{/foreach}}
+												{{if $childs|@count > 10}}</div>{{/if}}
 											</div>
 										{{/if}}
 									</li>
@@ -250,5 +254,6 @@
 		<!-- End Piwik Code -->
 	{{/if}}
 {{/block}}
+</div>
 </body>
 </html>

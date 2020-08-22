@@ -67,6 +67,12 @@ interface Field extends FormWidget {
 	/** Gets the current validation feedback message */
 	public function getVFeedback();
 
+	/** Sets the validation status */
+	public function setVStatus(int $status);
+
+	/** Sets the validation feedback message */
+	public function setVFeedback(string $message);
+
 	/** Tells whether this field has valid data */
 	public function isValid(): bool;
 
@@ -166,7 +172,7 @@ abstract class BaseField extends BaseFormWidget implements Field {
 		if( $value === null )
 			$value = '';
 		elseif( gettype($value) != 'string' )
-			throw new \Exception(get_class($this) . '[' . $this->_name
+			throw new \InvalidArgumentException(get_class($this) . '[' . $this->_name
 				. ']: String expected, got ' . gettype($value));
 
 		$this->_dv = $value;
@@ -231,6 +237,14 @@ abstract class BaseField extends BaseFormWidget implements Field {
 		return $this->_vfeedback;
 	}
 
+	public function setVStatus(int $status) {
+		$this->_vstatus = $status;
+	}
+
+	public function setVFeedback(string $message) {
+		$this->_vfeedback = $message;
+	}
+
 	public function isValid(): bool {
 		switch( $this->_vstatus ) {
 		case Field::V_SUCCESS:
@@ -239,7 +253,7 @@ abstract class BaseField extends BaseFormWidget implements Field {
 		case Field::V_ERROR:
 			return false;
 		}
-		throw new \Exception("Not implemented validation status \"{$this->_vstatus}\"");
+		throw new \dophp\NotImplementedException("Not implemented validation status \"{$this->_vstatus}\"");
 	}
 
 	public function isReadOnly(): bool {
@@ -329,7 +343,7 @@ abstract class InputField extends BaseField {
 		foreach( $opts as $name => $value ) {
 			$on = "_$name";
 			if( ! property_exists($this, $on) )
-				throw new \Exception("Invalid InputField attribute \"$name\"");
+				throw new \LogicException("Invalid InputField attribute \"$name\"");
 
 			$this->_noClosures("{$this->_name}/$name", $value);
 
@@ -350,7 +364,7 @@ abstract class InputField extends BaseField {
 	 */
 	protected function _noClosures(string $name, $val) {
 		if ( is_object($val) && $val instanceof \Closure )
-			throw new \Exception("Closure in \"$name\" will prevent serialization");
+			throw new \LogicException("Closure in \"$name\" will prevent serialization");
 
 		if ( is_array($val) )
 			foreach( $val as $k => $v )
@@ -385,8 +399,8 @@ class TextField extends InputField {
 
 	protected function _getValidationOptions(): array {
 		$vo = parent::_getValidationOptions();
-		if( $this->_maxlen )
-			$vo['length'] = [0,$this->_maxlen];
+		if( $this->_maxlen && ! isset($vo['len']) )
+			$vo['len'] = [0, $this->_maxlen];
 		return $vo;
 	}
 }
@@ -434,8 +448,8 @@ class DateField extends TextField {
 
 	protected function _getValidationOptions(): array {
 		$vo = parent::_getValidationOptions();
-		if( isset($vo['length']) )
-			unset($vo['length']);
+		if( isset($vo['len']) )
+			unset($vo['len']);
 		return $vo;
 	}
 
@@ -459,8 +473,8 @@ class TimeField extends TextField {
 
 	protected function _getValidationOptions(): array {
 		$vo = parent::_getValidationOptions();
-		if( isset($vo['length']) )
-			unset($vo['length']);
+		if( isset($vo['len']) )
+			unset($vo['len']);
 		return $vo;
 	}
 
@@ -579,7 +593,7 @@ class FileField extends TextField {
 
 	protected function _setDisplayValue($value, array $all) {
 		if( $value !== null && ! is_array($value) )
-			throw new \Exception(get_class($this) . '[' . $this->_name
+			throw new \InvalidArgumentException(get_class($this) . '[' . $this->_name
 				. ']: Array expected, got ' . gettype($value));
 
 		$this->_dv = '';
@@ -690,7 +704,7 @@ class SelectField extends InputField {
 	 */
 	public function getOptions(array $ajax=null): \Generator {
 		if( ! isset($this->_options) )
-			throw new \Exception('Options not defined');
+			throw new \LogicException('Options not defined');
 
 		if( $this->_addNullOpt )
 			yield new SelectOption('', false, '');
@@ -740,7 +754,7 @@ class SelectField extends InputField {
 		if( $this->_options instanceof \dophp\SelectQuery ) {
 			$query = clone $this->_options;
 			if( count($query->cols()) != 2 )
-				throw new \Exception("Query must return exactly 2 cols. Query: '{$this->_options}'");
+				throw new \LogicException("Query must return exactly 2 cols. Query: '{$this->_options}'");
 
 			list($idk, $desck) = array_keys($query->cols());
 			$params = $ajax ? $ajax['params'] : $this->_optParams;
@@ -788,7 +802,7 @@ class SelectField extends InputField {
 			return;
 		}
 
-		throw new \Exception('Should not reach this point');
+		throw new \LogicException('Should not reach this point');
 	}
 
 	private function __genSelectedOption(): SelectOption {
@@ -840,7 +854,7 @@ class SelectField extends InputField {
 		if( $this->_options instanceof \dophp\SelectQuery ) {
 			$query = clone $this->_options;
 			if( count($query->cols()) != 2 )
-				throw new \Exception("Query must return exactly 2 cols. Query: '{$this->_options}'");
+				throw new \LogicException("Query must return exactly 2 cols. Query: '{$this->_options}'");
 
 			list($idk, $desck) = array_keys($query->cols());
 			$params = $this->_optParams;
@@ -874,9 +888,9 @@ class SelectField extends InputField {
 	 */
 	public function ajaxQuery($params) {
 		if( ! isset($params['_type']) )
-			throw new \Exception('Missing type');
+			throw new \LogicException('Missing type');
 		if( $params['_type'] != 'query' )
-			throw new \Exception("Unsupported type {$params['_type']}");
+			throw new \dophp\NotImplementedException("Unsupported type {$params['_type']}");
 
 		$term = $params['term'] ?? '';
 		$extra = $params['ajaxParams'] ?? [];
@@ -1000,7 +1014,7 @@ class MultiSelectField extends BaseField {
 		// Parse global attributes
 		if( isset($opt['attrs']) ) {
 			if( ! is_array($opt['attrs']) )
-				throw new \Exception('Attrs must be array');
+				throw new \InvalidArgumentException('Attrs must be array');
 
 			foreach( $opt['attrs'] as $name => $ao )
 				$this->_attrs[$name] = new MultiSelectFieldAttr($name, $ao);
@@ -1008,15 +1022,15 @@ class MultiSelectField extends BaseField {
 
 		// Parse options
 		if( ! isset($opt['options']) )
-			throw new \Exception('Missing options');
+			throw new \LogicException('Missing options');
 		$oattrs = $opt['options']['attrs'] ?? [];
 		if( ! isset($opt['options']['query']) )
-			throw new \Exception('Missing options query');
+			throw new \LogicException('Missing options query');
 		$oquery = $opt['options']['query'];
 
 		foreach( \DoPhp::db()->xrun($oquery) as $r ) {
 			if( count($r) != 2 )
-				throw new \Exception('Query must return exactly 2 rows');
+				throw new \LogicException('Query must return exactly 2 rows');
 			$id = array_shift($r);
 			$descr = array_shift($r);
 			$attrs = [];
@@ -1058,19 +1072,19 @@ class MultiSelectField extends BaseField {
 			$value = [];
 
 		if( ! is_array($value) )
-			throw new \Exception('Value must be array');
+			throw new \InvalidArgumentException('Value must be array');
 
 		if( isset($value['attrs']) )
 			foreach( $value['attrs'] as $name => $val ) {
 				if( ! isset($this->_attrs[$name]) )
-					throw new \Exception("Unknown global attr $name");
+					throw new \LogicException("Unknown global attr $name");
 				$this->_attrs[$name]->setValue($val);
 			}
 
 		if( isset($value['options']) )
 			foreach( $value['options'] as $id => $val ) {
 				if( ! isset($this->_options[$id]) )
-					throw new \Exception("Unknown option $name");
+					throw new \LogicException("Unknown option $name");
 
 				if( isset($val['selected']) )
 					$this->_options[$id]->setSelected( (bool)$val['selected'] );
@@ -1173,7 +1187,7 @@ class MultiSelectFieldOption extends SelectOption {
 		// Make sure attrs key matches name
 		foreach( $attrs as $a ) {
 			if( ! $a instanceof BaseMultiSelectFieldOptionAttr )
-				throw new \Exception('Wrong attribute type ' . gettype($a));
+				throw new \InvalidArgumentException('Wrong attribute type ' . gettype($a));
 			$this->_attrs[$a->getName()] = $a;
 		}
 	}
@@ -1219,7 +1233,7 @@ class MultiSelectFieldOption extends SelectOption {
 	 */
 	public function getAttr(string $name): MultiSelectFieldOptionAttr {
 		if( ! isset($this->_attrs[$name]) )
-			throw new \Exception("Attribute \"$name\" not found");
+			throw new \UnexpectedValueException("Attribute \"$name\" not found");
 		return $this->_attrs[$name];
 	}
 
@@ -1231,7 +1245,7 @@ class MultiSelectFieldOption extends SelectOption {
 	 */
 	public function setAttr(string $name, $value) {
 		if( ! isset($this->_attrs[$name]) )
-			throw new \Exception("Attribute \"$name\" not found");
+			throw new \UnexpectedValueException("Attribute \"$name\" not found");
 
 		$this->_attrs[$name]->setValue($value);
 	}
@@ -1272,7 +1286,7 @@ abstract class BaseMultiSelectFieldAttr {
 		if( isset($opt['descr']) )
 			$this->_descr = $opt['descr'];
 		else
-			throw new \Exception('Missing descr');
+			throw new \LogicException('Missing descr');
 
 		if( isset($opt['label']) )
 			$this->_label = $opt['label'];
@@ -1386,7 +1400,7 @@ class TableField extends BaseField {
 		parent::__construct($name, $namespace);
 
 		if( ! array_key_exists(self::ID_KEY, $opts['cols']) )
-			throw new \Exception('ID field "'.self::ID_KEY.'" not defined');
+			throw new \LogicException('ID field "'.self::ID_KEY.'" not defined');
 
 		$this->_cols = $opts['cols'];
 
@@ -1441,7 +1455,7 @@ class TableField extends BaseField {
 		$this->_iv = [];
 		foreach( $value as $k => $rowData ) {
 			if( ! array_key_exists(self::ID_KEY, $rowData) )
-				throw new \Exception('Missing ID in row data');
+				throw new \LogicException('Missing ID in row data');
 
 			// Adjust names
 			$cols = [];

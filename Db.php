@@ -19,6 +19,8 @@ class Db {
 	const TYPE_MYSQL = 'mysql';
 	/** Microsoft SQL Server DB TYPE */
 	const TYPE_MSSQL = 'mssql';
+	/** PostgreSQL Server DB TYPE */
+	const TYPE_PGSQL = 'pgsql';
 
 	/** Debug object (or true for backward compatibility) */
 	public $debug = false;
@@ -65,10 +67,11 @@ class Db {
 		// When set, will cause MySQL to return INTEGER ans PHP int, but will
 		// cause some concurrency problems
 		//$this->_pdo->setAttribute(\PDO::ATTR_EMULATE_PREPARES, false);
-		switch( $this->_pdo->getAttribute(\PDO::ATTR_DRIVER_NAME) ) {
+		$driver = $this->_pdo->getAttribute(\PDO::ATTR_DRIVER_NAME);
+		switch( $driver ) {
 		case 'mysql':
 			$this->_type = self::TYPE_MYSQL;
-			$this->_pdo->exec('SET sql_mode = \'TRADITIONAL,STRICT_ALL_TABLES,NO_AUTO_VALUE_ON_ZERO,NO_ZERO_DATE,NO_ZERO_IN_DATE\'');
+			$this->_pdo->exec('SET sql_mode = \'TRADITIONAL,STRICT_ALL_TABLES,NO_AUTO_VALUE_ON_ZERO,NO_ZERO_DATE,NO_ZERO_IN_DATE,ANSI_QUOTES\'');
 			$this->_pdo->exec('SET NAMES utf8mb4');
 			break;
 		case 'odbc':
@@ -80,6 +83,11 @@ class Db {
 			$this->_type = self::TYPE_MSSQL;
 			$this->_pdo->exec('SET ARITHABORT ON');
 			break;
+		case 'pgsql':
+			$this->_type = self::TYPE_PGSQL;
+			break;
+		default:
+			throw new \dophp\NotImplementedException("Unknown DBMS \"$driver\"");
 		}
 	}
 
@@ -116,7 +124,7 @@ class Db {
 	/**
 	* Prepares a statement, executes it with given parameters and returns it
 	*
-	* @param $query string: The query to be executed
+	* @param $query mixed: The query to be executed or SelectQuery
 	* @param $params mixed: Array containing the parameters or single parameter
 	* @param $vcharfix boolean: like $this->vcharfix, ovverides it when used
 	* @return \PDOStatement
@@ -132,6 +140,9 @@ class Db {
 			$params = array($params);
 		if( $vcharfix === null )
 			$vcharfix = $this->vcharfix;
+
+		if( $query instanceof SelectQuery )
+			$query = $query->asSql($this->_type);
 
 		// Modify the query to cast all params to varchar
 		if( $vcharfix )
@@ -181,7 +192,7 @@ class Db {
 	 * Like Db::run(), but returns a Result instead
 	 *
 	 * @see run()
-	 * @param $query string: The Query string
+	 * @param $query mixed: The Query string or SelectQuery
 	 * @param $params array: Associative array of params
 	 * @param $types array: Associative array name => type of requested return
 	 *                      types. Omitted ones will be guessed from PDO data.
@@ -253,8 +264,8 @@ class Db {
 	*
 	* @see self::buildInsUpdQuery
 	*/
-	public function insertOrUpdate($table, $params) {
-		list($q,$p) = $this->buildInsUpdQuery('insupd', $table, $params);
+	public function insertOrUpdate($table, $params, $ccols=null) {
+		list($q,$p) = $this->buildInsUpdQuery('insupd', $table, $params, $ccols);
 
 		$this->run($q, $p);
 		// Does not return LAST_INSERT_ID because it is not updated on UPDATE
@@ -266,7 +277,16 @@ class Db {
 	* @return int: Number of found rows
 	*/
 	public function foundRows() {
-		$q = 'SELECT FOUND_ROWS() AS '.$this->quoteObj('fr');
+		switch( $this->_type ) {
+		case Db::TYPE_MYSQL:
+			$q = 'SELECT FOUND_ROWS() AS '.$this->quoteObj('fr');
+			break;
+		case Db::TYPE_MSSQL:
+			$q = 'SELECT @@ROWCOUNT AS '.$this->quoteObj('fr');
+			break;
+		default:
+			throw new NotImplementedException("Not Implemented DBMS {$this->_type}");
+		}
 
 		$res = $this->run($q)->fetch();
 		return $res['fr'] !== null ? (int)$res['fr'] : null;
@@ -363,7 +383,7 @@ class Db {
 	 * Quotes a schema object (table, column, ...)
 	 *
 	 * @param $name string: The unquoted object name
-	 * @param $type string: The DBMS type (ansi, mysql, mssql)
+	 * @param $type string: The DBMS type (ansi, mysql, mssql, pgsql)
 	 * @return string: The quoted object name
 	 */
 	public static function quoteObjFor($name, $type) {
@@ -373,6 +393,7 @@ class Db {
 			return "`$name`";
 		case self::TYPE_MSSQL:
 			return "[$name]";
+		case self::TYPE_PGSQL:
 		case 'ansi':
 			return "\"$name\"";
 		default:
@@ -386,17 +407,7 @@ class Db {
 	 */
 	public function quoteConv($query) {
 		$spat = '/"([^"\\\\]*(?:\\\\.[^"\\\\]*)*)"/';
-
-		switch( $this->_type ) {
-		case self::TYPE_MYSQL:
-			$reppat = '`$1`';
-			break;
-		case self::TYPE_MSSQL:
-			$reppat = '[$1]';
-			break;
-		default:
-			throw new NotImplementedException('Not Implemented');
-		}
+		$reppat = $this->quoteObj('$1');
 
 		return preg_replace($spat, $reppat, $query);
 	}
@@ -409,13 +420,18 @@ class Db {
 	*
 	* @param $type string: The query type (ins, upd, insupd)
 	* @param $table string: The name of the table
+	* @param $ccols array: When type is 'insupd' and DBMS is PostgreSQL,
+	*                      this is the list of constraint columns. Ignored otherwise
 	* @see self::buildParams
 	* @return array [query string, params]
 	*/
-	public function buildInsUpdQuery($type, $table, $params) {
+	public function buildInsUpdQuery($type, $table, $params, $ccols=null) {
 		switch( $type ) {
-		case 'ins':
 		case 'insupd':
+			if( $this->_type == self::TYPE_PGSQL && ! $ccols )
+				throw new \InvalidArgumentException('$ccols must be specified for PostgreSQL');
+			// no break is intended
+		case 'ins':
 			$q = 'INSERT INTO';
 			$ins = true;
 			break;
@@ -433,16 +449,28 @@ class Db {
 			list($cols, $p) = self::processParams($params, $this->_type);
 			$q .= '(' . implode(',', array_keys($cols)) . ')';
 			$q .= ' VALUES (' . implode(',', array_values($cols)) . ')';
+
 			if( $type == 'insupd' ) {
 				$updates = array();
 				foreach( $cols as $k => $v )
-					$updates[] = "$k=VALUES($k)";
-				$q .= ' ON DUPLICATE KEY UPDATE ' . implode(', ', $updates);;
+					if( $this->_type == self::TYPE_PGSQL )
+						$updates[] = "$k=excluded.$k";
+					else
+						$updates[] = "$k=VALUES($k)";
+
+				if( $this->_type == self::TYPE_PGSQL ) {
+					$con = implode(', ', array_map(function($c){ return $this->quoteObj($c); }, $ccols));
+					$cq = " ON CONFLICT ($con) DO UPDATE SET ";
+				} else
+					$cq = ' ON DUPLICATE KEY UPDATE ';
+
+				$q .= $cq . implode(', ', $updates);
 			}
 		} else {
 			list($sql, $p) = self::buildParams($params, ', ', $this->_type);
 			$q .= " SET $sql";
 		}
+
 		return array($q, $p);
 	}
 
@@ -485,6 +513,7 @@ class Db {
 	public static function processParams($params, $type=self::TYPE_MYSQL) {
 		if( ! $params )
 			return array([], []);
+
 		$cols = array();
 		$vals = array();
 		foreach( $params as $k => $v ) {
@@ -512,6 +541,16 @@ class Db {
 			}
 			$cols[$sqlCol] = $sqlPar;
 		}
+
+		// SQL Server driver fix
+		if( $type == self::TYPE_MSSQL ) {
+			foreach( $vals as &$v )
+				if( $v instanceof \DateTime )
+					$v = $v->format('Ymd H:i:s.v');
+
+			unset($v);
+		}
+
 		return array($cols, $vals);
 	}
 
@@ -838,6 +877,7 @@ class Table {
 	const DATA_TYPE_DATE     = 'Date';
 	const DATA_TYPE_DATETIME = 'DateTime';
 	const DATA_TYPE_TIME     = 'Time';
+	const DATA_TYPE_JSON     = 'JSON';
 	const DATA_TYPE_NULL     = 'null'; // Rare always null columns
 
 	/** Database table name, may be overridden in sub-class or passed by constructor */
@@ -1170,7 +1210,9 @@ class Table {
 	 *                 DateTime, Time (see DATA_TYPE_* constants)
 	 */
 	public static function getType($dtype, $len) {
-		switch(strtoupper($dtype)) {
+		$udtype = strtoupper($dtype);
+
+		switch( $udtype ) {
 		case 'SMALLINT':
 		case 'MEDIUMINT':
 		case 'INT':
@@ -1179,6 +1221,9 @@ class Table {
 		case 'LONG':
 		case 'LONGLONG':
 		case 'SHORT':
+		case 'INT2':
+		case 'INT4':
+		case 'INT8':
 			return self::DATA_TYPE_INTEGER;
 		case 'BIT':
 		case 'BOOL':
@@ -1203,7 +1248,9 @@ class Table {
 		case 'TINYBLOB':
 		case 'BLOB':
 		case 'MEDIUMBLOB':
+		case 'MEDIUM_BLOB':
 		case 'LONGBLOB':
+		case 'LONG_BLOB':
 		case 'TINYTEXT':
 		case 'TEXT':
 		case 'MEDIUMTEXT':
@@ -1219,10 +1266,15 @@ class Table {
 			return self::DATA_TYPE_DATETIME;
 		case 'TIME':
 			return self::DATA_TYPE_TIME;
+		case 'JSON':
+			return self::DATA_TYPE_JSON;
 		case 'NULL':
 			// Rare always-null columns
 			return self::DATA_TYPE_NULL;
 		}
+
+		if( Utils::startsWith($udtype, 'ENUM') )
+			return self::DATA_TYPE_STRING;
 
 		throw new NotImplementedException("Unsupported column type $dtype");
 	}
@@ -1316,6 +1368,8 @@ class Table {
 			return new \DateTime($val);
 		case self::DATA_TYPE_TIME:
 			return new Time($val);
+		case self::DATA_TYPE_JSON:
+			return json_decode($val, true);
 		case self::DATA_TYPE_NULL:
 			throw new \LogicException('Value should have been null');
 		}
@@ -1549,7 +1603,7 @@ class SelectQuery {
 	 *                Every index is the unique column name (alias).
 	 *                Possible keys in definition array:
 	 *                - qname: Name of the column as defined in the query
-	 *                  (ie. `a`.`id`). Mandatory. This will be the only field
+	 *                  (ie. a.id). Mandatory. This will be the only field
 	 *                  if a string is given
 	 *                - pk: Tells whether this column is part of the PK
 	 *        - from: The FROM part of the query, without the FROM keyword.
@@ -1769,19 +1823,24 @@ class SelectQuery {
 	 * Returns the query as SQL
 	 *
 	 * @todo Use Caching
+	 * @param $type string: See Db::TYPE_* consts
 	 */
-	public function asSql(): string {
+	public function asSql(string $type): string {
 		foreach( $this->_cols as $name => $def )
 			$select[] = $def['qname'] . " AS $name";
 
-		$sql = 'SELECT ' . implode(', ', $select) . "\nFROM " . $this->_from;
+		$sql = 'SELECT';
+		if( $type == Db::TYPE_MSSQL && $this->_limit )
+			$sql .= " TOP {$this->_limit}";
+
+		$sql .= "\n" . implode(', ', $select) . "\nFROM " . $this->_from;
 		if( $this->_where )
 			$sql .= "\nWHERE {$this->_where}";
 		if( $this->_groupBy )
 			$sql .= "\nGROUP BY {$this->_groupBy}";
 		if( $this->_orderBy )
 			$sql .= "\nORDER BY {$this->_orderBy}";
-		if( $this->_limit )
+		if( $type != Db::TYPE_MSSQL && $this->_limit )
 			$sql .= "\nLIMIT {$this->_limit}";
 
 		return $sql;
@@ -1789,9 +1848,10 @@ class SelectQuery {
 
 	/**
 	 * @see self::asSql()
+	 * @deprecated Do not use, since it defaults to MySQL. Will be removed
 	 */
 	public function __toString() {
-		return $this->asSql();
+		return $this->asSql(Db::TYPE_MYSQL);
 	}
 
 	/**
@@ -1827,7 +1887,7 @@ class SelectQuery {
 	 * @param $orderBy string: The clause to prepend, wihout ORDER BY keyword
 	 */
 	public function prependOrderBy(string $orderBy) {
-		if( $this->_orderBy == null ) {
+		if( $this->_orderBy === null ) {
 			$this->_orderBy = $orderBy;
 			return;
 		}

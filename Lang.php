@@ -16,30 +16,30 @@ namespace dophp;
 * Also handles database text storage and retrieve: a table <idxTable> contains
 * a single field representing the unique localized text id. A second table <txtTable>
 * is used for text storage and must have a composed primary key (index, language)
-* and a `text` field for text storage.
+* and a "text" field for text storage.
 *
 * Example Database structure:
-* CREATE TABLE IF NOT EXISTS `i18n` (
-*  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
-*  PRIMARY KEY (`id`))
+* CREATE TABLE IF NOT EXISTS "i18n" (
+*  "id" INT UNSIGNED NOT NULL AUTO_INCREMENT,
+*  PRIMARY KEY ("id"))
 * ENGINE = InnoDB
 * COMMENT = 'Internationalization and localization';
 *
-* CREATE TABLE IF NOT EXISTS `translations` (
-*  `i18n` INT UNSIGNED NOT NULL,
-*  `languages` CHAR(2) NOT NULL,
-*  `text` TEXT NOT NULL,
-*  PRIMARY KEY (`i18n`, `languages`),
-*  INDEX `fk_languages_has_i18n_i18n1_idx` (`i18n` ASC),
-*  INDEX `fk_languages_has_i18n_languages1_idx` (`languages` ASC),
-*  CONSTRAINT `fk_languages_has_i18n_languages1`
-*    FOREIGN KEY (`languages`)
-*    REFERENCES `languages` (`id`)
+* CREATE TABLE IF NOT EXISTS "translations" (
+*  "i18n" INT UNSIGNED NOT NULL,
+*  "languages" CHAR(2) NOT NULL,
+*  "text" TEXT NOT NULL,
+*  PRIMARY KEY ("i18n", "languages"),
+*  INDEX "fk_languages_has_i18n_i18n1_idx" ("i18n" ASC),
+*  INDEX "fk_languages_has_i18n_languages1_idx" ("languages" ASC),
+*  CONSTRAINT "fk_languages_has_i18n_languages1"
+*    FOREIGN KEY ("languages")
+*    REFERENCES "languages" ("id")
 *    ON DELETE NO ACTION
 *    ON UPDATE NO ACTION,
-*  CONSTRAINT `fk_languages_has_i18n_i18n1`
-*    FOREIGN KEY (`i18n`)
-*    REFERENCES `i18n` (`id`)
+*  CONSTRAINT "fk_languages_has_i18n_i18n1"
+*    FOREIGN KEY ("i18n")
+*    REFERENCES "i18n" ("id")
 *    ON DELETE NO ACTION
 *    ON UPDATE NO ACTION)
 * ENGINE = InnoDB;
@@ -291,7 +291,7 @@ class Lang {
 	*/
 	public function newText($text) {
 		$id = $this->_idxTable->insert(array($this->_idxTable->getPk()[0] => null));
-		
+
 		foreach( $text as $lang => $txt ) {
 			$par = array_combine($this->_txtTable->getPk(), array($id,$lang));
 			$par[self::TEXT_COL] = $txt;

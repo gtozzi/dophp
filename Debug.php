@@ -130,7 +130,7 @@ class SessionDebug extends Debug {
 			return [];
 
 		if( ! is_array($_SESSION[self::SESS_KEY]) )
-			throw new \Exception('Malformed session data');
+			throw new \UnexpectedValueException('Malformed session data');
 
 		return $_SESSION[self::SESS_KEY];
 	}

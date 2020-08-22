@@ -14,13 +14,56 @@ require_once(__DIR__ . '/../DateFilter.php');
 
 
 /**
- * A data table, uses the datatable javascript library
+ * Datatable base interface
  */
-class DataTable extends BaseWidget {
+interface DataTableInterface {
+
+	/**
+	 * Returns the table HTML structure
+	 */
+	public function getHTMLStructure(): string;
+
+	/**
+	 * Parses the request data and returns raw data
+	 *
+	 * @param $pars: array of parameters, associative
+	 * @param $save: if true, save search filter and order
+	 * @param $useSaved: boolean, if true, will use saved params as defaults
+	 * @see https://datatables.net/manual/server-side
+	 * @return \dophp\Result Query result object
+	 */
+	public function getRawData( $pars=[], $save=false, $useSaved=false ): array;
+
+	/**
+	 * Parses the request data and returns result
+	 *
+	 * @param $pars: array of parameters, associative
+	 * @param $save: boolean; if true, will save requested data
+	 * @param $useSaved: boolean, if true, will use saved params as defaults
+	 * @see https://datatables.net/manual/server-side
+	 * @see self::_encodeData
+	 */
+	public function getData( array $pars=[], bool $save=true, bool $useSaved=false ): array;
+
+}
+
+/**
+ * Base class for a datatable, inspired to the datatable javascript library
+ */
+abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 	use \dophp\SmartyFunctionalities;
 
 	/** Special data key for buttons */
 	const BTN_KEY = '~btns~';
+
+	/** Special data key for identifying totals row */
+	const TOT_KEY = '~istotals~';
+
+	// Special datatable consts, see: https://datatables.net/manual/server-side
+	const DT_ROWID_KEY = 'DT_RowId';
+	const DT_ROWCLASS_KEY = 'DT_RowClass';
+	const DT_ROWDATA_KEY = 'DT_RowData';
+	const DT_ROWATTR_KEY = 'DT_RowAttr';
 
 	/** asc keyword for order */
 	const ORDER_ASC = 'asc';
@@ -40,30 +83,10 @@ class DataTable extends BaseWidget {
 		"ud" => "ud"
 	);
 
-	const DATA_TYPE_DATE =  \dophp\Table::DATA_TYPE_DATE;
-
 	const MEMCACHE_KEY_BASE = 'DoPhp::DataTable::';
-
-	/** Expire time for _count cache entries */
-	const COUNT_CACHE_EXPIRE = 60 * 60;
-
-	/** Expire time for column type cache entries */
-	const COLTYPES_CACHE_EXPIRE = 60 * 60;
-
-	/**
-	 * The FROM part of the query to be executed to get data for the table,
-	 * without the "FROM" keyword, must be defined in child
-	 */
-	protected $_from = null;
 
 	/** Associative array of fixed query params and button params */
 	public $params = [];
-
-	/** Fixed where clause, if any, without "WHERE" keyword */
-	protected $_where = null;
-
-	/** Fixed group by, if any, without "GROUP BY" keyword */
-	protected $_groupBy = null;
 
 	/**
 	 * The columns definitions, used as DataTableColumn constructors ($id=>$opt)
@@ -122,6 +145,9 @@ class DataTable extends BaseWidget {
 	/** Tells whether elements in this table can be selected */
 	public $selectable = false;
 
+	/** Should add a totals row? */
+	public $addTotals = false;
+
 	/**
 	 * Provides the query for the cache freshness check default implementation
 	 * must be defined in child and return only a row and col
@@ -150,13 +176,17 @@ class DataTable extends BaseWidget {
 	/**
 	 * Get field types from the DBMS and set the field type for the Date type
 	 */
-	protected function _earlyRetrieveType() {
-		$types = $this->_getColumnTypeInfo();
+	protected function _fillMissingColumnTypeInfo() {
+		$types = null;
 
-		foreach( $this->_cols as $col ) {
-			if( ! isset($col->type) && $types[$col->id] == self::DATA_TYPE_DATE )
-				$col->type = self::DATA_TYPE_DATE;
-		}
+		foreach( $this->_cols as $col )
+			if( ! isset($col->type) ) {
+				// Only retrieve types when needed
+				if( $types === null )
+					$types = $this->_getColumnTypeInfo();
+
+				$col->type = $types[$col->id];
+			}
 	}
 
 	/**
@@ -174,26 +204,9 @@ class DataTable extends BaseWidget {
 	}
 
 	/**
-	 * Retrieve column type info from cache or live
-	 *
-	 * @return array associative [ id -> type ]
+	 * Given a result, returns column type info
 	 */
-	protected function _getColumnTypeInfo(): array {
-		$cache = \DoPhp::cache();
-		$cacheKey = self::MEMCACHE_KEY_BASE . $this->getFairlyUniqueIdentifier() . "::colTypes";
-
-		// Try cache first
-		if( $cache ) {
-			$info = $cache->get($cacheKey);
-			if( $info )
-				return $info;
-		}
-
-		// Cache failed, go retrieve it
-		list($q, $where, $p, $groupBy) = $this->_buildBaseQuery(false, false);
-		$q .= "\n LIMIT 0 \n";
-
-		$res = $this->_db->xrun($q);
+	protected function _extractColumnTypesFromRes(\dophp\Result $res): array {
 		$i = 0;
 		$types = [];
 		foreach( $this->_cols as $col ) {
@@ -202,41 +215,47 @@ class DataTable extends BaseWidget {
 
 			$i++;
 		}
-
-		if( $cache )
-			$cache->set($cacheKey, $types, 0, static::COLTYPES_CACHE_EXPIRE);
-
 		return $types;
 	}
+
+	/**
+	 * Retrieve column type info from cache or live
+	 *
+	 * @return array associative [ id -> type ]
+	 */
+	abstract protected function _getColumnTypeInfo(): array;
 
 	/**
 	 * Constructs the table object
 	 *
 	 * @param $page PageInterface: the parent page
+	 * @param $params array: Default parameters (see $this->params)
 	 */
-	public function __construct(\dophp\PageInterface $page) {
+	public function __construct(\dophp\PageInterface $page, array $params = null) {
 		parent::__construct();
+
+		// Sets the default template
+		$this->_template = 'widgets/dataTable.tpl';
 
 		$this->_page = $page;
 		$this->_db = $page->db();
 		$this->_config = $page->config();
 		$this->_user = $page->user();
 
+		if( isset($params) )
+			$this->params = $params;
+
 		$this->_initProps();
 
 		// Deprecation checks
 		if( isset($this->_pk) )
-			throw new \Exception('Deprecated PK specification');
-		if( isset($this->_query) )
-			throw new \Exception('Deprecated Query specification');
+			throw new \LogicException('Deprecated PK specification');
 		if( isset($this->_cntquery) )
-			throw new \Exception('Deprecated CntQuery specification');
+			throw new \LogicException('Deprecated CntQuery specification');
 
 		// Checks for data validity
-		if( ! isset($this->_from) || ! is_string($this->_from) )
-			throw new \Exception('Missing or invalid From definition');
 		if( ! isset($this->_cols) || ! is_array($this->_cols) )
-			throw new \Exception('Missing or invalid Cols definition');
+			throw new \LogicException('Missing or invalid Cols definition');
 
 		// Builds the super filter
 		foreach( $this->_sfilter as $name => &$field ) {
@@ -246,7 +265,7 @@ class DataTable extends BaseWidget {
 				$opts['label'] = $field['label'];
 
 			if( ! isset($field['filter']) )
-				throw new \Exception("Missing filter query in filter field \"$name\"");
+				throw new \LogicException("Missing filter query in filter field \"$name\"");
 			$filter = $field['filter'];
 
 			$field = new BoolField($name, $opts);
@@ -262,12 +281,18 @@ class DataTable extends BaseWidget {
 			} elseif( is_array($col) )
 				$col = new DataTableColumn($k, $col);
 			else
-				throw new \Exception('Invalid column definition: ' . gettype($col));
+				throw new \LogicException('Invalid column definition: ' . gettype($col));
 		}
 		unset($col);
 
-		// Retrieves column types for the query
-		$this->_earlyRetrieveType();
+		// Early retrieve column type info for the filter to be built correctly
+		// only needed if at least one column has filter enabled and missing type
+		foreach( $this->_cols as $col )
+			if( $col->filter && ! isset($col->type) ) {
+				// Trigger retrieve for all columns, then break
+				$this->_fillMissingColumnTypeInfo();
+				break;
+			}
 
 		// Makes sure PK is valid
 		$this->_getPkName();
@@ -310,9 +335,9 @@ class DataTable extends BaseWidget {
 
 		foreach( $this->_cols as $c )
 			if( $c->visible )
-				return [ $asIdx ? $this->colIdToIdx($c->id) : $c->id, self::ORDER_ASC ];
+				return [ $asIdx ? $this->colIdToIdx($c->id) : $c->id, static::ORDER_ASC ];
 
-		throw new \Exception('No visible column');
+		throw new \RuntimeException('No visible column');
 	}
 
 	/**
@@ -356,11 +381,11 @@ class DataTable extends BaseWidget {
 
 		$q = "
 			SELECT
-				`{$prefs['sortcol']}` AS sortcol,
-				`{$prefs['ordcol']}` AS sortord,
-				`{$prefs['sfcol']}` AS sf
-			FROM `{$prefs['table']}`
-			WHERE `{$prefs['uidcol']}` = ? AND `{$prefs['tablecol']}` = ?
+				" . $this->_db->quoteObj($prefs['sortcol']) . " AS sortcol,
+				" . $this->_db->quoteObj($prefs['ordcol']) . " AS sortord,
+				" . $this->_db->quoteObj($prefs['sfcol']) . " AS sf
+			FROM " . $this->_db->quoteObj($prefs['table']) . "
+			WHERE " . $this->_db->quoteObj($prefs['uidcol']) . " = ? AND " . $this->_db->quoteObj($prefs['tablecol']) . " = ?
 		";
 		$p = [ $this->_user->getUid(), $this->getClsId() ];
 		$t = [ 'sf' => \dophp\Table::DATA_TYPE_STRING ];
@@ -381,7 +406,7 @@ class DataTable extends BaseWidget {
 		if( ! $r || ! $r['sortcol'] || ! $r['sortord'] )
 			return null;
 
-		if( $r['sortord'] != self::ORDER_ASC && $r['sortord'] != self::ORDER_DESC )
+		if( $r['sortord'] != static::ORDER_ASC && $r['sortord'] != static::ORDER_DESC )
 			return null;
 
 		if( ! array_key_exists($r['sortcol'], $this->_cols) )
@@ -439,7 +464,7 @@ class DataTable extends BaseWidget {
 			$prefs['tablecol'] => $this->getClsId(),
 			$prefs['sortcol'] => $colId,
 			$prefs['ordcol'] => $ascDesc,
-		]);
+		], [$prefs['tablecol'], $prefs['uidcol']]);
 
 		// Invalidate cache
 		$this->_prefsCache = null;
@@ -461,7 +486,7 @@ class DataTable extends BaseWidget {
 			$prefs['uidcol'] => $this->_user->getUid(),
 			$prefs['tablecol'] => $this->getClsId(),
 			$prefs['sfcol'] => json_encode($filter, JSON_FORCE_OBJECT),
-		]);
+		], [$prefs['tablecol'], $prefs['uidcol']]);
 
 		// Invalidate cache
 		$this->_prefsCache = null;
@@ -475,12 +500,12 @@ class DataTable extends BaseWidget {
 	 */
 	public function colIdxToId( int $idx ): string {
 		if( $idx < 1 )
-			throw new \Exception('Min idx is 1');
+			throw new \UnexpectedValueException('Min idx is 1');
 		$idx--;
 
 		$ids = array_keys($this->_cols);
 		if( ! array_key_exists($idx, $ids) )
-			throw new \Exception("IDX $idx out of range");
+			throw new \UnexpectedValueException("IDX $idx out of range");
 		return $ids[$idx];
 	}
 
@@ -493,7 +518,7 @@ class DataTable extends BaseWidget {
 	public function colIdToIdx( string $id ): int {
 		$idx = array_search($id, array_keys($this->_cols), true);
 		if( $idx === false )
-			throw new \Exception("ID $id not found");
+			throw new \UnexpectedValueException("ID $id not found");
 
 		return $idx + 1;
 	}
@@ -536,9 +561,37 @@ class DataTable extends BaseWidget {
 		return $this->_page;
 	}
 
-	/**
-	 * Returns the table HTML structure
+	/*
+	 * Returns default JS options
 	 */
+	protected function _getHtmlInitOptions(): array {
+		return [
+			'processing' => true,
+			'serverSide' => true,
+			//scrollCollapse: true,
+			// Can't set to false or search will be ignored
+			//bFilter:        false,
+			//stateSave:      true,
+			'dom' => 'lrtip<"dtbl-buttons-container">',
+
+			// Scroller extension
+			'scroller'    => true,
+			'deferRender' => true,
+			'scrollY'     => 'calc( 100vh - 300px )',
+			'scrollX'     => true,
+			'autoWidth'   => true,
+
+			'language' => [
+				'url' => "{$this->_config['dophp']['url']}/webcontent/DataTables/Italian.json",
+			],
+
+			'ordering' => true,
+			//colReorder: true,
+
+			'autoWidth' => true,
+		];
+	}
+
 	public function getHTMLStructure(): string {
 		// Sets this prop for smarty compatibility
 		$this->_name = $this->_page->name();
@@ -546,26 +599,25 @@ class DataTable extends BaseWidget {
 
 		$this->_ajaxURL = \dophp\Url::getToStr($_GET);
 
-		// By default, use the generic "admin" template
-		$this->_template = 'widgets/dataTable.tpl';
-
 		$this->_smarty->assign('id', $this->_id);
 		$this->_smarty->assign('cols', $this->_cols);
 		$this->_smarty->assign('order', $this->_getSavedOrder(true) ?? $this->_getDefaultOrder(true));
+		$this->_smarty->assign('initOpts', $this->_getHtmlInitOptions());
 
 		$this->_smarty->assign("getColClass",$this->getColClass());
 		$this->_smarty->assign("monthYearList",$this->getMonthYearList());
 		$this->_smarty->assign("yearList",$this->getYearList());
-		$this->_smarty->assign("dFilterDivider",self::DFILTER_DIVIDER);
-		$this->_smarty->assign("customDateFilt",self::DATA_TYPE_DATE);
+		$this->_smarty->assign("dFilterDivider",static::DFILTER_DIVIDER);
 
 		$this->_smarty->assign('btns', $this->_btns);
 		$this->_smarty->assign('rbtns', $this->_rbtns);
-		$this->_smarty->assign('btnKey', self::BTN_KEY);
+		$this->_smarty->assign('btnKey', static::BTN_KEY);
+		$this->_smarty->assign('totKey', static::TOT_KEY);
 		$this->_smarty->assign('action', '?'.\DoPhp::BASE_KEY."={$this->_name}");
 		$this->_smarty->assign('sfilter', $this->_sfilter);
 		$this->_smarty->assign('ajaxURL', $this->_ajaxURL);
 		$this->_smarty->assign('selectable', $this->selectable);
+		$this->_smarty->assign('addTotals', $this->addTotals);
 
 		return $this->_smarty->fetch($this->_template);
 	}
@@ -588,102 +640,53 @@ class DataTable extends BaseWidget {
 		$pk = [];
 		foreach( $this->_cols as $k => $c ) {
 			if( $k != $c->id )
-				throw new \Exception('K and ID mismatch');
+				throw new \LogicException('K and ID mismatch');
 			if( $c->pk )
 				$pk[] = $c->id;
 		}
 
 		if( count($pk) < 1 )
-			throw new \Exception('PK is not defined');
+			throw new \LogicException('PK is not defined');
 		if( count($pk) > 2 )
-			throw new \Exception('Composite PK is not supported');
+			throw new \dophp\NotImplementedException('Composite PK is not supported');
 
 		return $pk[0];
 	}
 
 	/**
-	 * Returns the base query to be executed, with the super filter and
-	 * the access filter, no limit, no order
+	 * Returns column explicit types, when given
 	 *
-	 * @param $cnt boolean: if true, build a query for the COUNT(*)
-	 * @param $calcFound boolean: if true, add SQL_CALC_FOUND_ROWS
-	 * @todo Caching
-	 * @return [ $query, $where and array, $params array, $groupBy condition (may be null) ]
+	 * @return array [ id => type ], only for explicit columns
 	 */
-	protected function _buildBaseQuery($cnt=false, $calcFound=true) {
-		if( $cnt || ! $calcFound )
-			$q = "SELECT\n";
-		else
-			$q = "SELECT SQL_CALC_FOUND_ROWS\n";
+	protected function _getColumnExplicitTypes() : array {
+		$types = [];
 
-		$cols = [];
-		foreach( $this->_cols as $c )
-			if( $c->qname )
-				$cols[] = "\t{$c->qname} AS `{$c->id}`";
-			else
-				$cols[] = "\t`{$c->id}`";
-		$q .= implode(",\n", $cols) . "\n";
+		foreach( $this->_cols as $k => $c )
+			if( isset($c->type) )
+				$types[$k] = $c->type;
 
-		$q .= "FROM {$this->_from}\n";
-		$where = [];
-		if( $this->_where )
-			$where[] = "( {$this->_where} )";
-		$pars = $this->params;
-
-		// Calculate the super filter where clause
-		$sfilter = [];
-		foreach( $this->_sfilter as $f ) {
-			if( ! $f->getInternalValue() )
-				continue;
-
-			$sfilter[] = '(' . $f->filter . ')';
-		}
-		if( $sfilter )
-			$where[] = '( ' . implode(' OR ', $sfilter) . ' )';
-
-		// Get the access where clause
-		$afilter = $this->_getAccessFilter();
-		if( $afilter !== null ) {
-			if( ! is_array($afilter) )
-				throw new \Exception('Invalid access filter');
-			list($awhere, $apars) = $afilter;
-			if( ! is_string($awhere) || ! is_array($apars) )
-				throw new \Exception('Invalid access filter');
-
-			$where[] = '( ' . $awhere . ' )';
-			$pars = array_merge($pars, $apars);
-		}
-
-		return [ $q, $where, $pars, $this->_groupBy ];
+		return $types;
 	}
 
 	/**
-	 * Parses the request data and returns raw data
+	 * Retrieves the raw data, internal
 	 *
-	 * @param $pars: array of parameters, associative
-	 * @param $save: if true, save search filter and order
-	 * @param $useSaved: boolean, if true, will use saved params as defaults
-	 * @see https://datatables.net/manual/server-side
-	 * @return \dophp\Result Query result object
+	 * @param $filter DataTableSearchFilter
+	 * @param $order DatatableDataOrder
+	 * @param $limit DatatableDataLimit
+	 * @return \dophp\Result
 	 */
-	public function getRawData( $pars=[], $save=false, $useSaved=false ): \dophp\Result {
+	abstract protected function _getRawDataInternal( DataTableDataFilter $filter=null, DatatableDataOrder $order=null, DatatableDataLimit $limit=null ): array;
+
+	public function getRawData( $pars=[], $save=false, $useSaved=false ): array {
 		// Parses the super filter
 		foreach( $this->_sfilter as $field )
 			if( isset($pars['filter'][$field->getName()]) )
 				$field->setInternalValue( (bool)$pars['filter'][$field->getName()] );
 
-		// Base query
-		list($q, $where, $p, $groupBy) = $this->_buildBaseQuery();
-		$having = [];
-
-		// Calculate explicit types array
-		$types = [];
-		foreach( $this->_cols as $k => $c )
-			if( isset($c->type) )
-				$types[$k] = $c->type;
-
-		// Calculate filter having clause
+		// Calculate filter clause
 		$filter = [];
+		$filterArgs = [];
 		$saveFilter = [];
 		$idx = -1;
 		foreach( $this->_cols as $c ) {
@@ -703,7 +706,7 @@ class DataTable extends BaseWidget {
 			$saveFilter[$c->id] = $search;
 
 			// checks if filter is a date filter and calculate where clause
-			if($c->type==self::DATA_TYPE_DATE){
+			if($c->type == \dophp\Table::DATA_TYPE_DATE){
 
 				$dateFilter = new \dophp\DateFilter($search, self::DFILTER_DIVIDER);
 				$search = $dateFilter->getSearchFilter($c->qname);
@@ -711,30 +714,18 @@ class DataTable extends BaseWidget {
 
 			} else {
 				$filter[] = "{$c->qname} LIKE :f$idx";
-				$p[":f$idx"] = "%$search%";
+				$filterArgs[":f$idx"] = "%$search%";
 			}
 
 		}
+		$filter = new DataTableDataFilter($filter, $filterArgs);
 		// Save the search filter
 		if( $save )
 			$this->_saveSearchFilter($saveFilter);
 
-		if( $filter )
-			$having[] = '( ' . implode(' AND ', $filter) . ' )';
 
-		// Apply where clause
-		if( $where )
-			$q .= "\nWHERE " . implode(' AND ', $where);
-
-		// Apply Group By
-		if( $groupBy )
-			$q .= "\nGROUP BY $groupBy";
-
-		// Apply having clause
-		if( $having )
-			$q .= "\nHAVING " . implode(' AND ', $having);
-
-		// Apply order, if given
+		// Calculate order, if given
+		$order = null;
 		if( isset($pars['order']) && isset($pars['order'][0]) && $pars['order'][0] ) {
 			$order = $pars['order'][0];
 			$orderc = (int)$order['column']; // Indexes start at 1 because column 0 is the buttons column
@@ -742,50 +733,51 @@ class DataTable extends BaseWidget {
 				$orderc = 1;
 
 			$colId = $this->colIdxToId($orderc);
-			$q .= "\nORDER BY $colId ";
-			$ord = strtolower($order['dir'])==self::ORDER_DESC ? self::ORDER_DESC : self::ORDER_ASC;
-			$q .= strtoupper($ord);
+			$ord = strtolower($order['dir'])==static::ORDER_DESC ? static::ORDER_DESC : static::ORDER_ASC;
 
+			$order = new DataTableDataOrder($colId, $ord);
 			// Saves the new order preference
 			if( $save )
 				$this->_saveOrder($colId, $ord);
 		}
 
-		// Filter by limit, if given
+		// Calculate limit, if given
+		$limit = null;
 		if( isset($pars['length']) && $pars['length'] > 0 ) {
-			if( $this->_db->type() == $this->_db::TYPE_MSSQL)
-				$q .= "\nOFFSET ". ( (int)$pars['start'] ) . ' ROWS FETCH NEXT ' . $pars['length'].' ROWS ONLY';
-			else
-				$q .= "\nLIMIT " . ( (int)$pars['start'] ) . ',' . $pars['length'];
+			$limit = new DatatableDataLimit($pars['length'], $pars['start']);
 		}
 
-		return $this->_db->xrun($q, $p, $types);
+		return $this->_getRawDataInternal($filter, $order, $limit);
 	}
 
-	/**
-	 * Parses the request data and returns result
-	 *
-	 * @param $pars: array of parameters, associative
-	 * @param $save: boolean; if true, will save requested data
-	 * @param $useSaved: boolean, if true, will use saved params as defaults
-	 * @see https://datatables.net/manual/server-side
-	 * @see self::_encodeData
-	 */
 	public function getData( array $pars=[], bool $save=true, bool $useSaved=false ): array {
 		$trx = $this->_db->beginTransaction(true);
 
 		// Retrieve data
-		$data = $this->getRawData($pars, $save, $useSaved)->fetchAll();
+		$data = $this->getRawData($pars, $save, $useSaved);
 
-		// Add buttons
+		if( $this->addTotals )
+			$totals = new DataTableTotalsUtil($this->_cols);
+
+		// Add buttons / calculate totals
 		foreach( $data as &$d ) {
-			$d[self::BTN_KEY] = [];
+			$d[static::BTN_KEY] = [];
 
 			foreach( $this->_rbtns as $k => $btn )
 				if( $btn->showInRow($d) )
-					$d[self::BTN_KEY][] = $k;
+					$d[static::BTN_KEY][] = $k;
+
+			if( $this->addTotals )
+				$totals->addRow($d);
 		}
 		unset($d);
+
+		// Add totals row
+		if( isset($totals) ) {
+			$totrow = $totals->get();
+			$totrow[DataTable::TOT_KEY] = true;
+			$data[] = $totrow;
+		}
 
 		$found = $this->_db->foundRows();
 
@@ -863,7 +855,11 @@ class DataTable extends BaseWidget {
 
 				if( $colCount === null )
 					$cc++;
-				$row[] = $v;
+
+				if( $v instanceof DataTableCell )
+					$row[] = $v->value;
+				else
+					$row[] = $v;
 			}
 			if( $colCount === null )
 				$colCount = $cc;
@@ -891,43 +887,7 @@ class DataTable extends BaseWidget {
 	/**
 	 * Counts unfiltered results, uses memcache if possible
 	 */
-	protected function _count(): int {
-		list($query, $where, $params, $groupBy) = $this->_buildBaseQuery(true);
-		if( $where )
-			$query .= "\nWHERE " . implode(' AND ', $where);
-		if( $groupBy )
-			$query .= "\nGROUP BY $groupBy";
-
-		$query = "SELECT COUNT(*) AS `cnt` FROM ( $query ) AS `q`";
-
-		$trans = $this->_db->beginTransaction(true);
-
-		// Try to use the cache
-		if( $this->_enableCountCache ) {
-			$cache = \DoPhp::cache();
-			$ccfcv = $this->_getCountCacheFreshnessCheckVal();
-			$ch = sha1(sha1($ccfcv) . sha1($query) . sha1(serialize($params)));
-			$cacheKey = self::MEMCACHE_KEY_BASE . 'count::' . $ch;
-		}
-
-		if( $this->_enableCountCache && $cache ) {
-			$cnt = $cache->get($cacheKey);
-			if( $cnt !== false && is_int($cnt) )
-				return $cnt;
-		}
-
-		// No hit in cache, run the query
-		$cnt = (int)$this->_db->run($query, $params)->fetch()['cnt'];
-
-		if( $trans )
-			$this->_db->commit();
-
-		// Try to save the new value in cache
-		if( $this->_enableCountCache && $cache )
-			$cache->set($cacheKey, $cnt, 0, static::COUNT_CACHE_EXPIRE);
-
-		return $cnt;
-	}
+	abstract protected function _count(): int;
 
 	/**
 	 * Returns a value to be used to check if _count cache is still fresh
@@ -937,7 +897,7 @@ class DataTable extends BaseWidget {
 	 */
 	protected function _getCountCacheFreshnessCheckVal(): string {
 		if( ! $this->_countCacheFreshQuery )
-			throw new \Exception('Cache fresh query is not defined');
+			throw new \LogicException('Cache fresh query is not defined');
 
 		$r = $this->_db->run($this->_countCacheFreshQuery)->fetch();
 		return (string)array_shift($r);
@@ -954,7 +914,7 @@ class DataTable extends BaseWidget {
 			/** See: https://datatables.net/manual/server-side */
 			'draw' => ['int', []],
 			'start' => ['int', ['min'=>0]],
-			'length' => ['int', ['min'=>1]],
+			'length' => ['int', ['min'=>-1]], // -1 = all
 			'order' => ['array', [
 				0 => [ [ 'array', [
 					'column' => [ 'int', ['min'=>0, 'max'=>count($this->_cols)-1] ],
@@ -995,7 +955,7 @@ class DataTable extends BaseWidget {
 	public function getColClass($type=""){
 		$class="";
 		if((trim($type))!=""){
-			if($type==self::DATA_TYPE_DATE){
+			if($type == \dophp\Table::DATA_TYPE_DATE){
 				$class="ag-date-flt";
 			}
 		}
@@ -1206,6 +1166,8 @@ class DataTableColumn extends DataTableBaseColumn {
 
 	/** The user-friendly description */
 	public $descr;
+	/** The user-friendly extended explanation */
+	public $tooltip = null;
 	/** The name of the column inside the query */
 	public $qname;
 	/** The column explicit data type, if given */
@@ -1214,6 +1176,8 @@ class DataTableColumn extends DataTableBaseColumn {
 	public $format = null;
 	/** Whether this column is part of the PK */
 	public $pk = false;
+	/** Whether to allow filtering on this column */
+	public $filter = true;
 
 	/**
 	 * Creates the column definition
@@ -1222,6 +1186,7 @@ class DataTableColumn extends DataTableBaseColumn {
 	 * @param $opt array: Associative array of options, possible keys:
 	 *             - descr: User-friendly description, will use ID with first
 	 *                      uppercase letter by default
+	 *             - tooltip: User-friendly extended tooltip description, optional
 	 *             - qname: Name to be used iside DB queries, by default use the
 	 *                      quoted version of the ID. If provided, shoudl contain
 	 *                      quotes
@@ -1231,6 +1196,7 @@ class DataTableColumn extends DataTableBaseColumn {
 	 *             - visible: Default visibility, boolean.
 	 *             - pk:    Tells if this column is part of the PK,
 	 *                      default: false
+	 *             - filter: enable/disable filtering on this column
 	 */
 	public function __construct(string $id, array $opt) {
 		parent::__construct($id);
@@ -1244,6 +1210,10 @@ class DataTableColumn extends DataTableBaseColumn {
 			$this->visible = (bool)$opt['visible'];
 		if( isset($opt['pk']) )
 			$this->pk = (bool)$opt['pk'];
+		if( isset($opt['filter']) )
+			$this->filter = (bool)$opt['filter'];
+		if( isset($opt['tooltip']) && $opt['tooltip'] )
+			$this->tooltip = $opt['tooltip'];
 	}
 
 }
@@ -1293,12 +1263,16 @@ class DataTableButton {
 
 		foreach( $opt as $k => $v ) {
 			if( ! property_exists($this, $k) )
-				throw new \Exception("Invalid property $k");
+				throw new \UnexpectedValueException("Invalid property $k");
 			$this->$k = $v;
 		}
 
 		$this->_params = $params;
-		$this->_params['base'] = $this->_table->getPage()->getBase();
+
+		//TODO: this should probably implemented with an interface or injected
+		//      at runtime by a parent class
+		if( method_exists($this->_table->getPage(), 'getBase') )
+			$this->_params['base'] = $this->_table->getPage()->getBase();
 	}
 
 	/**
@@ -1311,7 +1285,7 @@ class DataTableButton {
 		$searches = [];
 		$replaces = [];
 		foreach( array_merge($this->_table->params, $this->_params) as $name => $val ) {
-			$searches[] = self::PARAM_START . $name . self::PARAM_END;
+			$searches[] = static::PARAM_START . $name . static::PARAM_END;
 			$replaces[] = $val;
 		}
 		return str_replace($searches, $replaces, $this->url);
@@ -1332,7 +1306,7 @@ class DataTableButton {
 
 		foreach( $ret as &$v )
 			foreach( $this->_params as $name => $val )
-				if( $v === self::PARAM_START . $name . self::PARAM_END ) {
+				if( $v === static::PARAM_START . $name . static::PARAM_END ) {
 					$v = $val;
 					break;
 				}
@@ -1370,5 +1344,542 @@ class DataTableRowButton extends DataTableButton {
 			return ($this->show)($row);
 
 		return (bool)$this->show;
+	}
+}
+
+
+/**
+ * Advanced data container
+ */
+class DataTableCell implements \JsonSerializable {
+
+	public $value;
+	public $repr = null;
+	public $class = null;
+	public $href = null;
+
+	/**
+	 * Constructs the advanced value
+	 *
+	 * @param $value mixed: The real value
+	 * @param $repr string: The string representation (optional)
+	 * @param $class string: The data class (optional)
+	 * @param $href string: The url to link to (optional)
+	 */
+	public function __construct($value, string $repr = null, string $class = null, string $href = null) {
+		$this->value = $value;
+		$this->repr = $repr;
+		$this->class = $class;
+		$this->href = $href;
+	}
+
+	public function jsonSerialize() {
+		if( $this->repr === null && $this->class === null && $this->href === null )
+			return $this->value;
+
+		$ret = [ 'value' => $this->value ];
+		if( $this->repr !== null )
+			$ret['repr'] = $this->repr;
+		if( $this->class !== null )
+			$ret['class'] = $this->class;
+		if( $this->href !== null )
+			$ret['href'] = $this->href;
+
+		return $ret;
+	}
+
+}
+
+
+/**
+ * A simple datatable search filter, used inside the class
+ */
+class DataTableDataFilter {
+
+	protected $_filter;
+	protected $_args;
+
+	/**
+	 * Construct the filter
+	 *
+	 * @param $filter array: Array of SQL AND conditions
+	 * @param $args array: Associative array of arguments to bound
+	 */
+	public function __construct(array $filter = [], array $args = []) {
+		$this->_filter = $filter;
+		$this->_args = $args;
+	}
+
+	public function getFilter(): array {
+		return $this->_filter;
+	}
+
+	public function getArgs(): array {
+		return $this->_args;
+	}
+
+	public function empty(): bool {
+		return ! $this->_filter;
+	}
+}
+
+
+/**
+ * The datatable order
+ */
+class DatatableDataOrder {
+
+	/** The column id */
+	protected $_colId;
+
+	/** The ORDER_ASC|ORDER_DESC */
+	protected $_ascDesc;
+
+	public function __construct(string $colId, string $ascDesc) {
+		$this->_colId = $colId;
+		$this->_ascDesc = $ascDesc;
+	}
+
+	/**
+	 * Returns the filter as array
+	 *
+	 * @return array [ colid, ORDER_ASC|ORDER_DESC ]
+	 */
+	public function get(): array {
+		return [ $this->_colId, $this->_ascDesc ];
+	}
+
+	public function getColId(): string {
+		return $this->_colId;
+	}
+
+	public function getAscDesc(): string {
+		return $this->_ascDesc;
+	}
+}
+
+
+/**
+ * Utility class for calculating totals
+ */
+class DataTableTotalsUtil {
+
+	/**
+	 * The totals row array
+	 */
+	protected $_totals = [];
+
+	public function __construct(array $cols) {
+		foreach( $cols as $k => $c )
+			$this->_totals[$k] = null;
+	}
+
+	public function addRow(array $row) {
+		foreach( $row as $k => $v )
+			if( is_int($v) || is_float($v) )
+				$this->_totals[$k] += $v;
+	}
+
+	public function get(): array {
+		return array_merge($this->_totals, [
+			DataTable::DT_ROWCLASS_KEY => 'totals',
+		]);
+	}
+
+	/**
+	 * Returns true when all totals are zero
+	 */
+	public function allZero(): bool {
+		foreach( $this->_totals as $v )
+			if( $v )
+				return false;
+
+		return true;
+	}
+}
+
+/**
+ * The datatable limit
+ */
+class DatatableDataLimit {
+
+	protected $_start;
+	protected $_length;
+
+	public function __construct(int $length, int $start=0) {
+		$this->_start = $start;
+		$this->_length = $length;
+	}
+
+	/**
+	 * Returns the limit as array
+	 *
+	 * @return array [ start, length ]
+	 */
+	public function get(): array {
+		return [ $this->_start, $this->_length ];
+	}
+
+	public function getStart(): int {
+		return $this->_start;
+	}
+
+	public function getLength(): int {
+		return $this->_length;
+	}
+}
+
+
+/**
+ * A data table, uses the datatable javascript library
+ *
+ * This is the original data table, builds the query dynamically
+ */
+class DataTable extends BaseDataTable {
+
+	/** Expire time for _count cache entries */
+	const COUNT_CACHE_EXPIRE = 60 * 60;
+
+	/** Expire time for column type cache entries */
+	const COLTYPES_CACHE_EXPIRE = 60 * 60;
+
+	/**
+	 * The FROM part of the query to be executed to get data for the table,
+	 * without the "FROM" keyword, must be defined in child
+	 */
+	protected $_from = null;
+
+	/** Fixed where clause, if any, without "WHERE" keyword */
+	protected $_where = null;
+
+	/** Fixed group by, if any, without "GROUP BY" keyword */
+	protected $_groupBy = null;
+
+	/**
+	 * Constructs the table object
+	 *
+	 * @param $page PageInterface: the parent page
+	 */
+	public function __construct(\dophp\PageInterface $page) {
+		// Checks for data validity
+		if( isset($this->_query) )
+			throw new \LogicException('Deprecated Query specification');
+		if( ! isset($this->_from) || ! is_string($this->_from) )
+			throw new \LogicException('Missing or invalid From definition');
+
+		parent::__construct($page);
+	}
+
+	/**
+	 * Returns the base query to be executed, with the super filter and
+	 * the access filter, no limit, no order
+	 *
+	 * @param $cnt boolean: if true, build a query for the COUNT(*)
+	 * @param $calcFound boolean: if true, add SQL_CALC_FOUND_ROWS
+	 * @todo Caching
+	 * @return [ $query, $where and array, $params array, $groupBy condition (may be null) ]
+	 */
+	protected function _buildBaseQuery($cnt=false, $calcFound=true) {
+		if( $cnt || ! $calcFound || $this->_db->type() != $this->_db::TYPE_MYSQL )
+			$q = "SELECT\n";
+		else
+			$q = "SELECT SQL_CALC_FOUND_ROWS\n";
+
+		$cols = [];
+		foreach( $this->_cols as $c )
+			if( $c->qname )
+				$cols[] = "\t{$c->qname} AS " . $this->_db->quoteObj($c->id);
+			else
+				$cols[] = "\t" . $this->_db->quoteObj($c->id);
+		$q .= implode(",\n", $cols) . "\n";
+
+		$q .= "FROM {$this->_from}\n";
+		$where = [];
+		if( $this->_where )
+			$where[] = "( {$this->_where} )";
+		$pars = $this->params;
+
+		// Calculate the super filter where clause
+		$sfilter = [];
+		foreach( $this->_sfilter as $f ) {
+			if( ! $f->getInternalValue() )
+				continue;
+
+			$sfilter[] = '(' . $f->filter . ')';
+		}
+		if( $sfilter )
+			$where[] = '( ' . implode(' OR ', $sfilter) . ' )';
+
+		// Get the access where clause
+		$afilter = $this->_getAccessFilter();
+		if( $afilter !== null ) {
+			if( ! is_array($afilter) )
+				throw new \LogicException('Invalid access filter');
+			list($awhere, $apars) = $afilter;
+			if( ! is_string($awhere) || ! is_array($apars) )
+				throw new \LogicException('Invalid access filter');
+
+			$where[] = '( ' . $awhere . ' )';
+			$pars = array_merge($pars, $apars);
+		}
+
+		return [ $q, $where, $pars, $this->_groupBy ];
+	}
+
+	protected function _getRawDataInternal( DataTableDataFilter $filter=null, DatatableDataOrder $order=null, DatatableDataLimit $limit=null ): array {
+		// Base query
+		list($q, $where, $p, $groupBy) = $this->_buildBaseQuery();
+		$having = [];
+
+		// Calculate filter having clause
+		if( $filter && ! $filter->empty() ) {
+			$having[] = '( ' . implode(' AND ', $filter->getFilter()) . ' )';
+			$p = array_merge($p, $filter->getArgs());
+		}
+
+		// Apply where clause
+		if( $where )
+			$q .= "\nWHERE " . implode(' AND ', $where);
+
+		// Apply Group By
+		if( $groupBy )
+			$q .= "\nGROUP BY $groupBy";
+
+		// Apply having clause (in MS SQL, use where if no group)
+		if( $having )
+			if( $this->_db->type() == $this->_db::TYPE_MSSQL && ! $groupBy )
+				$q .= ($where ? "\nAND" : "\nWHERE") . ' (' . implode(' AND ', $having) . ')';
+			else
+				$q .= "\nHAVING " . implode(' AND ', $having);
+
+		// Apply order, if given
+		if( $order ) {
+			$q .= "\nORDER BY " . $order->getColId() . ' ';
+			$ord = strtolower($order->getAscDesc())==static::ORDER_DESC ? static::ORDER_DESC : static::ORDER_ASC;
+			$q .= strtoupper($ord);
+		}
+
+		// Filter by limit, if given
+		if( $limit ) {
+			if( $this->_db->type() == $this->_db::TYPE_MSSQL )
+				$q .= "\nOFFSET ". ( $limit->getStart() ) . ' ROWS FETCH NEXT ' . $limit->getLength().' ROWS ONLY';
+			else
+				$q .= "\nLIMIT " . ( $limit->getStart() ) . ',' . $limit->getLength();
+		}
+
+		return $this->_db->xrun($q, $p, $this->_getColumnExplicitTypes())->fetchAll();
+	}
+
+	/**
+	 * Retrieve column type info from cache or live
+	 *
+	 * @return array associative [ id -> type ]
+	 */
+	protected function _getColumnTypeInfo(): array {
+		$cache = \DoPhp::cache();
+		$cacheKey = static::MEMCACHE_KEY_BASE . $this->getFairlyUniqueIdentifier() . "::colTypes";
+
+		// Try cache first
+		if( $cache ) {
+			$info = $cache->get($cacheKey);
+			if( $info )
+				return $info;
+		}
+
+		// Cache failed, go retrieve it
+		list($q, $where, $p, $groupBy) = $this->_buildBaseQuery(false, false);
+		if( $this->_db->type() == $this->_db::TYPE_MSSQL)
+			$q = preg_replace( '/^SELECT/', 'SELECT TOP 0', $q, 1 );
+		else
+			$q .= "\n LIMIT 0 \n";
+
+		$res = $this->_db->xrun($q);
+		$types = $this->_extractColumnTypesFromRes($res);
+
+		if( $cache )
+			$cache->set($cacheKey, $types, 0, static::COLTYPES_CACHE_EXPIRE);
+
+		return $types;
+	}
+
+	/**
+	 * Counts unfiltered results, uses memcache if possible
+	 */
+	protected function _count(): int {
+		list($query, $where, $params, $groupBy) = $this->_buildBaseQuery(true);
+		if( $where )
+			$query .= "\nWHERE " . implode(' AND ', $where);
+		if( $groupBy )
+			$query .= "\nGROUP BY $groupBy";
+
+		$query = "SELECT COUNT(*) AS cnt FROM ( $query ) AS q";
+
+		$trans = $this->_db->beginTransaction(true);
+
+		// Try to use the cache
+		if( $this->_enableCountCache ) {
+			$cache = \DoPhp::cache();
+			$ccfcv = $this->_getCountCacheFreshnessCheckVal();
+			$ch = sha1(sha1($ccfcv) . sha1($query) . sha1(serialize($params)));
+			$cacheKey = static::MEMCACHE_KEY_BASE . 'count::' . $ch;
+		}
+
+		if( $this->_enableCountCache && $cache ) {
+			$cnt = $cache->get($cacheKey);
+			if( $cnt !== false && is_int($cnt) )
+				return $cnt;
+		}
+
+		// No hit in cache, run the query
+		$cnt = (int)$this->_db->run($query, $params)->fetch()['cnt'];
+
+		if( $trans )
+			$this->_db->commit();
+
+		// Try to save the new value in cache
+		if( $this->_enableCountCache && $cache )
+			$cache->set($cacheKey, $cnt, 0, static::COUNT_CACHE_EXPIRE);
+
+		return $cnt;
+	}
+}
+
+
+/**
+ * A data table that uses a single static query and caches is
+ */
+class StaticCachedQueryDataTable extends BaseDataTable {
+
+	public $addTotals = true;
+
+	/**
+	 * The full query. Returned cols must match col name
+	 */
+	protected $_query = null;
+
+	/**
+	 * How long the query can be cached, in seconds
+	 */
+	protected $_queryCacheExpireSecs = 60 * 5;
+
+	/**
+	 * Local variable used for basic caching
+	 */
+	private $__content = null;
+
+	/**
+	 * Constructs the table object
+	 *
+	 * @param $page PageInterface: the parent page
+	 */
+	public function __construct(\dophp\PageInterface $page) {
+		// Checks for data validity
+		if( ! isset($this->_query) || ! is_string($this->_query) )
+			throw new \LogicException('Missing or invalid Query definition');
+
+		// Filters are not supported, so disable all of them
+		foreach( $this->_cols as &$c )
+			$c['filter'] = false;
+		unset($c);
+
+		parent::__construct($page);
+	}
+
+	public function getFairlyUniqueIdentifier(): string {
+		$cls = $this->getClsId();
+		$hash = sha1(serialize([array_keys($this->_cols), $this->_query, $this->params]));
+		return "{$cls}_{$hash}";
+	}
+
+	/**
+	 * Internal function to run the query, may be overridden in child to run muliple queries
+	 *
+	 * @return array [ [data], [types] ]
+	 */
+	protected function _runQuery(): array {
+		$res = $this->_db->xrun($this->_query, $this->params, $this->_getColumnExplicitTypes());
+		$types = $this->_extractColumnTypesFromRes($res);
+		$data = $res->fetchAll();
+
+		return [ $data, $types ];
+	}
+
+	/**
+	 * Runs the query and updates the cache (if needed)
+	 *
+	 * @return array [ 'data': the query result, 'foundRows': total count of found rows, 'colTypes': column types data ]
+	 */
+	protected function _retrieveContent() {
+		// Try local cache first
+		if( $this->__content )
+			return $this->__content;
+
+		$cache = \DoPhp::cache();
+		$cacheKey = static::MEMCACHE_KEY_BASE . $this->getFairlyUniqueIdentifier() . "::content";
+
+		// Then try cache
+		if( $cache ) {
+			$this->__content = $cache->get($cacheKey);
+			if( $this->__content )
+				return $this->__content;
+		}
+
+		$trans = $this->_db->beginTransaction(true);
+
+		// TODO: access filter
+		list($data, $types) = $this->_runQuery();
+
+		// No hit in cache, run the query
+		$count = count($data);
+
+		if( $trans )
+			$this->_db->commit();
+
+		$this->__content = [
+			'data' => $data,
+			'foundRows' => $count,
+			'colTypes' => $types,
+		];
+
+		if( $cache )
+			$cache->set($cacheKey, $this->__content, 0, $this->_queryCacheExpireSecs);
+
+		return $this->__content;
+	}
+
+	protected function _getRawDataInternal( DataTableDataFilter $filter=null, DatatableDataOrder $order=null, DatatableDataLimit $limit=null ): array {
+		//TODO: support filter, order, limit
+		return $this->_retrieveContent()['data'];
+	}
+
+	/**
+	 * Retrieve column type info from cache or live
+	 *
+	 * @return array associative [ id -> type ]
+	 */
+	protected function _getColumnTypeInfo(): array {
+		return $this->_retrieveContent()['colTypes'];
+	}
+
+	/**
+	 * Counts unfiltered results, uses memcache if possible
+	 */
+	protected function _count(): int {
+		return $this->_retrieveContent()['foundRows'];
+	}
+
+	protected function _getHtmlInitOptions(): array {
+		$opt = parent::_getHtmlInitOptions();
+
+		$opt['scroller'] = false;
+		$opt['deferRender'] = false;
+		unset($opt['scrollY']);
+		unset($opt['scrollX']);
+
+		$opt['ordering'] = false;
+		$opt['paging'] = false;
+		$opt['info'] = false;
+
+		return $opt;
 	}
 }
