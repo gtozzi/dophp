@@ -14,4 +14,8 @@ require_once 'lib/Page.php';
 
 require 'config.php';
 
-new DoPhp($config, 'Db', 'Auth');
+new DoPhp([
+	'conf' => $config,
+	'db' => 'Db',
+	'auth' => 'Auth',
+]);
