@@ -2035,6 +2035,8 @@ class DataTable extends BaseDataTable {
 		if( $limit ) {
 			if( $this->_db->type() == $this->_db::TYPE_MSSQL )
 				$q .= "\nOFFSET ". ( $limit->getStart() ) . ' ROWS FETCH NEXT ' . $limit->getLength().' ROWS ONLY';
+			else if( $this->_db->type() == $this->_db::TYPE_PGSQL )
+				$q .= "\nOFFSET " . ( $limit->getStart() ) . ' LIMIT ' . $limit->getLength();
 			else
 				$q .= "\nLIMIT " . ( $limit->getStart() ) . ',' . $limit->getLength();
 		}
