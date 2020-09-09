@@ -2019,7 +2019,7 @@ class DataTable extends BaseDataTable {
 
 		// Apply having clause (in MS SQL, use where if no group)
 		if( $having )
-			if( $this->_db->type() == $this->_db::TYPE_MSSQL && ! $groupBy )
+			if( ($this->_db->type() == $this->_db::TYPE_MSSQL || $this->_db->type() == $this->_db::TYPE_PGSQL) && ! $groupBy )
 				$q .= ($where ? "\nAND" : "\nWHERE") . ' (' . implode(' AND ', $having) . ')';
 			else
 				$q .= "\nHAVING " . implode(' AND ', $having);

@@ -284,6 +284,9 @@ class Db {
 		case Db::TYPE_MSSQL:
 			$q = 'SELECT @@ROWCOUNT AS '.$this->quoteObj('fr');
 			break;
+		case Db::TYPE_PGSQL:
+			$q = 'SELECT count(*) OVER() AS '.$this->quoteObj('fr');
+			break;
 		default:
 			throw new NotImplementedException("Not Implemented DBMS {$this->_type}");
 		}
