@@ -243,7 +243,7 @@ class Utils {
 		if( $html )
 			return $err;
 
-		return strip_tags(html_entity_decode($err));
+		return strip_tags(html_entity_decode($err, ENT_COMPAT | ENT_HTML401, "UTF-8"));
 	}
 
 	/**
@@ -675,9 +675,8 @@ class Utils {
 	 * Convert a raw text string into its HTML representation
 	 */
 	public static function strAsHTML(string $str): string {
-		$str = nl2br(htmlentities($str));
-		$str = str_replace("\t", '&emsp;', $str);
-		return $str;
+		$str = str_replace("\t", '&#9;', $str);
+		return "<pre>" . $str . "</pre>";
 	}
 
 	/**
