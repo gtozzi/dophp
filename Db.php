@@ -929,6 +929,10 @@ class Table {
 			$sqlSelfDb = 'DATABASE()';
 			$colKey = true;
 			$hasReferences = true;
+		case Db::TYPE_PGSQL:
+			$sqlSelfDb = 'current_database()';
+			$colKey = false;
+			$hasReferences = true;
 			break;
 		case Db::TYPE_MSSQL:
 			$sqlSelfDb = '\'dbo\'';
@@ -968,11 +972,11 @@ class Table {
 		if( ! in_array($this->_name, $this->_tables) ) {
 
 			$q = '
-				SELECT
-					"TABLE_TYPE"
-				FROM "information_schema"."TABLES"
-				WHERE "TABLE_SCHEMA" = '.$sqlSelfDb.'
-					AND "TABLE_NAME" = ?
+			select
+			table_type
+	 FROM information_schema.TABLES
+		WHERE ((table_catalog = \'def\' AND table_schema = '.$sqlSelfDb.') OR table_catalog = '.$sqlSelfDb.')
+		and table_name = ?
 			';
 			if( ! $this->_db->run($this->_db->quoteConv($q), array($this->_name))->fetch() )
 				throw new \LogicException("Table {$this->_name} not found");
@@ -982,48 +986,48 @@ class Table {
 			// Read and cache table structure
 			$q = '
 				SELECT
-					"COLUMN_NAME",
-					"COLUMN_DEFAULT",
-					"IS_NULLABLE",
-					"DATA_TYPE",
-					"CHARACTER_MAXIMUM_LENGTH",
-					"NUMERIC_PRECISION",
-					"NUMERIC_SCALE"';
+					column_name,
+					column_default,
+					is_nullable,
+					data_type,
+					character_maximum_length,
+					numeric_precision,
+					numeric_scale';
 			if( $colKey )
 				$q .= ",\n\t\t\t\t\"COLUMN_KEY\"";
 			$q .= '
-				FROM "information_schema"."COLUMNS"
-				WHERE "TABLE_SCHEMA" = '.$sqlSelfDb.'
-					AND "TABLE_NAME" = ?
-				ORDER BY "ORDINAL_POSITION"
+			FROM information_schema.COLUMNS
+			WHERE ((table_catalog = \'def\' AND table_schema = '.$sqlSelfDb.') OR table_catalog = '.$sqlSelfDb.')
+				AND table_name = ?
+				ORDER BY ordinal_position
 			';
 			foreach( $this->_db->run($this->_db->quoteConv($q), array($this->_name))->fetchAll() as $c ) {
 				if( isset($this->_cols['COLUMN_NAME']) )
 					throw new \LogicException("Duplicate definition found for column {$c['COLUMN_NAME']}");
 
-				$this->_cols[$c['COLUMN_NAME']] = $c;
+				$this->_cols[$c['column_name']] = $c;
 
 				if( $colKey && $c['COLUMN_KEY'] == 'PRI' )
-					$this->_pk[] = $c['COLUMN_NAME'];
+					$this->_pk[] = $c['column_name'];
 			}
 
 			// Read primary keys (if not done earlier)
 			if( ! $colKey ) {
 				$q = '
 					SELECT
-						"COLUMN_NAME"
+					column_name
 					FROM
-						"information_schema"."TABLE_CONSTRAINTS" AS "tab",
-						"information_schema"."CONSTRAINT_COLUMN_USAGE" AS "col"
+						information_schema.TABLE_CONSTRAINTS AS tab,
+						information_schema.CONSTRAINT_COLUMN_USAGE AS col
 					WHERE
-						"col"."CONSTRAINT_NAME" = "tab"."CONSTRAINT_NAME"
-						AND "col"."TABLE_NAME" = "tab"."TABLE_NAME"
-						AND "CONSTRAINT_TYPE" = \'PRIMARY KEY\'
-						AND "col"."TABLE_SCHEMA" = '.$sqlSelfDb.'
-						AND "col"."TABLE_NAME" = ?
+						col.constraint_name = tab.constraint_name
+						AND col.table_name = tab.table_name
+						AND constraint_type = \'PRIMARY KEY\'
+						AND (col.table_catalog = '.$sqlSelfDb.' OR col.table_schema = '.$sqlSelfDb.')
+						AND col.table_name = ?
 				';
 				foreach( $this->_db->run($this->_db->quoteConv($q), array($this->_name))->fetchAll() as $c )
-					$this->_pk[] = $c['COLUMN_NAME'];
+					$this->_pk[] = $c['column_name'];
 			}
 
 			// Read and cache references structure
