@@ -1182,18 +1182,27 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 							$year = substr($string,-4);
 							if($date=$this->makeYearMonthString($year,$monthName)){
 								//$search=$columnName.">='".$date."'";
-								$search= " YEAR(".$columnName.") = '".intval(substr($date,0,4))."' AND MONTH(".$columnName.") = '".intval(substr($date,5,7))."' ";
+								if( $this->_db->type() == $this->_db::TYPE_PGSQL )
+									$search= " EXTRACT(YEAR FROM ".$columnName.") = '".intval(substr($date,0,4))."' AND EXTRACT(MONTH FROM ".$columnName.") = '".intval(substr($date,5,7))."' ";
+								else
+									$search= " YEAR(".$columnName.") = '".intval(substr($date,0,4))."' AND MONTH(".$columnName.") = '".intval(substr($date,5,7))."' ";
 							}
 						break;
 						// 2018-01
 						case static::DTYPE_LIST["my_sql"]:
 							//$search=$columnName.">='".$string."'";
-							$search= " YEAR(".$columnName.") = '".intval(substr($string,0,4))."' AND MONTH(".$columnName.") = '".intval(substr($string,5,7))."' ";
+							if( $this->_db->type() == $this->_db::TYPE_PGSQL )
+								$search= " EXTRACT(YEAR FROM ".$columnName.") = '".intval(substr($string,0,4))."' AND EXTRACT(MONTH FROM ".$columnName.") = '".intval(substr($string,5,7))."' ";
+							else
+								$search= " YEAR(".$columnName.") = '".intval(substr($string,0,4))."' AND MONTH(".$columnName.") = '".intval(substr($string,5,7))."' ";
 						break;
 
 						// 2018
 						case static::DTYPE_LIST["y"]:
-							$search=" YEAR(".$columnName.") = '".$string."'";
+							if( $this->_db->type() == $this->_db::TYPE_PGSQL )
+								$search=" EXTRACT(YEAR FROM ".$columnName.") = '".$string."'";
+							else
+								$search=" YEAR(".$columnName.") = '".$string."'";
 						break;
 
 						default:
@@ -2039,7 +2048,7 @@ class DataTable extends BaseDataTable {
 				$q .= "\nOFFSET " . ( $limit->getStart() ) . ' LIMIT ' . $limit->getLength();
 			else
 				$q .= "\nLIMIT " . ( $limit->getStart() ) . ',' . $limit->getLength();
-		}
+		}		
 
 		return $this->_db->xrun($q, $p, $this->_getColumnExplicitTypes())->fetchAll();
 	}
