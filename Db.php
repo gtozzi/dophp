@@ -1245,6 +1245,7 @@ class Table {
 				return self::DATA_TYPE_BOOLEAN;
 			return self::DATA_TYPE_INTEGER;
 		case 'FLOAT':
+		case 'FLOAT4':
 		case 'FLOAT8':
 		case 'DOUBLE':
 		case 'REAL':
