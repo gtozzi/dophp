@@ -2071,6 +2071,8 @@ class DataTable extends BaseDataTable {
 
 		// Cache failed, go retrieve it
 		list($q, $where, $p, $groupBy) = $this->_buildBaseQuery(false, false);
+		if( $groupBy )
+			$q .= "\nGROUP BY $groupBy";
 		if( $this->_db->type() == $this->_db::TYPE_MSSQL)
 			$q = preg_replace( '/^SELECT/', 'SELECT TOP 0', $q, 1 );
 		else
@@ -2124,6 +2126,13 @@ class DataTable extends BaseDataTable {
 			$cache->set($cacheKey, $cnt, 0, static::COUNT_CACHE_EXPIRE);
 
 		return $cnt;
+	}
+
+	public static function _getGroupConcat($column, $db): string {
+		if ($db->type() == $db::TYPE_PGSQL)
+			return "string_agg($column, \', \')";
+		else 
+			return "GROUP_CONCAT($column SEPARATOR \', \')";
 	}
 }
 
@@ -2265,4 +2274,5 @@ class StaticCachedQueryDataTable extends BaseDataTable {
 
 		return $opt;
 	}
+
 }
