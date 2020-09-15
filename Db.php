@@ -1231,6 +1231,9 @@ class Table {
 		case 'INT2':
 		case 'INT4':
 		case 'INT8':
+		case 'NUMERIC':
+		case 'SERIAL':
+		case 'BIGSERIAL':
 			return self::DATA_TYPE_INTEGER;
 		case 'BIT':
 		case 'BOOL':
@@ -1242,7 +1245,9 @@ class Table {
 				return self::DATA_TYPE_BOOLEAN;
 			return self::DATA_TYPE_INTEGER;
 		case 'FLOAT':
+		case 'FLOAT8':
 		case 'DOUBLE':
+		case 'REAL':
 			return self::DATA_TYPE_DOUBLE;
 		case 'DECIMAL':
 		case 'DEC':
