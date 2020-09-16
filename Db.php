@@ -1276,6 +1276,7 @@ class Table {
 			return self::DATA_TYPE_DATE;
 		case 'DATETIME':
 		case 'TIMESTAMP':
+		case 'TIMESTAMPTZ':
 			return self::DATA_TYPE_DATETIME;
 		case 'TIME':
 			return self::DATA_TYPE_TIME;
