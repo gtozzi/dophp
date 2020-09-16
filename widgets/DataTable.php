@@ -706,7 +706,6 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 
 			// checks if filter is a date filter and calculate where clause
 			if($c->type == \dophp\Table::DATA_TYPE_DATE){
-
 				$firstElem = $search;
 				$isDateRange = false;
 				// check if search string is a range of dates,
@@ -719,7 +718,7 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 
 				// proceed only if date_type has been identified
 				if($agDateType){
-					$search = $this->getDateFilter($search,$agDateType,$isDateRange,$c->qname);
+					$search = $this->getDateFilter($search,$agDateType,$isDateRange,$c->qname);					
 					$filter[] = $search;
 				}
 				// if data type is unknown return no results
@@ -1144,7 +1143,6 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 	 * Returns the where condition based on date filter type
 	 */
 	public function getDateFilter($string="",$type="",$range=null,$columnName=""){
-
 		$search="";
 
 		if(isset($columnName)&&(trim($columnName)!="")){
@@ -1224,7 +1222,7 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 									$end = $this->formatDateIt2En($items[1]);
 
 									if($start&&$end){
-										$search=" ( ".$columnName.">='".$start."' && ".$columnName."<='".$end."' ) ";
+										$search=" ( ".$columnName.">='".$start."' AND ".$columnName."<='".$end."' ) ";
 									}
 								}
 
@@ -1237,7 +1235,7 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 									$end = $this->makeYearMonthString(date("Y"),$items[1]);
 
 									if($start&&$end){
-										$search=" ( ".$columnName.">='".$start."' && ".$columnName."<='".$end."' ) ";
+										$search=" ( ".$columnName.">='".$start."' AND ".$columnName."<='".$end."' ) ";
 									}
 								}
 							break;
@@ -1262,7 +1260,7 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 
 											$end=date("Y-m-t",strtotime($end));
 
-											$search=" ( ".$columnName.">='".$start."' && ".$columnName."<='".$end."' ) ";
+											$search=" ( ".$columnName.">='".$start."' AND ".$columnName."<='".$end."' ) ";
 										}
 									}
 								}
@@ -1294,8 +1292,9 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 										}
 
 										$end=date("Y-m-t",strtotime($end));
+										$start=date("Y-m-t",strtotime($start));
 
-										$search=" ( ".$columnName.">='".$start."' && ".$columnName."<='".$end."' ) ";
+										$search=" ( ".$columnName.">='".$start."' AND ".$columnName."<='".$end."' ) ";
 									}
 								}
 
@@ -1319,7 +1318,7 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 									}
 
 									if($start&&$end){
-										$search=" ( ".$columnName.">='".$start."' && ".$columnName."<='".$end."' ) ";
+										$search=" ( ".$columnName.">='".$start."' AND ".$columnName."<='".$end."' ) ";
 									}
 								}
 
@@ -2017,7 +2016,7 @@ class DataTable extends BaseDataTable {
 			$having[] = '( ' . implode(' AND ', $filter->getFilter()) . ' )';
 			$p = array_merge($p, $filter->getArgs());
 		}
-
+		
 		// Apply where clause
 		if( $where )
 			$q .= "\nWHERE " . implode(' AND ', $where);
