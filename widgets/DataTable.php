@@ -1497,6 +1497,21 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 	}
 
 
+	/**
+	 * Returns the parameters list purged from null values, 
+	 * compliant with the PostgreSQL driver requirements
+	 */
+	protected function _getFilledParams($params) {
+		$fParams = [];
+		foreach ($params as $key => $p) {
+			if( $p ) {
+				$fParams[$key] = $p;
+			}
+		}
+		return $fParams;
+	}
+
+
 
 }
 
