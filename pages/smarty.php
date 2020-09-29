@@ -11,6 +11,7 @@
 namespace dophp;
 
 require_once(__DIR__ . '/../Page.php');
+require_once(__DIR__ . '/base.php');
 
 
 /**
@@ -48,6 +49,14 @@ trait SmartyFunctionalities {
 		));
 		$smarty->setCompileDir("{$config['paths']['cac']}/");
 		$smarty->setCacheDir("{$config['paths']['cac']}/");
+
+		// If in release mode, use only cache
+		$testServer=isset($config['testserver']) && $config['testserver'];
+		if (!$testServer) {
+			$smarty->setCacheLifetime(-1);	// Cache never expires
+			$smarty->setCaching(\Smarty::CACHING_LIFETIME_CURRENT);
+			$smarty->setCompileCheck(false);	// Do not check tpl files for modifications
+		}
 
 		$smarty->registerPlugin('modifier', 'format', 'dophp\Utils::format');
 		$smarty->registerPlugin('modifier', 'formatTime', 'dophp\Utils::formatTime');
