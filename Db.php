@@ -929,6 +929,7 @@ class Table {
 			$sqlSelfDb = 'DATABASE()';
 			$colKey = true;
 			$hasReferences = true;
+			break;
 		case Db::TYPE_PGSQL:
 			$sqlSelfDb = 'current_database()';
 			$colKey = false;
@@ -1005,10 +1006,10 @@ class Table {
 				if( isset($this->_cols['COLUMN_NAME']) )
 					throw new \LogicException("Duplicate definition found for column {$c['COLUMN_NAME']}");
 
-				$this->_cols[$c['column_name']] = $c;
+				$this->_cols[$c['COLUMN_NAME']] = $c;
 
 				if( $colKey && $c['COLUMN_KEY'] == 'PRI' )
-					$this->_pk[] = $c['column_name'];
+					$this->_pk[] = $c['COLUMN_NAME'];
 			}
 
 			// Read primary keys (if not done earlier)
