@@ -51,7 +51,7 @@ trait SmartyFunctionalities {
 
 		// If in release mode, use only cache
 		$smartyCacheOnly = isset($config['dophp']['smartyCacheOnly']) && $config['dophp']['smartyCacheOnly'];
-		if (!$smartyCacheOnly) {
+		if ($smartyCacheOnly) {
 			$smarty->setCacheLifetime(-1);	// Cache never expires
 			$smarty->setCaching(\Smarty::CACHING_LIFETIME_CURRENT);
 			$smarty->setCompileCheck(false);	// Do not check tpl files for modifications
