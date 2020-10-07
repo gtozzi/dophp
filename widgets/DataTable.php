@@ -1652,7 +1652,7 @@ class DataTableButton {
 	 *        included by default:
 	 *        - base: base url for the page
 	 */
-	public function __construct(DataTable $table, string $id, array $opt = [], array $params = []) {
+	public function __construct(DataTableInterface $table, string $id, array $opt = [], array $params = []) {
 		$this->_table = $table;
 		$this->_id = $id;
 
@@ -1681,7 +1681,8 @@ class DataTableButton {
 		$replaces = [];
 		foreach( array_merge($this->_table->params, $this->_params) as $name => $val ) {
 			$searches[] = static::PARAM_START . $name . static::PARAM_END;
-			$replaces[] = $val;
+			// TODO: Proper conversion to machine format?
+			$replaces[] = \dophp\Utils::format($val);
 		}
 		return str_replace($searches, $replaces, $this->url);
 	}
@@ -1727,7 +1728,7 @@ class DataTableRowButton extends DataTableButton {
 	 * @param $opt array of options, like DataTableButton, extra options:
 	 *        - show mixed: bool or callable($row), tells if the button should be shown
 	 */
-	public function __construct(DataTable $table, string $id, array $opt = [], array $params = []) {
+	public function __construct(DataTableInterface $table, string $id, array $opt = [], array $params = []) {
 		parent::__construct($table, $id, $opt, $params);
 	}
 

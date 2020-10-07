@@ -319,7 +319,7 @@
 				'<a id="data-table-export-url" class="dtbl-buttons-itm">'
 				+ '<span class="fa fa-file-excel-o"></span> Esporta</a>');
 
-			updateDataTableExportUrl();
+			updateDataTableUrls();
 		} );
 
 		// change opacity for table body while processing data
@@ -634,12 +634,13 @@
 	/**
 	 * Updates the export url when filter is changed
 	 */
-	function updateDataTableExportUrl() {
+	function updateDataTableUrls() {
 		// Read the filter and put it in the $_GET url
 		let filters = {};
-		let iter = 1;
+		let iter = 0;
 		let nFilters = $('input.data-table-filter').length
 		$('input.data-table-filter').each(function() {
+			iter++;
 			if (iter > nFilters/2)
 				return false;
 			let el = $(this);

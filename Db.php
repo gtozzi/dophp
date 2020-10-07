@@ -1860,7 +1860,7 @@ class SelectQuery {
 		//TODO: improve, many bugs
 		$parts = explode('.', $colname);
 		foreach( $parts as &$p )
-			$p = trim($p, '`');
+			$p = trim($p, '"');
 		unset($p);
 		return $parts;
 	}
