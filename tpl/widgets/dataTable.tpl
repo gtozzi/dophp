@@ -1128,13 +1128,16 @@
 			{{/foreach}}
 		</tr>
 		<tr>
-			<th style="width: 20px" class="data-table-filter"><a href="#" class="fa fa-columns" onclick="selectColumns('{{$id}}');return false;"></a></th>
+			<th style="width: 20px" class="data-table-filter">
+				<a href="#" class="fa fa-columns" onclick="selectColumns('{{$id}}');return false;"></a>&nbsp;
+				<a href="#" class="fa fa-filter" onclick="$(':input.data-table-filter').val('');table.columns().search('').draw();return false;"></a>
+			</th>
 			{{foreach $cols as $c}}
 				<th class="data-table-filter">
 					{{if $c->filter}}
 						<input
 							class="data-table-filter {{if $c->type == \dophp\Table::DATA_TYPE_DATE}}ag-dt-dtFilt{{/if}}"
-							type="text" placeholder="filtra - cerca" onkeyup="filterKeyUp(event);" onchange="filterChanged(this);"
+							type="text" placeholder="filtra - cerca" onkeyup="console.log(event);filterKeyUp(event);" onchange="filterChanged(this);"
 							data-timer="" data-coln="{{$c@index}}" data-type="{{$c->type|htmlentities}}"
 							{{if $c->type == \dophp\Table::DATA_TYPE_DATE}}
 								onfocus="filterShowDate(this);"
