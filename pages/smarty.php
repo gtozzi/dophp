@@ -49,6 +49,14 @@ trait SmartyFunctionalities {
 		$smarty->setCompileDir("{$config['paths']['cac']}/");
 		$smarty->setCacheDir("{$config['paths']['cac']}/");
 
+		// If in release mode, use only cache
+		$smartyCacheOnly = isset($config['dophp']['smartyCacheOnly']) && $config['dophp']['smartyCacheOnly'];
+		if ($smartyCacheOnly) {
+			$smarty->setCacheLifetime(-1);	// Cache never expires
+			$smarty->setCaching(\Smarty::CACHING_LIFETIME_CURRENT);
+			$smarty->setCompileCheck(false);	// Do not check tpl files for modifications
+		}
+
 		$smarty->registerPlugin('modifier', 'format', 'dophp\Utils::format');
 		$smarty->registerPlugin('modifier', 'formatTime', 'dophp\Utils::formatTime');
 		$smarty->registerPlugin('modifier', 'formatNumber', 'dophp\Utils::formatNumber');

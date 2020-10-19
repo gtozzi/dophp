@@ -706,7 +706,6 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 
 			// checks if filter is a date filter and calculate where clause
 			if($c->type == \dophp\Table::DATA_TYPE_DATE){
-
 				$firstElem = $search;
 				$isDateRange = false;
 				// check if search string is a range of dates,
@@ -1013,7 +1012,6 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 		return $month_number;
 	}
 
-
 	/**
 	 * Returns month name from month number
 	 */
@@ -1044,7 +1042,6 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 
 		return $month_name;
 	}
-
 
 	/**
 	 * Returns data filter type by parsing the search string
@@ -1126,7 +1123,6 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 		return $type;
 	}
 
-
 	/**
 	 * Returns the first element from a range of dates
 	 */
@@ -1139,12 +1135,10 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 		return $el;
 	}
 
-
 	/**
 	 * Returns the where condition based on date filter type
 	 */
 	public function getDateFilter($string="",$type="",$range=null,$columnName=""){
-
 		$search="";
 
 		if(isset($columnName)&&(trim($columnName)!="")){
@@ -1182,18 +1176,27 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 							$year = substr($string,-4);
 							if($date=$this->makeYearMonthString($year,$monthName)){
 								//$search=$columnName.">='".$date."'";
-								$search= " YEAR(".$columnName.") = '".intval(substr($date,0,4))."' AND MONTH(".$columnName.") = '".intval(substr($date,5,7))."' ";
+								if( $this->_db->type() == $this->_db::TYPE_PGSQL )
+									$search= " EXTRACT(YEAR FROM ".$columnName.") = '".intval(substr($date,0,4))."' AND EXTRACT(MONTH FROM ".$columnName.") = '".intval(substr($date,5,7))."' ";
+								else
+									$search= " YEAR(".$columnName.") = '".intval(substr($date,0,4))."' AND MONTH(".$columnName.") = '".intval(substr($date,5,7))."' ";
 							}
 						break;
 						// 2018-01
 						case static::DTYPE_LIST["my_sql"]:
 							//$search=$columnName.">='".$string."'";
-							$search= " YEAR(".$columnName.") = '".intval(substr($string,0,4))."' AND MONTH(".$columnName.") = '".intval(substr($string,5,7))."' ";
+							if( $this->_db->type() == $this->_db::TYPE_PGSQL )
+								$search= " EXTRACT(YEAR FROM ".$columnName.") = '".intval(substr($string,0,4))."' AND EXTRACT(MONTH FROM ".$columnName.") = '".intval(substr($string,5,7))."' ";
+							else
+								$search= " YEAR(".$columnName.") = '".intval(substr($string,0,4))."' AND MONTH(".$columnName.") = '".intval(substr($string,5,7))."' ";
 						break;
 
 						// 2018
 						case static::DTYPE_LIST["y"]:
-							$search=" YEAR(".$columnName.") = '".$string."'";
+							if( $this->_db->type() == $this->_db::TYPE_PGSQL )
+								$search=" EXTRACT(YEAR FROM ".$columnName.") = '".$string."'";
+							else
+								$search=" YEAR(".$columnName.") = '".$string."'";
 						break;
 
 						default:
@@ -1215,7 +1218,7 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 									$end = $this->formatDateIt2En($items[1]);
 
 									if($start&&$end){
-										$search=" ( ".$columnName.">='".$start."' && ".$columnName."<='".$end."' ) ";
+										$search=" ( ".$columnName.">='".$start."' AND ".$columnName."<='".$end."' ) ";
 									}
 								}
 
@@ -1228,7 +1231,7 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 									$end = $this->makeYearMonthString(date("Y"),$items[1]);
 
 									if($start&&$end){
-										$search=" ( ".$columnName.">='".$start."' && ".$columnName."<='".$end."' ) ";
+										$search=" ( ".$columnName.">='".$start."' AND ".$columnName."<='".$end."' ) ";
 									}
 								}
 							break;
@@ -1253,7 +1256,7 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 
 											$end=date("Y-m-t",strtotime($end));
 
-											$search=" ( ".$columnName.">='".$start."' && ".$columnName."<='".$end."' ) ";
+											$search=" ( ".$columnName.">='".$start."' AND ".$columnName."<='".$end."' ) ";
 										}
 									}
 								}
@@ -1285,8 +1288,9 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 										}
 
 										$end=date("Y-m-t",strtotime($end));
+										$start=date("Y-m-t",strtotime($start));
 
-										$search=" ( ".$columnName.">='".$start."' && ".$columnName."<='".$end."' ) ";
+										$search=" ( ".$columnName.">='".$start."' AND ".$columnName."<='".$end."' ) ";
 									}
 								}
 
@@ -1310,7 +1314,7 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 									}
 
 									if($start&&$end){
-										$search=" ( ".$columnName.">='".$start."' && ".$columnName."<='".$end."' ) ";
+										$search=" ( ".$columnName.">='".$start."' AND ".$columnName."<='".$end."' ) ";
 									}
 								}
 
@@ -1330,7 +1334,6 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 
 		return $search;
 	}
-
 
 	/**
 	 * Accept various it date format and
@@ -1357,7 +1360,6 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 		return $date;
 	}
 
-
 	/**
 	 * Return the first day of month in english
 	 * format for the last 12 months
@@ -1375,7 +1377,6 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 		}
 		return $last12Months;
 	}
-
 
 	/**
 	 * Return a list of month-year string
@@ -1463,7 +1464,6 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 		return $list;
 	}
 
-
 	/**
 	 * Return false on error or a string in numeric year-month format
 	 * e.g.:
@@ -1488,7 +1488,19 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 
 	}
 
-
+	/**
+	 * Returns the parameters list purged from null values,
+	 * compliant with the PostgreSQL driver requirements
+	 */
+	protected function _getFilledParams($params) {
+		$fParams = [];
+		foreach ($params as $key => $p) {
+			if( $p ) {
+				$fParams[$key] = $p;
+			}
+		}
+		return $fParams;
+	}
 
 }
 
@@ -2020,7 +2032,7 @@ class DataTable extends BaseDataTable {
 
 		// Apply having clause (in MS SQL, use where if no group)
 		if( $having )
-			if( $this->_db->type() == $this->_db::TYPE_MSSQL && ! $groupBy )
+			if( ($this->_db->type() == $this->_db::TYPE_MSSQL || $this->_db->type() == $this->_db::TYPE_PGSQL) && ! $groupBy )
 				$q .= ($where ? "\nAND" : "\nWHERE") . ' (' . implode(' AND ', $having) . ')';
 			else
 				$q .= "\nHAVING " . implode(' AND ', $having);
@@ -2036,6 +2048,8 @@ class DataTable extends BaseDataTable {
 		if( $limit ) {
 			if( $this->_db->type() == $this->_db::TYPE_MSSQL )
 				$q .= "\nOFFSET ". ( $limit->getStart() ) . ' ROWS FETCH NEXT ' . $limit->getLength().' ROWS ONLY';
+			else if( $this->_db->type() == $this->_db::TYPE_PGSQL )
+				$q .= "\nOFFSET " . ( $limit->getStart() ) . ' LIMIT ' . $limit->getLength();
 			else
 				$q .= "\nLIMIT " . ( $limit->getStart() ) . ',' . $limit->getLength();
 		}
@@ -2061,6 +2075,8 @@ class DataTable extends BaseDataTable {
 
 		// Cache failed, go retrieve it
 		list($q, $where, $p, $groupBy) = $this->_buildBaseQuery(false, false);
+		if( $groupBy )
+			$q .= "\nGROUP BY $groupBy";
 		if( $this->_db->type() == $this->_db::TYPE_MSSQL)
 			$q = preg_replace( '/^SELECT/', 'SELECT TOP 0', $q, 1 );
 		else
@@ -2114,6 +2130,13 @@ class DataTable extends BaseDataTable {
 			$cache->set($cacheKey, $cnt, 0, static::COUNT_CACHE_EXPIRE);
 
 		return $cnt;
+	}
+
+	public static function _getGroupConcat($column, $db): string {
+		if ($db->type() == $db::TYPE_PGSQL)
+			return "string_agg($column, \', \')";
+		else
+			return "GROUP_CONCAT($column SEPARATOR \', \')";
 	}
 }
 
@@ -2255,4 +2278,5 @@ class StaticCachedQueryDataTable extends BaseDataTable {
 
 		return $opt;
 	}
+
 }
