@@ -140,6 +140,7 @@
 						<button id="{{$id}}_btn" type="button" class="btn btn-secondary ag-calender-button">
 							Seleziona
 						</button>
+						<div id="abortAjax_{{$id}}" class="btn btn-secondary ag-calender-button">X</div>
 					</span>
 				{{elseif $prepend}}
 					<div class="input-group-prepend">
@@ -276,7 +277,7 @@
 							var startTime = new Date();
 							startTime = ( startTime.getTime() / 1000 );
 
-							$.ajax({
+							jqXHR = $.ajax({
 								type:"POST",
 								contentType: false,
 								cache: false,
@@ -284,6 +285,7 @@
 								data: agForm_{{$id}},
 								url: '?do=fileUpload',
 								xhr: function(){
+									$("#abortAjax_{{$id}}").show();
 									var currHXR= $.ajaxSettings.xhr();
 									if(currHXR.upload){
 										currHXR.upload.addEventListener("progress",function(e){
@@ -363,6 +365,7 @@
 
 
 									console.log('File upload success', data);
+									$("#abortAjax_{{$id}}").hide();
 									let myfile = data.files['file_'+{{$id|json_encode}}];
 
 									if( myfile && myfile.success ) {
@@ -404,6 +407,20 @@
 								}
 							});
 
+						});
+						$( document ).ready(function() {
+							$("#abortAjax_{{$id}}").hide();
+							$("#abortAjax_{{$id}}").click(function() {
+								if( ! window.confirm('Sei sicuro di voler interrompere il caricamento?') )
+									return;
+								jqXHR.abort();
+								$(this).parents("form")
+									.find(".save-button")
+									.prop("disabled",false);
+								$(".progress-ETA").css("display","none");
+								$(".ag-progress-line_{{$id}}").css("display","none");
+								$("#abortAjax_{{$id}}").hide();
+							});
 						});
 						//$("#ag-fileupl-s-act-{{$id}}").click(function(){
 						//});
