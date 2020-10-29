@@ -270,6 +270,7 @@
 							$(".ag-prog-itm_{{$id}}").css("display","flex");
 							var currForm = $(this).parents("form");
 							$(currForm).find(".save-button").prop("disabled",true);
+							$(".save-button").prop("disabled",true);
 
 							var agForm_{{$id}} = new FormData();
 							agForm_{{$id}}.append("file_{{$id}}", $('#{{$id}}')[0].files[0]);
@@ -382,6 +383,7 @@
 										$(currForm)
 											.find(".save-button")
 											.prop("disabled",false);
+										$(".save-button").prop("disabled",false);
 										//$(".progress-ETA").html("Terminato");
 
 										// hide the progress bar and ETA text
@@ -414,11 +416,11 @@
 								if( ! window.confirm('Sei sicuro di voler interrompere il caricamento?') )
 									return;
 								jqXHR.abort();
-								$(this).parents("form")
-									.find(".save-button")
-									.prop("disabled",false);
+								$(this).parents("form").find(".save-button").prop("disabled",false);
+								$(".save-button").prop("disabled",false);
 								$(".progress-ETA").css("display","none");
 								$(".ag-progress-line_{{$id}}").css("display","none");
+								$('#{{$id}}_txt').val('');
 								$("#abortAjax_{{$id}}").hide();
 							});
 						});
