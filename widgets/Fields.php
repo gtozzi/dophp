@@ -583,6 +583,43 @@ class CurrencyField extends NumberField {
 }
 
 
+/**
+ * A numeric field specifically for handling a time duration
+ */
+class DurationField extends TextField {
+
+	protected $_type = 'duration';
+	protected $_vtype = 'duration';
+
+	/** The time separator */
+	protected $_sep = ':';
+
+	public function __construct(string $name, array $namespace = [], array $opts = []) {
+		parent::__construct($name, $namespace, $opts);
+
+		$this->_vopts['sep'] = & $this->_sep;
+	}
+
+	public function getSep(): string {
+		return $this->_sep;
+	}
+
+	public function getPlaceholder() {
+		return "00:00:00";
+	}
+
+	public function format($value) {
+		$hours = $value / (60 * 60);
+		$rest = $value % (60 * 60);
+		$minutes = $rest / 60;
+		$rest = $rest % 60;
+		$seconds = $rest;
+		$str = sprintf('%02d%s%02d%s%02d', $hours, $this->getSep(), $minutes, $this->getSep(), $seconds);
+		return $str;
+	}
+}
+
+
 
 /**
  * A file upload field
@@ -700,7 +737,7 @@ class SelectField extends InputField {
 	 *              - params: the base option params
 	 *              - extra: Extra params
 	 *
-	 * @yield SelectOption
+	 * @return yield SelectOption
 	 */
 	public function getOptions(array $ajax=null): \Generator {
 		if( ! isset($this->_options) )
@@ -1119,7 +1156,7 @@ class MultiSelectField extends BaseField {
 	/**
 	 * Yields list of selected items
 	 *
-	 * @yield MultiSelectFieldOption
+	 * @return yield MultiSelectFieldOption
 	 */
 	public function getSelected(): \Generator {
 		foreach( $this->_options as $o )
