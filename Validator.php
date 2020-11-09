@@ -504,7 +504,7 @@ class duration_validator extends base_validator {
 			if( ! isset($vals[$i]) )
 				$vals[$i] = 0;
 
-		$sec = $vals[0] + ($vals[1] * 60) + ($vals[2] * 60 * 60);	// Seconds, minutes, hours
+		$sec = $vals[2] + ($vals[1] * 60) + ($vals[0] * 60 * 60);	// Seconds, minutes, hours
 		return $sec;
 	}
 
