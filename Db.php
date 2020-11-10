@@ -284,6 +284,9 @@ class Db {
 		case Db::TYPE_MSSQL:
 			$q = 'SELECT @@ROWCOUNT AS '.$this->quoteObj('fr');
 			break;
+		case Db::TYPE_PGSQL:
+			$q = 'SELECT count(*) OVER() AS '.$this->quoteObj('fr');
+			break;
 		default:
 			throw new NotImplementedException("Not Implemented DBMS {$this->_type}");
 		}
@@ -404,6 +407,9 @@ class Db {
 	/**
 	 * Converts a string using SQL-99 "\"" quoting into a string using
 	 * DBMS' native quoting
+	 *
+	 * @deprecated
+	 * @see self::quoteObj
 	 */
 	public function quoteConv($query) {
 		$spat = '/"([^"\\\\]*(?:\\\\.[^"\\\\]*)*)"/';
@@ -625,6 +631,38 @@ class Db {
 		return new Table($this, $name);
 	}
 
+	/**
+	 * Returns true when current DBMS supports schemas
+	 */
+	public function hasSchemaSupport(): bool {
+		switch( $this->_type ) {
+		case self::TYPE_MYSQL:
+			return false;
+		case self::TYPE_PGSQL:
+		case self::TYPE_MSSQL:
+			return true;
+		}
+
+		throw new \dophp\NotImplementedException("Unknown Type \"$this->_type\"");
+	}
+
+	/**
+	 * Returns default schema name for current DBMS
+	 *
+	 * @return string: schema name or null when schemas are not supported
+	 */
+	public function getDefaultSchemaName(): ?string {
+		switch( $this->_type ) {
+		case self::TYPE_MYSQL:
+			return null;
+		case self::TYPE_PGSQL:
+			return 'public';
+		case self::TYPE_MSSQL:
+			return 'dbo';
+		}
+
+		throw new \dophp\NotImplementedException("Unknown Type \"$this->_type\"");
+	}
 }
 
 
@@ -880,10 +918,15 @@ class Table {
 	const DATA_TYPE_JSON     = 'JSON';
 	const DATA_TYPE_NULL     = 'null'; // Rare always null columns
 
+	/** Database table schema, may be overridden in sub-class or passed by constructor */
+	protected $_schema = null;
 	/** Database table name, may be overridden in sub-class or passed by constructor */
 	protected $_name = null;
 	/** Database object instance, passed by constructor */
 	protected $_db = null;
+
+	/** Name for this table in cache (includes schema if given) */
+	protected $_cacheName;
 
 	/**
 	 * Shared cache for all instances (indexed db, type)
@@ -905,14 +948,20 @@ class Table {
 	*
 	* @param $db object: The Db instance
 	* @param $name string: The table name, override the given one
+	* @param $schema string: The table schema, if null, default is Db::getDefaultSchemaName()
 	* @param $reload bool: If true, forces reloading of cached table structure
 	*/
-	public function __construct($db, $name=null, $reload=false) {
+	public function __construct(Db $db, string $name=null, string $schema = null, bool $reload=false) {
 
 		// Assign and check parameters
 		$this->_db = $db;
 		if( $name )
 			$this->_name = $name;
+		if( $schema )
+			$this->_schema = $schema;
+		if( $this->_schema === null )
+			$this->_schema = $this->_db->getDefaultSchemaName();
+		$this->_cacheName = $this->_schema ? "{$this->_schema}.{$this->_name}" : $this->_name;
 		if( ! $this->_db instanceof Db )
 			throw new \LogicException('Db must be a valid dophp\Db instance');
 		if( ! $this->_name || gettype($this->_name) !== 'string' )
@@ -927,8 +976,13 @@ class Table {
 			$colKey = true;
 			$hasReferences = true;
 			break;
+		case Db::TYPE_PGSQL:
+			$sqlSelfDb = 'current_database()';
+			$colKey = false;
+			$hasReferences = false;
+			break;
 		case Db::TYPE_MSSQL:
-			$sqlSelfDb = '\'dbo\'';
+			$sqlSelfDb = 'DB_NAME()';
 			$colKey = false;
 			$hasReferences = false;
 			break;
@@ -947,54 +1001,77 @@ class Table {
 		$this->_tables = & self::$_cache[$dbh]['tables'];
 
 		if( $reload )
-			if( ($k = array_search($this->_name, $this->_tables)) !== false )
-				unset($this->_tables[$key]);
+			unset($this->_tables[$this->_cacheName]);
 
-		if( $reload || ! array_key_exists($this->_name, self::$_cache[$dbh]['cols']) )
-			self::$_cache[$dbh]['cols'][$this->_name] = [];
-		if( $reload || ! array_key_exists($this->_name, self::$_cache[$dbh]['refs']) )
-			self::$_cache[$dbh]['refs'][$this->_name] = [];
-		if( $reload || ! array_key_exists($this->_name, self::$_cache[$dbh]['pk']) )
-			self::$_cache[$dbh]['pk'][$this->_name] = [];
+		if( $reload || ! array_key_exists($this->_cacheName, self::$_cache[$dbh]['cols']) )
+			self::$_cache[$dbh]['cols'][$this->_cacheName] = [];
+		if( $reload || ! array_key_exists($this->_cacheName, self::$_cache[$dbh]['refs']) )
+			self::$_cache[$dbh]['refs'][$this->_cacheName] = [];
+		if( $reload || ! array_key_exists($this->_cacheName, self::$_cache[$dbh]['pk']) )
+			self::$_cache[$dbh]['pk'][$this->_cacheName] = [];
 
-		$this->_cols = & self::$_cache[$dbh]['cols'][$this->_name];
-		$this->_refs = & self::$_cache[$dbh]['refs'][$this->_name];
-		$this->_pk = & self::$_cache[$dbh]['pk'][$this->_name];
+		$this->_cols = & self::$_cache[$dbh]['cols'][$this->_cacheName];
+		$this->_refs = & self::$_cache[$dbh]['refs'][$this->_cacheName];
+		$this->_pk = & self::$_cache[$dbh]['pk'][$this->_cacheName];
 
-		// Makes sure that table exists
-		if( ! in_array($this->_name, $this->_tables) ) {
+		// Makes sure that table exists, if not, loads table structure from
+		// information_schema into cache. Be aware that information_schema
+		// column names are upper case in some DBMS (MySQL) and lower case in
+		// others (PgSQL). Select column names will need to be aliased for a
+		// consistent result.
+		if( ! in_array($this->_cacheName, $this->_tables) ) {
+
+			/**
+			 * Build table where conditions, used by constructor
+			 *
+			 * @return [ <where sql>, <params array> ]
+			 */
+			$tableWhere = function( string $prefix = null ) use ($sqlSelfDb): array {
+				$qp = $prefix ? $this->_db->quoteObj($prefix) . '.' : '';
+
+				$tw = "( {$qp}TABLE_NAME = :tableName AND ";
+				$tp = [ 'tableName' => $this->_name ];
+				if( $this->_db->hasSchemaSupport() ) {
+					$tw .= "{$qp}TABLE_CATALOG = $sqlSelfDb AND {$qp}TABLE_SCHEMA = :tableSchema ";
+					$tp['tableSchema'] = $this->_schema;
+				} else {
+					$tw .= "{$qp}TABLE_SCHEMA = $sqlSelfDb ";
+				}
+				$tw .= ')';
+
+				return [ $tw, $tp ];
+			};
+			list($tw, $tp) = $tableWhere();
 
 			$q = '
-				SELECT
-					"TABLE_TYPE"
-				FROM "information_schema"."TABLES"
-				WHERE "TABLE_SCHEMA" = '.$sqlSelfDb.'
-					AND "TABLE_NAME" = ?
-			';
-			if( ! $this->_db->run($this->_db->quoteConv($q), array($this->_name))->fetch() )
+				SELECT TABLE_TYPE AS "TABLE_TYPE"
+				FROM information_schema.TABLES
+				WHERE ' . $tw;
+
+			if( ! $this->_db->run($q, $tp)->fetch() )
 				throw new \LogicException("Table {$this->_name} not found");
 
-			$this->_tables[] = $this->_name;
+			$this->_tables[] = $this->_cacheName;
 
 			// Read and cache table structure
 			$q = '
 				SELECT
-					"COLUMN_NAME",
-					"COLUMN_DEFAULT",
-					"IS_NULLABLE",
-					"DATA_TYPE",
-					"CHARACTER_MAXIMUM_LENGTH",
-					"NUMERIC_PRECISION",
-					"NUMERIC_SCALE"';
-			if( $colKey )
-				$q .= ",\n\t\t\t\t\"COLUMN_KEY\"";
-			$q .= '
-				FROM "information_schema"."COLUMNS"
-				WHERE "TABLE_SCHEMA" = '.$sqlSelfDb.'
-					AND "TABLE_NAME" = ?
-				ORDER BY "ORDINAL_POSITION"
+					COLUMN_NAME AS "COLUMN_NAME",
+					COLUMN_DEFAULT AS "COLUMN_DEFAULT",
+					IS_NULLABLE AS "IS_NULLABLE",
+					DATA_TYPE AS "DATA_TYPE",
+					CHARACTER_MAXIMUM_LENGTH AS "CHARACTER_MAXIMUM_LENGTH",
+					NUMERIC_PRECISION AS "NUMERIC_PRECISION",
+					NUMERIC_SCALE AS "NUMERIC_SCALE"
 			';
-			foreach( $this->_db->run($this->_db->quoteConv($q), array($this->_name))->fetchAll() as $c ) {
+			if( $colKey )
+				$q .= ",\n\t\t\t\tCOLUMN_KEY AS \"COLUMN_KEY\"";
+			$q .= "
+				FROM information_schema.COLUMNS
+				WHERE $tw
+				ORDER BY ORDINAL_POSITION
+			";
+			foreach( $this->_db->run($q, $tp)->fetchAll() as $c ) {
 				if( isset($this->_cols['COLUMN_NAME']) )
 					throw new \LogicException("Duplicate definition found for column {$c['COLUMN_NAME']}");
 
@@ -1006,64 +1083,93 @@ class Table {
 
 			// Read primary keys (if not done earlier)
 			if( ! $colKey ) {
+				list($twCol, $tpCol) = $tableWhere('col');
 				$q = '
 					SELECT
-						"COLUMN_NAME"
+						COLUMN_NAME AS "COLUMN_NAME"
 					FROM
-						"information_schema"."TABLE_CONSTRAINTS" AS "tab",
-						"information_schema"."CONSTRAINT_COLUMN_USAGE" AS "col"
+						information_schema.TABLE_CONSTRAINTS AS "tab",
+						information_schema.CONSTRAINT_COLUMN_USAGE AS "col"
 					WHERE
-						"col"."CONSTRAINT_NAME" = "tab"."CONSTRAINT_NAME"
-						AND "col"."TABLE_NAME" = "tab"."TABLE_NAME"
-						AND "CONSTRAINT_TYPE" = \'PRIMARY KEY\'
-						AND "col"."TABLE_SCHEMA" = '.$sqlSelfDb.'
-						AND "col"."TABLE_NAME" = ?
-				';
-				foreach( $this->_db->run($this->_db->quoteConv($q), array($this->_name))->fetchAll() as $c )
+						"col".CONSTRAINT_NAME = "tab".CONSTRAINT_NAME
+						AND "col".TABLE_NAME = "tab".TABLE_NAME
+						AND CONSTRAINT_TYPE = \'PRIMARY KEY\'
+						AND ' . $twCol;
+				foreach( $this->_db->run($q, $tpCol)->fetchAll() as $c )
 					$this->_pk[] = $c['COLUMN_NAME'];
 			}
 
 			// Read and cache references structure
-			if( $hasReferences )
+			if( $hasReferences ) {
 				$q = '
 					SELECT
-						"CONSTRAINT_NAME",
-						"COLUMN_NAME",
-						"REFERENCED_TABLE_NAME",
-						"REFERENCED_COLUMN_NAME"
-					FROM "information_schema"."KEY_COLUMN_USAGE"
-					WHERE "CONSTRAINT_SCHEMA" = '.$sqlSelfDb.'
-						AND "TABLE_SCHEMA" = '.$sqlSelfDb.'
-						AND "REFERENCED_TABLE_SCHEMA" = '.$sqlSelfDb.'
-						AND "TABLE_NAME" = ?
+						CONSTRAINT_NAME AS "CONSTRAINT_NAME",
+						COLUMN_NAME AS "COLUMN_NAME",
+						REFERENCED_TABLE_NAME AS "REFERENCED_TABLE_NAME",
+						REFERENCED_COLUMN_NAME AS "REFERENCED_COLUMN_NAME"
+					FROM information_schema.KEY_COLUMN_USAGE
+					WHERE ';
+				if( $this->_db->hasSchemaSupport() )
+					$q .= "
+						CONSTRAINT_CATALOG = $sqlSelfDb
+						AND CONSTRAINT_SCHEMA = :tableSchema
+						AND TABLE_SCHEMA = :tableSchema
+						AND TABLE_CATALOG = $sqlSelfDb
+						AND REFERENCED_TABLE_SCHEMA = :tableSchema
+						AND TABLE_NAME = :tableName
+					";
+				else
+					$q .= "
+						CONSTRAINT_SCHEMA = $sqlSelfDb
+						AND TABLE_SCHEMA = $sqlSelfDb
+						AND REFERENCED_TABLE_SCHEMA = $sqlSelfDb
+						AND TABLE_NAME = :tableName
+					";
+				$q .= '
 					ORDER BY "ORDINAL_POSITION",
 						"POSITION_IN_UNIQUE_CONSTRAINT"
 				';
-			else
+			} else {
 				$q = '
 					SELECT
-						"kcu1"."CONSTRAINT_NAME",
-						"kcu1"."COLUMN_NAME",
-						"kcu2"."TABLE_NAME" AS "REFERENCED_TABLE_NAME",
-						"kcu2"."COLUMN_NAME" AS "REFERENCED_COLUMN_NAME"
-					FROM "information_schema"."REFERENTIAL_CONSTRAINTS" AS "rc"
-					INNER JOIN "information_schema"."KEY_COLUMN_USAGE" AS "kcu1"
-						ON "kcu1"."CONSTRAINT_CATALOG" = "rc"."CONSTRAINT_CATALOG"
-						AND "kcu1"."CONSTRAINT_SCHEMA" = "rc"."CONSTRAINT_SCHEMA"
-						AND "kcu1"."CONSTRAINT_NAME" = "rc"."CONSTRAINT_NAME"
-					INNER JOIN "information_schema"."KEY_COLUMN_USAGE" AS "kcu2"
-						ON "kcu2"."CONSTRAINT_CATALOG" = "rc"."UNIQUE_CONSTRAINT_CATALOG"
-						AND "kcu2"."CONSTRAINT_SCHEMA" = "rc"."UNIQUE_CONSTRAINT_SCHEMA"
-						AND "kcu2"."CONSTRAINT_NAME" = "rc"."UNIQUE_CONSTRAINT_NAME"
-						AND "kcu2"."ORDINAL_POSITION" = "kcu1"."ORDINAL_POSITION"
-					WHERE "kcu1"."CONSTRAINT_SCHEMA" = '.$sqlSelfDb.'
-						AND "kcu1"."TABLE_SCHEMA" = '.$sqlSelfDb.'
-						AND "kcu2"."TABLE_SCHEMA" = '.$sqlSelfDb.'
-						AND "kcu1"."TABLE_NAME" = ?
-					ORDER BY "kcu1"."ORDINAL_POSITION",
-						"kcu2"."ORDINAL_POSITION"
+						"kcu1".CONSTRAINT_NAME AS "CONSTRAINT_NAME",
+						"kcu1".COLUMN_NAME AS "COLUMN_NAME",
+						"kcu2".TABLE_NAME AS "REFERENCED_TABLE_NAME",
+						"kcu2".COLUMN_NAME AS "REFERENCED_COLUMN_NAME"
+					FROM information_schema.REFERENTIAL_CONSTRAINTS AS "rc"
+					INNER JOIN information_schema.KEY_COLUMN_USAGE AS "kcu1"
+						ON "kcu1".CONSTRAINT_CATALOG = "rc".CONSTRAINT_CATALOG
+						AND "kcu1".CONSTRAINT_SCHEMA = "rc".CONSTRAINT_SCHEMA
+						AND "kcu1".CONSTRAINT_NAME = "rc".CONSTRAINT_NAME
+					INNER JOIN information_schema.KEY_COLUMN_USAGE AS "kcu2"
+						ON "kcu2".CONSTRAINT_CATALOG = "rc".UNIQUE_CONSTRAINT_CATALOG
+						AND "kcu2".CONSTRAINT_SCHEMA = "rc".UNIQUE_CONSTRAINT_SCHEMA
+						AND "kcu2".CONSTRAINT_NAME = "rc".UNIQUE_CONSTRAINT_NAME
+						AND "kcu2".ORDINAL_POSITION = "kcu1".ORDINAL_POSITION
+					WHERE ';
+				if( $this->_db->hasSchemaSupport() )
+					$q .= '
+						"kcu1".CONSTRAINT_SCHEMA = :tableSchema
+						AND "kcu1".CONSTRAINT_CATALOG = '.$sqlSelfDb.'
+						AND "kcu1".TABLE_SCHEMA = :tableSchema
+						AND "kcu1".TABLE_CATALOG = '.$sqlSelfDb.'
+						AND "kcu2".TABLE_SCHEMA = :tableSchema
+						AND "kcu2".TABLE_CATALOG = '.$sqlSelfDb.'
+						AND "kcu1".TABLE_NAME = :tableName
+					';
+				else
+					$q .= '
+						"kcu1".CONSTRAINT_SCHEMA = '.$sqlSelfDb.'
+						AND "kcu1".TABLE_SCHEMA = '.$sqlSelfDb.'
+						AND "kcu2".TABLE_SCHEMA = '.$sqlSelfDb.'
+						AND "kcu1".TABLE_NAME = :tableName
+					';
+				$q .= '
+					ORDER BY "kcu1".ORDINAL_POSITION,
+						"kcu2".ORDINAL_POSITION
 				';
-			foreach( $this->_db->run($this->_db->quoteConv($q), array($this->_name))->fetchAll() as $c ) {
+			}
+			foreach( $this->_db->run($q, $tp)->fetchAll() as $c ) {
 				if( isset($this->_refs['COLUMN_NAME']) )
 					throw new \LogicException("More than one reference detected for column {$c['COLUMN_NAME']}");
 				$this->_refs[$c['COLUMN_NAME']] = $c;
@@ -1148,9 +1254,9 @@ class Table {
 		else
 			$skip = null;
 		$q .= $this->_db->buildLimit($limit, $skip);
-		$st = $this->_db->run($q, $p);
-		while( $row = $st->fetch() )
-			yield $this->cast($row, $joins);
+		$res = $this->_db->xrun($q, $p);
+		while( $row = $res->fetch() )
+			yield $row;
 	}
 
 	/**
@@ -1224,6 +1330,9 @@ class Table {
 		case 'INT2':
 		case 'INT4':
 		case 'INT8':
+		case 'NUMERIC':
+		case 'SERIAL':
+		case 'BIGSERIAL':
 			return self::DATA_TYPE_INTEGER;
 		case 'BIT':
 		case 'BOOL':
@@ -1235,7 +1344,10 @@ class Table {
 				return self::DATA_TYPE_BOOLEAN;
 			return self::DATA_TYPE_INTEGER;
 		case 'FLOAT':
+		case 'FLOAT4':
+		case 'FLOAT8':
 		case 'DOUBLE':
+		case 'REAL':
 			return self::DATA_TYPE_DOUBLE;
 		case 'DECIMAL':
 		case 'DEC':
@@ -1263,6 +1375,7 @@ class Table {
 			return self::DATA_TYPE_DATE;
 		case 'DATETIME':
 		case 'TIMESTAMP':
+		case 'TIMESTAMPTZ':
 			return self::DATA_TYPE_DATETIME;
 		case 'TIME':
 			return self::DATA_TYPE_TIME;
@@ -1297,44 +1410,6 @@ class Table {
 		default:
 			throw new NotImplementedException("Unsupported nullable value {$this->_cols[$col]['IS_NULLABLE']}");
 		}
-	}
-
-	/**
-	* Put every res element into the right type according to column definition
-	*
-	* @param $res array: Associative array representing a row
-	* @param $joins array: List of Join objects used for the query
-	* @return array: Associative array, with values correctly casted into the
-	*                appropriate type
-	*/
-	public function cast($res, $joins=null) {
-		// PDOStatement::fetch returns false when no results are found,
-		// this is a bug in my opinion, so working around it
-		if( $res === null || $res === false )
-			return null;
-		$ret = array();
-
-		foreach( $res as $k => $v ) {
-
-			$type = null;
-			if( in_array($k, $this->getCols()) )
-				$type = $this->getColumnType($k);
-			elseif( preg_match('/^([^.]+)\.([^.]+)$/', $k, $matches) ) {
-				if( $joins )
-					foreach( $joins as $j )
-						if( $j->getTable()->getName() == $matches[1] ) {
-							$type = $j->getTable()->getColumnType($matches[2]);
-							break;
-						}
-				if( ! $type )
-					throw new \LogicException("Unknown join column $matches[2] in table $matches[1]");
-			} else
-				throw new \LogicException("Unknown column $k");
-
-			$ret[$k] = self::castVal($v, $type);
-		}
-
-		return $ret;
 	}
 
 	/**
@@ -1785,7 +1860,7 @@ class SelectQuery {
 		//TODO: improve, many bugs
 		$parts = explode('.', $colname);
 		foreach( $parts as &$p )
-			$p = trim($p, '`');
+			$p = trim($p, '"');
 		unset($p);
 		return $parts;
 	}

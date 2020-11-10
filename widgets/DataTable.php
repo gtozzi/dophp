@@ -962,44 +962,6 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 		return $class;
 	}
 
-
-	/**
-	 * Returns month number from month name
-	 */
-	/*
-	public function agStrToMonthNumb($month=""){
-
-		$month_number = false;
-
-		if((trim($month))!=""){
-
-			$months_list = array(
-				"gen" => 1,
-				"feb" => 2,
-				"mar" => 3,
-				"apr" => 4,
-				"mag" => 5,
-				"giu" => 6,
-				"lug" => 7,
-				"ago" => 8,
-				"set" => 9,
-				"ott" => 10,
-				"nov" => 11,
-				"dic" => 12
-			);
-			$month = trim($month);
-			if(array_key_exists(strtolower($month),$months_list)){
-				$month = strtolower($month);
-				$month = $months_list[$month]."";
-				$month = str_pad($month,2,"0",STR_PAD_LEFT);
-				$month_number = $month;
-			}
-		}
-
-		return $month_number;
-	}
-*/
-
 	/**
 	 * Returns month name from month number
 	 */
@@ -1257,7 +1219,7 @@ class DataTableButton {
 	 *        included by default:
 	 *        - base: base url for the page
 	 */
-	public function __construct(DataTable $table, string $id, array $opt = [], array $params = []) {
+	public function __construct(DataTableInterface $table, string $id, array $opt = [], array $params = []) {
 		$this->_table = $table;
 		$this->_id = $id;
 
@@ -1286,7 +1248,8 @@ class DataTableButton {
 		$replaces = [];
 		foreach( array_merge($this->_table->params, $this->_params) as $name => $val ) {
 			$searches[] = static::PARAM_START . $name . static::PARAM_END;
-			$replaces[] = $val;
+			// TODO: Proper conversion to machine format?
+			$replaces[] = \dophp\Utils::format($val);
 		}
 		return str_replace($searches, $replaces, $this->url);
 	}
@@ -1332,7 +1295,7 @@ class DataTableRowButton extends DataTableButton {
 	 * @param $opt array of options, like DataTableButton, extra options:
 	 *        - show mixed: bool or callable($row), tells if the button should be shown
 	 */
-	public function __construct(DataTable $table, string $id, array $opt = [], array $params = []) {
+	public function __construct(DataTableInterface $table, string $id, array $opt = [], array $params = []) {
 		parent::__construct($table, $id, $opt, $params);
 	}
 
@@ -1647,7 +1610,7 @@ class DataTable extends BaseDataTable {
 
 		// Apply having clause (in MS SQL, use where if no group)
 		if( $having )
-			if( $this->_db->type() == $this->_db::TYPE_MSSQL && ! $groupBy )
+			if( ($this->_db->type() == $this->_db::TYPE_MSSQL || $this->_db->type() == $this->_db::TYPE_PGSQL) && ! $groupBy )
 				$q .= ($where ? "\nAND" : "\nWHERE") . ' (' . implode(' AND ', $having) . ')';
 			else
 				$q .= "\nHAVING " . implode(' AND ', $having);
@@ -1663,6 +1626,8 @@ class DataTable extends BaseDataTable {
 		if( $limit ) {
 			if( $this->_db->type() == $this->_db::TYPE_MSSQL )
 				$q .= "\nOFFSET ". ( $limit->getStart() ) . ' ROWS FETCH NEXT ' . $limit->getLength().' ROWS ONLY';
+			else if( $this->_db->type() == $this->_db::TYPE_PGSQL )
+				$q .= "\nOFFSET " . ( $limit->getStart() ) . ' LIMIT ' . $limit->getLength();
 			else
 				$q .= "\nLIMIT " . ( $limit->getStart() ) . ',' . $limit->getLength();
 		}
@@ -1688,6 +1653,8 @@ class DataTable extends BaseDataTable {
 
 		// Cache failed, go retrieve it
 		list($q, $where, $p, $groupBy) = $this->_buildBaseQuery(false, false);
+		if( $groupBy )
+			$q .= "\nGROUP BY $groupBy";
 		if( $this->_db->type() == $this->_db::TYPE_MSSQL)
 			$q = preg_replace( '/^SELECT/', 'SELECT TOP 0', $q, 1 );
 		else
@@ -1741,6 +1708,13 @@ class DataTable extends BaseDataTable {
 			$cache->set($cacheKey, $cnt, 0, static::COUNT_CACHE_EXPIRE);
 
 		return $cnt;
+	}
+
+	public static function _getGroupConcat($column, $db): string {
+		if ($db->type() == $db::TYPE_PGSQL)
+			return "string_agg($column, \', \')";
+		else
+			return "GROUP_CONCAT($column SEPARATOR \', \')";
 	}
 }
 
@@ -1882,4 +1856,5 @@ class StaticCachedQueryDataTable extends BaseDataTable {
 
 		return $opt;
 	}
+
 }
