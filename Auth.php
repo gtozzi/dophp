@@ -172,6 +172,9 @@ abstract class AuthBase implements AuthInterface {
 	 * Compares a plain password with a SHA512 password
 	 *
 	 * @see self::encryptPasswordSHA512
+	 * @param $plain_password The plain password
+	 * @param $hashed_password The hashed password, in the format "salt$password"
+	 * @return true on success
 	 */
 	public static function comparePasswordsSHA512(string $plain_password, string $hashed_password): bool {
 		$matches = [];
