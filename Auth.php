@@ -55,6 +55,9 @@ abstract class AuthBase implements AuthInterface {
 	/** Name of the session array password key */
 	const SESS_VPASS = 'password';
 
+	/** String (char) used to concatenate salt and password */
+	const PWD_SALT_GLUE = '$';
+
 	/** Config array */
 	protected $_config;
 	/** Database instance */
@@ -165,7 +168,7 @@ abstract class AuthBase implements AuthInterface {
 		}
 
 		$merged = "{$salt}§{$password}§{$salt}";
-		return $salt . '$' . hash('sha512', $merged);
+		return $salt . self::PWD_SALT_GLUE . hash('sha512', $merged);
 	}
 
 	/**
@@ -177,15 +180,17 @@ abstract class AuthBase implements AuthInterface {
 	 * @return true on success
 	 */
 	public static function comparePasswordsSHA512(string $plain_password, string $hashed_password): bool {
-		$matches = [];
-		preg_match("([A-Za-z0-9]*)", $hashed_password, $matches);
-		$salt = $matches[0];
+		$parts = explode(self::PWD_SALT_GLUE, $hashed_password, 2);
+		if( count($parts) < 2 ) {
+			// Missing salt
+			return false;
+		}
+		$salt = $parts[0];
 
 		if(trim($hashed_password) == trim(self::encryptPasswordSHA512($plain_password, $salt)))
 			return true;
-		else
-			return false;
 
+		return false;
 	}
 
 }
