@@ -148,6 +148,43 @@ abstract class AuthBase implements AuthInterface {
 		return false;
 	}
 
+	/**
+	 * Creates a sha512-based password hash
+	 *
+	 * @param $password string: The password to be hashed
+	 * @param $salt string: The salt; if missing, use a random one
+	 *
+	 * @return "{$salt}${$salt}§{$password}§{$salt}"
+	 */
+	public static function encryptPasswordSHA512(string $password, string $salt=null): string {
+		if( ! $salt ) {
+			$chars = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+			$salt = '';
+			for($i = 0; $i < 8; $i++)
+				$salt .= $chars[rand(0, strlen($chars) - 1)];
+		}
+
+		$merged = "{$salt}§{$password}§{$salt}";
+		return $salt . '$' . hash('sha512', $merged);
+	}
+
+	/**
+	 * Compares a plain password with a SHA512 password
+	 *
+	 * @see self::encryptPasswordSHA512
+	 */
+	public static function comparePasswordsSHA512(string $plain_password, string $hashed_password): bool {
+		$matches = [];
+		preg_match("([A-Za-z0-9]*)", $hashed_password, $matches);
+		$salt = $matches[0];
+
+		if(trim($hashed_password) == trim(self::encryptPasswordSHA512($plain_password, $salt)))
+			return true;
+		else
+			return false;
+
+	}
+
 }
 
 
