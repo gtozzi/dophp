@@ -263,6 +263,7 @@
 							case 'string':
 								return data;
 							case 'boolean':
+								return data ? 'Sì' : 'No';
 							case 'number':
 							case 'undefined':
 								return getValueRepr(data);
@@ -490,8 +491,8 @@
 		$(".wp-dfilt-dpck").datepicker({
 			language: "it",
 			autoclose: true,
-			dateFormat: "dd-mm-yyyy",
-			format: "dd-mm-yyyy",
+			dateFormat: "dd.mm.yyyy",
+			format: "dd.mm.yyyy",
 		});
 
 		$(".wp-date-filter-cont .wpdf_close, .wp-date-filter-head .wp-close").click(function(){
