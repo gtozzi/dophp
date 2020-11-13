@@ -152,7 +152,8 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 	 * Provides the query for the cache freshness check default implementation
 	 * must be defined in child and return only a row and col
 	 *
-	 * @example SELECT MAX(last_updated) FROM table
+	 * Example: SELECT MAX(last_updated) FROM table
+	 *
 	 * @see self::_getCountCacheFreshnessCheckVal()
 	 */
 	protected $_countCacheFreshQuery = null;
@@ -526,7 +527,7 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 	/**
 	 * Sets the super filter from array
 	 *
-	 * @param $sfilter array: Associative array of field->status, unknown keys
+	 * @param $params array: Associative array of field->status, unknown keys
 	 *                         are ignored
 	 */
 	public function setSFilter(array $params) {
@@ -537,7 +538,7 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 	/**
 	 * Sets the initial params (filter/search) from $_GET array
 	 *
-	 * @param $pars: array of parameters, associative
+	 * @param $params array of parameters, associative
 	 * @see https://datatables.net/manual/server-side
 	 */
 	public function setGParams(array $params) {
@@ -707,11 +708,9 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 
 			// checks if filter is a date filter and calculate where clause
 			if($c->type == \dophp\Table::DATA_TYPE_DATE){
-
 				$dateFilter = new \dophp\DateFilter($search, self::DFILTER_DIVIDER);
 				$search = $dateFilter->getSearchFilter($c->qname);
 				$filter[] = $search;
-
 			} else {
 				$filter[] = "{$c->qname} LIKE :f$idx";
 				$filterArgs[":f$idx"] = "%$search%";

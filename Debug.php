@@ -67,7 +67,7 @@ abstract class Debug {
 	/**
 	 * Yields all the stored requests, from most recent to the oldest
 	 *
-	 * @yield Request
+	 * @return yield Request
 	 */
 	abstract public function getRequests();
 
