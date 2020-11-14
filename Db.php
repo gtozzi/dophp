@@ -898,6 +898,9 @@ class Result implements \Iterator {
 		$this->_current = $this->fetch();
 	}
 
+	public function rowCount(): int {
+		return $this->_st->rowCount();
+	}
 }
 
 
