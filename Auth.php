@@ -55,6 +55,9 @@ abstract class AuthBase implements AuthInterface {
 	/** Name of the session array password key */
 	const SESS_VPASS = 'password';
 
+	/** String (char) used to concatenate salt and password */
+	const PWD_SALT_GLUE = '$';
+
 	/** Config array */
 	protected $_config;
 	/** Database instance */
@@ -145,6 +148,48 @@ abstract class AuthBase implements AuthInterface {
 			$_SESSION[self::SESS_VAR][self::SESS_VPASS] = $pwd;
 			return true;
 		}
+		return false;
+	}
+
+	/**
+	 * Creates a sha512-based password hash
+	 *
+	 * @param $password string: The password to be hashed
+	 * @param $salt string: The salt; if missing, use a random one
+	 *
+	 * @return "{$salt}${$salt}§{$password}§{$salt}"
+	 */
+	public static function encryptPasswordSHA512(string $password, string $salt=null): string {
+		if( ! $salt ) {
+			$chars = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+			$salt = '';
+			for($i = 0; $i < 8; $i++)
+				$salt .= $chars[rand(0, strlen($chars) - 1)];
+		}
+
+		$merged = "{$salt}§{$password}§{$salt}";
+		return $salt . self::PWD_SALT_GLUE . hash('sha512', $merged);
+	}
+
+	/**
+	 * Compares a plain password with a SHA512 password
+	 *
+	 * @see self::encryptPasswordSHA512
+	 * @param $plain_password The plain password
+	 * @param $hashed_password The hashed password, in the format "salt$password"
+	 * @return true on success
+	 */
+	public static function comparePasswordsSHA512(string $plain_password, string $hashed_password): bool {
+		$parts = explode(self::PWD_SALT_GLUE, $hashed_password, 2);
+		if( count($parts) < 2 ) {
+			// Missing salt
+			return false;
+		}
+		$salt = $parts[0];
+
+		if(trim($hashed_password) == trim(self::encryptPasswordSHA512($plain_password, $salt)))
+			return true;
+
 		return false;
 	}
 
