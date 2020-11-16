@@ -334,7 +334,7 @@ abstract class FormPage extends \dophp\PageSmarty {
 	 * The field groups definition array, should be overridden in child.
 	 * The key is the unique field group name.
 	 * Every field group is definied as an array compatible with Form::__construct
-	 * @see \dophp\widgets\Form::__construct
+	 * @see \\dophp\\widgets\\Form::__construct
 	 */
 	protected $_fieldGroups = [];
 
@@ -342,7 +342,7 @@ abstract class FormPage extends \dophp\PageSmarty {
 	 * The field definition array, should be overridden in child.
 	 * The key is the unique field name, must match DMBS name.
 	 * Every field is definied as an array compatible with Form::__construct
-	 * @see \dophp\widgets\Form::__construct
+	 * @see \\dophp\\widgets\\Form::__construct
 	 **/
 	protected $_fields = [];
 
@@ -672,7 +672,7 @@ abstract class FormPage extends \dophp\PageSmarty {
 	/**
 	 * Loads the form from session and assign it to $this->_form
 	 *
-	 * @throws \Exception
+	 * @throws Exception
 	 */
 	protected function _loadFormFromSession() {
 		if( ! isset($_SESSION[$this->_sesskey][self::SESS_FORM]) )
@@ -736,7 +736,7 @@ abstract class FormPage extends \dophp\PageSmarty {
 	 *
 	 * @param $perm mixed: The permission ID (usually string), or array for
 	 *                     multiple permissions with OR clause
-	 * @throws \dophp\PageDenied
+	 * @throws \\dophp\\PageDenied
 	 */
 	public function needPerm($perm) {
 		if( $this->_perm === true )

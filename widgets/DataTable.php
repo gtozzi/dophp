@@ -151,7 +151,8 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 	 * Provides the query for the cache freshness check default implementation
 	 * must be defined in child and return only a row and col
 	 *
-	 * @example SELECT MAX(last_updated) FROM table
+	 * Example: SELECT MAX(last_updated) FROM table
+	 *
 	 * @see self::_getCountCacheFreshnessCheckVal()
 	 */
 	protected $_countCacheFreshQuery = null;
@@ -525,7 +526,7 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 	/**
 	 * Sets the super filter from array
 	 *
-	 * @param $sfilter array: Associative array of field->status, unknown keys
+	 * @param $params array: Associative array of field->status, unknown keys
 	 *                         are ignored
 	 */
 	public function setSFilter(array $params) {
@@ -536,7 +537,7 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 	/**
 	 * Sets the initial params (filter/search) from $_GET array
 	 *
-	 * @param $pars: array of parameters, associative
+	 * @param $params array of parameters, associative
 	 * @see https://datatables.net/manual/server-side
 	 */
 	public function setGParams(array $params) {
@@ -718,7 +719,7 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 
 				// proceed only if date_type has been identified
 				if($agDateType){
-					$search = $this->getDateFilter($search,$agDateType,$isDateRange,$c->qname);					
+					$search = $this->getDateFilter($search,$agDateType,$isDateRange,$c->qname);
 					$filter[] = $search;
 				}
 				// if data type is unknown return no results
@@ -1012,7 +1013,6 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 		return $month_number;
 	}
 
-
 	/**
 	 * Returns month name from month number
 	 */
@@ -1043,7 +1043,6 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 
 		return $month_name;
 	}
-
 
 	/**
 	 * Returns data filter type by parsing the search string
@@ -1125,7 +1124,6 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 		return $type;
 	}
 
-
 	/**
 	 * Returns the first element from a range of dates
 	 */
@@ -1137,7 +1135,6 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 		}
 		return $el;
 	}
-
 
 	/**
 	 * Returns the where condition based on date filter type
@@ -1339,7 +1336,6 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 		return $search;
 	}
 
-
 	/**
 	 * Accept various it date format and
 	 * returns the date in english format
@@ -1365,7 +1361,6 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 		return $date;
 	}
 
-
 	/**
 	 * Return the first day of month in english
 	 * format for the last 12 months
@@ -1383,7 +1378,6 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 		}
 		return $last12Months;
 	}
-
 
 	/**
 	 * Return a list of month-year string
@@ -1471,7 +1465,6 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 		return $list;
 	}
 
-
 	/**
 	 * Return false on error or a string in numeric year-month format
 	 * e.g.:
@@ -1496,9 +1489,8 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 
 	}
 
-
 	/**
-	 * Returns the parameters list purged from null values, 
+	 * Returns the parameters list purged from null values,
 	 * compliant with the PostgreSQL driver requirements
 	 */
 	protected function _getFilledParams($params) {
@@ -1510,8 +1502,6 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 		}
 		return $fParams;
 	}
-
-
 
 }
 
@@ -1652,7 +1642,7 @@ class DataTableButton {
 	 *        included by default:
 	 *        - base: base url for the page
 	 */
-	public function __construct(DataTable $table, string $id, array $opt = [], array $params = []) {
+	public function __construct(DataTableInterface $table, string $id, array $opt = [], array $params = []) {
 		$this->_table = $table;
 		$this->_id = $id;
 
@@ -1681,7 +1671,8 @@ class DataTableButton {
 		$replaces = [];
 		foreach( array_merge($this->_table->params, $this->_params) as $name => $val ) {
 			$searches[] = static::PARAM_START . $name . static::PARAM_END;
-			$replaces[] = $val;
+			// TODO: Proper conversion to machine format?
+			$replaces[] = \dophp\Utils::format($val);
 		}
 		return str_replace($searches, $replaces, $this->url);
 	}
@@ -1727,7 +1718,7 @@ class DataTableRowButton extends DataTableButton {
 	 * @param $opt array of options, like DataTableButton, extra options:
 	 *        - show mixed: bool or callable($row), tells if the button should be shown
 	 */
-	public function __construct(DataTable $table, string $id, array $opt = [], array $params = []) {
+	public function __construct(DataTableInterface $table, string $id, array $opt = [], array $params = []) {
 		parent::__construct($table, $id, $opt, $params);
 	}
 
@@ -2031,7 +2022,7 @@ class DataTable extends BaseDataTable {
 			$having[] = '( ' . implode(' AND ', $filter->getFilter()) . ' )';
 			$p = array_merge($p, $filter->getArgs());
 		}
-		
+
 		// Apply where clause
 		if( $where )
 			$q .= "\nWHERE " . implode(' AND ', $where);
@@ -2062,7 +2053,7 @@ class DataTable extends BaseDataTable {
 				$q .= "\nOFFSET " . ( $limit->getStart() ) . ' LIMIT ' . $limit->getLength();
 			else
 				$q .= "\nLIMIT " . ( $limit->getStart() ) . ',' . $limit->getLength();
-		}		
+		}
 
 		return $this->_db->xrun($q, $p, $this->_getColumnExplicitTypes())->fetchAll();
 	}
@@ -2145,7 +2136,7 @@ class DataTable extends BaseDataTable {
 	public static function _getGroupConcat($column, $db): string {
 		if ($db->type() == $db::TYPE_PGSQL)
 			return "string_agg($column, \', \')";
-		else 
+		else
 			return "GROUP_CONCAT($column SEPARATOR \', \')";
 	}
 }

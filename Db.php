@@ -773,9 +773,13 @@ class Result implements \Iterator {
 			if( ! $meta )
 				throw new \InvalidArgumentException("No meta for column $idx");
 
-			if( isset($this->_types[$meta['name']]) )
+			if( isset($this->_types[$meta['name']]) ) {
 				$type = $this->_types[$meta['name']];
-			elseif( ! isset($meta['native_type']) ) {
+			} elseif( isset($meta['sqlsrv:decl_type']) && $meta['sqlsrv:decl_type'] ) {
+				// Apparently the sqlsrv driver uses a different key for types
+				$declType = explode(' ', $meta['sqlsrv:decl_type'], 2)[0];
+				$type = Table::getType($declType, $meta['len']);
+			} elseif( ! isset($meta['native_type']) ) {
 				// Apparently JSON fields have no native_type
 				throw new \InvalidArgumentException("Missing native_type form column $idx, must declare type explicitly");
 			} else
@@ -898,6 +902,9 @@ class Result implements \Iterator {
 		$this->_current = $this->fetch();
 	}
 
+	public function rowCount(): int {
+		return $this->_st->rowCount();
+	}
 }
 
 
@@ -1860,7 +1867,7 @@ class SelectQuery {
 		//TODO: improve, many bugs
 		$parts = explode('.', $colname);
 		foreach( $parts as &$p )
-			$p = trim($p, '`');
+			$p = trim($p, '"');
 		unset($p);
 		return $parts;
 	}
