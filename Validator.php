@@ -481,6 +481,36 @@ class time_validator extends base_validator {
 }
 
 /**
+ * Validate as duration
+ */
+class duration_validator extends base_validator {
+
+	protected function do_clean($val, $opt) {
+		if( gettype($val) == 'int')
+			return $val;
+		if( gettype($val) != 'string')
+			return null;
+
+		$vals = preg_split('/(\\.|:|\\s+)/', trim($val));
+		if( count($vals) < 2 || count($vals) > 3 )
+			return null;
+		foreach( $vals as & $v ) {
+			if( ! is_numeric($v) )
+				return null;
+			$v = (int) $v;
+		}
+		unset($v);
+		for( $i = 0; $i < 3; $i++ )
+			if( ! isset($vals[$i]) )
+				$vals[$i] = 0;
+
+		$sec = $vals[2] + ($vals[1] * 60) + ($vals[0] * 60 * 60);	// Seconds, minutes, hours
+		return $sec;
+	}
+
+}
+
+/**
 * Validate a file
 *
 * Custom validation rules: 'type': array(<types>) Validate against a list of mime types

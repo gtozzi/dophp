@@ -173,6 +173,9 @@
 						data-thosep="{{$field->getThoSep()|htmlentities}}"
 						data-decdigits="{{$field->getDecDigits()|htmlentities}}"
 					{{/if}}
+					{{if $type=='duration'}}
+						data-sep="{{$field->getSep()|htmlentities}}"
+					{{/if}}
 
 					{{if $type=='textarea'}}
 						rows="{{$field->getRows()}}"

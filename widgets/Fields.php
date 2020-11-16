@@ -583,6 +583,43 @@ class CurrencyField extends NumberField {
 }
 
 
+/**
+ * A numeric field specifically for handling a time duration
+ */
+class DurationField extends TextField {
+
+	protected $_type = 'duration';
+	protected $_vtype = 'duration';
+
+	/** The time separator */
+	protected $_sep = ':';
+
+	public function __construct(string $name, array $namespace = [], array $opts = []) {
+		parent::__construct($name, $namespace, $opts);
+
+		$this->_vopts['sep'] = & $this->_sep;
+	}
+
+	public function getSep(): string {
+		return $this->_sep;
+	}
+
+	public function getPlaceholder() {
+		return "00:00:00";
+	}
+
+	public function format($value) {
+		$hours = $value / (60 * 60);
+		$rest = $value % (60 * 60);
+		$minutes = $rest / 60;
+		$rest = $rest % 60;
+		$seconds = $rest;
+		$str = sprintf('%02d%s%02d%s%02d', $hours, $this->getSep(), $minutes, $this->getSep(), $seconds);
+		return $str;
+	}
+}
+
+
 
 /**
  * A file upload field
