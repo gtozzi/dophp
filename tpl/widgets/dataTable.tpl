@@ -263,6 +263,7 @@
 							case 'string':
 								return data;
 							case 'boolean':
+								return data ? 'Sì' : 'No';
 							case 'number':
 							case 'undefined':
 								return getValueRepr(data);
@@ -578,7 +579,7 @@
 				case "2":
 					$(".wp-mthUnit.wp-active").each(function(){
 						monthsList.push($(this).data("year-month"));
-						filterString = monthsList.join("{{$dFilterDivider}}");
+						filterString = monthsList.reverse().join("{{$dFilterDivider}}");
 					});
 				break;
 
@@ -586,7 +587,7 @@
 				case "3":
 					$(".wp-yeaUnit.wp-active").each(function(){
 						yearsList.push($(this).data("year"));
-						filterString = yearsList.join("{{$dFilterDivider}}");
+						filterString = yearsList.reverse().join("{{$dFilterDivider}}");
 					});
 				break;
 
@@ -597,12 +598,12 @@
 			var currFilter = document.getElementById("ag-dt-dtFilt-"+currColNo);
 
 			// fill given date filter with the search_string
-			$("#ag-dt-dtFilt-"+currColNo).val(filterString)
+			$("#ag-dt-dtFilt-"+currColNo).val(filterString);
 
 			// store the identifier of the used date_tab for the current used filter
 			$("#ag-dt-dtFilt-"+currColNo).attr("data-seltab",activeTab);
 
-			updateFilter(currFilter,filterString);
+			updateFilter(currFilter, filterString);
 
 		});
 
@@ -770,176 +771,151 @@
 		$(formEl).closest('div.modal').modal('hide');
 	}
 
+	function monthDiff(dateFrom, dateTo) {
+		return dateTo.getMonth() - dateFrom.getMonth() +
+			(12 * (dateTo.getFullYear() - dateFrom.getFullYear()))
+	}
 
-	function filterShowDate(formEl){
-
-		var activeTab = $(".wp-date-filter-tab.wp-active").attr("id").replace("tab-","");
-		var filterValue = $(".ag-dt-dtFilt").val();
-
-		// Get first year valuie from $yearList
-		{{$firstYearEl = end($yearList)}}
-		const FIRST_YEAR = "{{end($firstYearEl)}}";
-		const FIRST_MONTH = FIRST_YEAR+"-01";
-
-		// Show the date filter modal
+	function resetModal() {
 		$(".wp-date-filter-cont").removeClass("do-hide");
-		// Rimuovo la precedente selezione
 		$(".wp-date-filter-cont .wp-date-filter-form").removeClass("wp-active");
 		$(".wp-date-filter-cont .wp-date-filter-tab").removeClass("wp-active");
 		$(".wp-date-filter-cont .wp-mthUnit,.wp-date-filter-cont .wp-yeaUnit").removeClass("wp-range");
 		$(".wp-date-filter-cont .wp-mthUnit,.wp-date-filter-cont .wp-yeaUnit").removeClass("wp-active");
+	}
 
-		// Show selection based on date search field filter value
-		if(filterValue != "" && activeTab > 1)
-		{
-			var filterStart = "";
-			var filterEnd = "";
+	// Set modal tab and selection, according to the DateFilter in jsonString
+	function setModal(jsonString) {
 
-			// Sort the dates
-			var filterArray = filterValue.split('||').sort();
+		const precList = ["dmy", "my", "y"];
 
-			if(filterArray[0] != undefined && filterArray[0] != "")
-				filterStart = filterArray[0];
+		let precison;
+		let filterStart;
+		let filterEnd;
+		let currentDay;
+		let currentMonth;
+		let dateFilter = jQuery.parseJSON(jsonString);
 
-			if(filterArray[1] != undefined && filterArray[1] != "")
-				filterEnd = filterArray[1];
-			else
-				filterEnd = filterStart;
+		if(!dateFilter._valid)
+			return;
 
-			switch (activeTab){
-				case "2": {
-					// Show the selection for the months tab
-					if(filterStart == "")
-						filterStart = FIRST_MONTH;
-					$("#mthID-"+filterStart).addClass("wp-active");
-					$("#mthID-"+filterEnd).addClass("wp-active");
+		// Clean old modal selection
+		resetModal();
 
-					var month = "";
-					var firstMonthFilterEnd = "1";
-					var lastMonthfilterStart = "12";
-					var monthFilterStart = "";
-					var monthFilterEnd = "";
-					var yearFilterStart = "";
-					var yearFilterEnd = "";
+		if(dateFilter._startDate != null && dateFilter._startDate._precision != null)
+			precison = dateFilter._startDate._precision;
+		else
+			precison = dateFilter._endDate._precision;
 
-					if(filterStart != "") {
-						yearFilterStart = filterStart.split('-')[0];
-						monthFilterStart = filterStart.split('-')[1];
-					}
 
-					if(filterEnd != "") {
-						console.log("filterEnd: "+filterEnd);
-						monthFilterEnd = filterEnd.split('-')[1];
-						yearFilterEnd = filterEnd.split('-')[0];
-					}
+		if(dateFilter._startDate == null || dateFilter._startDate.date == null)
+			filterStart = new Date('01-01-1000');
+		else
+			filterStart = new Date(dateFilter._startDate.date);
 
-					// FIRST YEAR
-					// Calculate the last month of the selection
-					if(yearFilterStart == yearFilterEnd)
-						lastMonthfilterStart = parseInt(monthFilterEnd)-1;
-					for (var month = parseInt(monthFilterStart)+1; month <= parseInt(lastMonthfilterStart); month++)
-					{
-						if (month < 10)
-							month = "0"+month;
-						$("#mthID-"+yearFilterStart+"-"+month).addClass("wp-range");
-					}
+		if(dateFilter._endDate == null || dateFilter._endDate.date == null)
+			filterEnd = new Date();
+		else
+			filterEnd = new Date(dateFilter._endDate.date);
 
-					// YEARS RANGE
-					for (var year = parseInt(yearFilterStart)+1; year < parseInt(yearFilterEnd); year++)
-					{
-						for (var month = 1; month <= 12; month++) {
-							if (month < 10)
-								month = "0"+month;
-							$("#mthID-"+year+"-"+month).addClass("wp-range");
-						}
-					}
+		switch(precison){
+			case precList[0]:
+				// Day Tab
+				tabId = 1;
 
-					// LAST YEAR
-					// calculate first month of the selection
-					if(yearFilterStart == yearFilterEnd)
-						firstMonthFilterEnd = parseInt(monthFilterStart)+1;
-					for (var month =  parseInt(firstMonthFilterEnd); month <= parseInt(monthFilterEnd); month++) {
-						if (month < 10)
-							month = "0"+month;
-						$("#mthID-"+yearFilterEnd+"-"+month).addClass("wp-range");
-					}
-					break;
+				if(dateFilter._startDate != null && dateFilter._startDate.date != null) {
+					currentDay = ("0" + filterStart.getDate()).slice(-2);
+					currentMonth = ("0" + (filterStart.getMonth() + 1)).slice(-2);
+					startDate = currentDay+"-"+currentMonth+"-"+filterStart.getFullYear();
+					$("#wp-dfilt-start").val(startDate);
 				}
-				case "3": {
-					// Show the selection for the years tab
-					if(filterStart == "")
-						filterStart = FIRST_YEAR;
-					$("#yyID-"+filterStart).addClass("wp-active");
-					$("#yyID-"+filterEnd).addClass("wp-active");
-					for (var i = parseInt(filterStart)+1; i < parseInt(filterEnd); i++)
-						$("#yyID-"+i).addClass("wp-range");
-					break;
+
+				if(dateFilter._endDate != null && dateFilter._endDate.date != null) {
+					currentDay = ("0" + filterEnd.getDate()).slice(-2);
+					currentMonth = ("0" + (filterEnd.getMonth() + 1)).slice(-2);
+					endDate = currentDay+"-"+currentMonth+"-"+filterEnd.getFullYear();
+					$("#wp-dfilt-end").val(endDate);
 				}
-			default:
-					break;
-			}
+
+			break;
+
+			case precList[1]:
+				// Month Tab
+				tabId = 2
+
+				controlDate = new Date(dateFilter._startDate.date);
+				monthOfDifference = monthDiff(filterStart, filterEnd);
+
+				// First month
+				currentMonth = ("0" + (filterStart.getMonth() + 1)).slice(-2)
+				$("#mthID-"+currentMonth+"-"+filterStart.getFullYear()).addClass("wp-active");
+
+				// Last month
+				currentMonth = ("0" + (filterEnd.getMonth() + 1)).slice(-2)
+				$("#mthID-"+currentMonth+"-"+filterEnd.getFullYear()).addClass("wp-active");
+
+				// Range
+				for(i=1; i<=monthOfDifference; i++) {
+					currentMonth = ("0" + (controlDate.getMonth() + 1)).slice(-2)
+					$("#mthID-"+currentMonth+"-"+controlDate.getFullYear()).addClass("wp-range");
+					controlDate.setMonth(controlDate.getMonth() + 1);
+				}
+			break;
+
+			case precList[2]:
+				// Year Tab
+				tabId = 3
+				yearStart = filterStart.getFullYear();
+				yearEnd = filterEnd.getFullYear();
+
+				for (var i = parseInt(yearStart); i <= parseInt(yearEnd); i++)
+					$("#yyID-"+i).addClass("wp-range");
+			break;
 		}
 
-		var jQ_formEl = $(formEl);
+		$(".wp-date-filter-tab#tab-"+tabId).addClass("wp-active");
+		$(".wp-date-filter-form.form-"+tabId).addClass("wp-active");
 
-		// store the current_filter identifier
+	}
+
+	function rpcDateFilter(filterValue) {
+
+		if(filterValue == '')
+			return;
+
+		// Update table based on filter date
+		let data = {
+			'search': filterValue,
+		};
+
+		$.ajax({
+			type: "POST",
+			url: 'rpc.php?do=filterDate',
+			data: data,
+			success: function( res ) {
+				setModal(res);
+			},
+			dataType: 'json',
+		});
+	}
+
+
+	function filterShowDate(formEl){
+
+		var jQ_formEl = $(formEl);
 		var currColNo = jQ_formEl.data("coln");
+		var activeTab = $(".wp-date-filter-tab.wp-active").attr("id").replace("tab-","");
+		var filterValue = $(".ag-dt-dtFilt").val();
+
+		$(".wp-date-filter-cont").removeClass("do-hide");
+
+		if(filterValue != null && filterValue != "")
+			 rpcDateFilter(filterValue);
+
 		$(".wp-date-filter-cont #wp-date-filter-colNo").val(currColNo);
 
 		$('#wp-dfilt-start').data('coln', currColNo);
 		$('#wp-dfilt-end').data('coln', currColNo);
-
-		// if filter has been used before reopen last choosen tab otherwise open the default layout
-		var usedTab = jQ_formEl.attr("data-seltab");
-		restoreFilterData(currColNo,usedTab)
-	}
-
-
-	/**
-	 * If given, restore last used tab and filter_data
-	 */
-	function restoreFilterData(column,tab){
-
-		// if a tab is given make it active otherwise show default layout
-		if(typeof(tab)!="undefined"&&parseInt(tab)>0){
-			$(".wp-date-filter-tab#tab-"+tab).addClass("wp-active");
-			$(".wp-date-filter-cont .wp-date-filter-form.form-"+tab).addClass("wp-active");
-
-			// if a column is given try to retrieve previous filter_data
-			if(typeof(column)!="undefined"&&parseInt(column)>=0){
-
-				// get current filter value
-				var currFilterString = $(".ag-dt-dtFilt#ag-dt-dtFilt-"+column);
-				currFilterString = currFilterString[0];
-				currFilterString = $(currFilterString).val()
-
-				// if filter_string is not empty try to restore previous data
-				if((currFilterString.trim())!=""){
-
-					var firstElem=false;
-					var lastElem=false;
-
-					var currValues=currFilterString.trim();
-					currValues=currValues.split("{{$dFilterDivider}}");
-					switch(tab){
-
-						case "1":
-						break;
-
-						case "2":
-						break;
-
-						case "3":
-						break;
-					}
-				}
-			}
-		}
-		else{
-			$(".wp-date-filter-tab#tab-1").addClass("wp-active");
-			$(".wp-date-filter-cont .wp-date-filter-form.form-1").addClass("wp-active");
-		}
-
 
 	}
 
@@ -951,7 +927,6 @@
 	/**
 	 * Asks for an element deletion confirmation
 	 */
-	//function confirmAndDelete(id, url) {
 	function confirmAndDelete(url) {
 		if( ! confirm("Confermi la cancellazione?") )
 			return;
@@ -1083,7 +1058,7 @@
 				{{foreach from=$monthYearList item=myl_list key=myl_year}}
 					<div class="wp-date-monthBlck-title">{{$myl_year}}</div>
 					{{foreach from=$myl_list item=month}}
-						<div id="mthID-{{$myl_year}}-{{$month["number"]}}" class="wp-mthUnit" data-year-month="{{$myl_year}}-{{$month["number"]}}">{{$month["name"]}}</div>
+						<div id="mthID-{{$month["number"]}}-{{$myl_year}}" class="wp-mthUnit" data-year-month="{{$month["number"]}}.{{$myl_year}}">{{$month["name"]}}</div>
 					{{/foreach}}
 				{{/foreach}}
 			</div>
