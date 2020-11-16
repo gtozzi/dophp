@@ -883,7 +883,7 @@
 		if(filterValue == '')
 			return;
 
-		// Update provincia
+		// Update table based on filter date
 		let data = {
 			'search': filterValue,
 		};
@@ -1058,7 +1058,7 @@
 				{{foreach from=$monthYearList item=myl_list key=myl_year}}
 					<div class="wp-date-monthBlck-title">{{$myl_year}}</div>
 					{{foreach from=$myl_list item=month}}
-						<div id="mthID-{{$month["number"]}}-{{$myl_year}}" class="wp-mthUnit" data-year-month="{{$month["number"]}}-{{$myl_year}}">{{$month["name"]}}</div>
+						<div id="mthID-{{$month["number"]}}-{{$myl_year}}" class="wp-mthUnit" data-year-month="{{$month["number"]}}.{{$myl_year}}">{{$month["name"]}}</div>
 					{{/foreach}}
 				{{/foreach}}
 			</div>

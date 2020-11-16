@@ -9,6 +9,9 @@
 
 namespace dophp;
 
+use DateTime;
+use Exception;
+use InvalidArgumentException;
 
 /**
 * Define a date filter
@@ -53,7 +56,7 @@ class DateFilter implements \JsonSerializable {
 		// If precion it's PRECISON_DMY, leave the missing date as null, to implement 'from' and 'until'
 
 		if((is_null($startDate) || $startDate == '')  && (is_null($endDate) || $endDate == ''))
-			throw new Exception('Date filter need at least one date');
+			throw new InvalidArgumentException('Date filter need at least one date');
 
 		if(is_null($startDate) || $startDate == '') {
 			$this->_startDate = self::strToDateWithPrecision($endDate, true);
@@ -158,7 +161,7 @@ class DateFilter implements \JsonSerializable {
 				return self::PRECISON_DMY;
 			break;
 			default:
-				throw new Exception ('Wrong Date Format');
+				throw new WrongFormatException('Wrong Date Format');
 		}
 	}
 
@@ -263,7 +266,7 @@ class DateFilter implements \JsonSerializable {
 	 * null if $date format is wrong or not supported
 	 *
 	 */
-	public static function formatDate(string $date, bool $isStart = true) {
+	public static function formatDate(string $date, bool $isStart = true): DateTime {
 
 		// Supported date formats
 		// 18, 2018, 1.18, 10.18, 1.2018, 10.2018
@@ -382,7 +385,7 @@ class DateWithPrecision extends Date implements \JsonSerializable {
 	public function __construct(\DateTime $date, string $precision) {
 
 		if(!in_array($precision, self::SUPPORTED_PRECISON))
-			throw new Exception('Unsupported Precision');
+			throw new UnsupportedPrecisionException();
 
 		$this->_precision = $precision;
 		parent::__construct($date);
@@ -394,7 +397,7 @@ class DateWithPrecision extends Date implements \JsonSerializable {
 
 	public function setPrecision($precision) {
 		if(!in_array($precision, self::SUPPORTED_PRECISON))
-			throw new Exception('Unsupported Precision');
+			throw new UnsupportedPrecisionException();
 		$this->_precision = $precision;
 	}
 
@@ -408,4 +411,6 @@ class DateWithPrecision extends Date implements \JsonSerializable {
 
 }
 
+class UnsupportedPrecisionException extends Exception {}
+class WrongFormatException extends Exception {}
 
