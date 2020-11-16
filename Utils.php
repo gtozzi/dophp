@@ -117,6 +117,25 @@ class Utils {
 	}
 
 	/**
+	 * Returns a formatted version of a DateTime object according to current locale
+	 *
+	 * @see strftime()
+	 * @param $dt \DateTime: The object to be formatted
+	 * @param $format string: The format, in strftime() synta
+	 * @return string The formatted string
+	 * @throws InvalidArgumentException on invalid format or date
+	 */
+	public static function formatDateTimeLocale(\DateTime $dt, string $format) {
+		$ts = $dt->getTimestamp();
+
+		$str = strftime($format, $ts);
+		if( $str === false || $str === null )
+			throw new \InvalidArgumentException('Format failed');
+
+		return $str;
+	}
+
+	/**
 	* Tries to process a time string intelligently
 	*
 	* @param  $str string: The time to be processed

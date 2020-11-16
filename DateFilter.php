@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types = 1);
 
 /**
 * @file DateFilter.php
@@ -9,9 +9,6 @@
 
 namespace dophp;
 
-use DateTime;
-use Exception;
-use InvalidArgumentException;
 
 /**
 * Define a date filter
@@ -22,41 +19,46 @@ class DateFilter implements \JsonSerializable {
 	const PRECISON_Y = 'y';
 	const PRECISON_MY = 'my';
 	const PRECISON_DMY = 'dmy';
-	const DATE_SEPARATOR = ['.', '-', '/'];
+	const DATE_SEPARATORS = ['.', '-', '/'];
 
-	protected $_startDate = null; 	// The date where filter start
-	protected $_endDate = null; 	// The date where filter end
-	protected $_valid = true;		// true if the dateFilter is valid
+	/// The date where filter start
+	protected $_startDate = null;
+	/// The date where filter end
+	protected $_endDate = null;
+	// true if the dateFilter is valid
+	protected $_valid = true;
 
 	/**
 	* Constructs the DateFilter
 	*
-	* @param string $search The string defining the filter parameters ('10.2018,11.2018' '19' '01.10.2010')
-	*
+	* @param $search string: The string defining the filter parameters ('10.2018,11.2018' '19' '01.10.2010')
+	* @param $divider The char/string used to separate two dates from a period
 	*/
-	public function __construct(string $search, string $divider) {
+	public function __construct(string $search, string $divider=',') {
 
 		// Parse the $search string, splitting in 1 or 2 dates
 		$count = substr_count($search, $divider);
 
 		switch($count) {
-			case 0:
-				$startDate = $search;
-				$endDate = null;
-			break;
-			case 1:
-				list($startDate, $endDate) = explode($divider, trim($search));
-			break;
-			default:
-				$this->_valid = false;
-				return;
+		case 0:
+			$startDate = trim($search);
+			$endDate = null;
+		break;
+		case 1:
+			list($startDate, $endDate) = explode($divider, trim($search));
+			$startDate = trim($startDate);
+			$endDate = trim($endDate);
+		break;
+		default:
+			$this->_valid = false;
+			return;
 		}
 
 		// The filter set automatically the missing date, calculating it from the given date and precision
 		// If precion it's PRECISON_DMY, leave the missing date as null, to implement 'from' and 'until'
 
-		if((is_null($startDate) || $startDate == '')  && (is_null($endDate) || $endDate == ''))
-			throw new InvalidArgumentException('Date filter need at least one date');
+		if((is_null($startDate) || $startDate == '') && (is_null($endDate) || $endDate == ''))
+			throw new \InvalidArgumentException('Date filter need at least one date');
 
 		if(is_null($startDate) || $startDate == '') {
 			$this->_startDate = self::strToDateWithPrecision($endDate, true);
@@ -77,40 +79,34 @@ class DateFilter implements \JsonSerializable {
 		if(is_null($this->_startDate) && is_null($this->_endDate))
 			$this->_valid = false;
 
-		}
+	}
 
-
-	public function getStartDate() {
+	public function getStartDate(): ?DateWithPrecision {
 		return $this->_startDate;
 	}
 
-
-	public function getEndDate() {
+	public function getEndDate(): ?DateWithPrecision {
 		return $this->_EndDate;
 	}
 
-
-	public function isValid(){
+	public function isValid(): bool{
 		return $this->_valid;
 	}
-
 
 	/**
 	 * Returns the date separator found in the given unformatted $date
 	 *
 	 * @param $date string: The unformatted filter date (eg. 2018, 10.2018, 01-11-2018)
 	 *
-	 * @return string The found date separator, if it is in DATE_SEPARATOR array, false otherwise
+	 * @return string The found date separator, if it is in DATE_SEPARATORS array, false otherwise
 	 *
 	 */
 	protected static function getDateSeparatot(string $date) {
-
-		foreach (self::DATE_SEPARATOR as $ds)
+		foreach (self::DATE_SEPARATORS as $ds)
 			if (strpos($date, $ds) !== false )
 				return $ds;
 		return false;
 	}
-
 
 	/**
 	 * Returns an array of strings representing the given unformatted $date
@@ -129,22 +125,21 @@ class DateFilter implements \JsonSerializable {
 			return [$date];
 	}
 
-
 	/**
 	 * Returns date precision as string from given $date
+	 *
+	 * Supported date formats
+	 * 18, 2018
+	 * 1.18, 10.18, 1.2018, 10.2018
+	 * 1.1.18, 1.10.18, 10.1.18, 10.10.18
+	 * 1.1.2018, 1.10.2018, 10.1.2018, 10.10.2018
 	 *
 	 * @param $date string: The unformatted filter date (eg. 2018, 10.2018, 01-11-2018)
 	 *
 	 * @return string date precision as string
-	 *
+	 * @throws WrongFormatException
 	 */
-	protected static function getDatePrecision(string $date) {
-
-		// Supported date formats
-		// 18, 2018
-		// 1.18, 10.18, 1.2018, 10.2018
-		// 1.1.18, 1.10.18, 10.1.18, 10.10.18
-		// 1.1.2018, 1.10.2018, 10.1.2018, 10.10.2018
+	protected static function getDatePrecision(string $date): string {
 
 		$separator = self::getDateSeparatot($date);
 
@@ -179,7 +174,6 @@ class DateFilter implements \JsonSerializable {
 	 *
 	 */
 
-
 	 protected static function isValidYear(string $year) : bool {
 		$len = \strlen($year);
 		// Check if the year is numeric and it's 2 o 4 digit
@@ -187,7 +181,6 @@ class DateFilter implements \JsonSerializable {
 			return false;
 		return true;
 	 }
-
 
 	 protected static function isValidMonth(string $month) : bool {
 		// Check if $month is numeric
@@ -203,7 +196,6 @@ class DateFilter implements \JsonSerializable {
 		return true;
 	}
 
-
 	protected static function isValidDay(string $day) : bool {
 		// Check if $day is numeric
 		if(!\is_numeric($day))
@@ -218,7 +210,6 @@ class DateFilter implements \JsonSerializable {
 		return true;
 	}
 
-
 	/**
 	 * Returns true if the given $date it's formatted like the supported formats
 	 *
@@ -228,33 +219,31 @@ class DateFilter implements \JsonSerializable {
 	 * @return bool: true if all the parts of the $date are in the right format
 	 *
 	 */
-
 	 protected static function validateFormat($date, $precision) : bool {
 
 		switch($precision) {
-			case self::PRECISON_Y :
-				return self::isValidYear($date);
-			break;
+		case self::PRECISON_Y :
+			return self::isValidYear($date);
+		break;
 
-			case self::PRECISON_MY :
-				$splitDate = self::getSplittedDate($date);
-				return self::isValidMonth($splitDate[0]) && self::isValidYear($splitDate[1]);
-			break;
+		case self::PRECISON_MY :
+			$splitDate = self::getSplittedDate($date);
+			return self::isValidMonth($splitDate[0]) && self::isValidYear($splitDate[1]);
+		break;
 
-			case self::PRECISON_DMY :
-				$splitDate = self::getSplittedDate($date);
-				return
-					self::isValidDay($splitDate[0]) &&
-					self::isValidMonth($splitDate[1]) &&
-					self::isValidYear($splitDate[2]);
-			break;
+		case self::PRECISON_DMY :
+			$splitDate = self::getSplittedDate($date);
+			return
+				self::isValidDay($splitDate[0]) &&
+				self::isValidMonth($splitDate[1]) &&
+				self::isValidYear($splitDate[2]);
+		break;
 
-			default :
-				return false;
+		default :
+			return false;
 		}
 
 	}
-
 
 	/**
 	 * Returns a new DateTime object from given string $date, according to $isStart parameter
@@ -266,7 +255,7 @@ class DateFilter implements \JsonSerializable {
 	 * null if $date format is wrong or not supported
 	 *
 	 */
-	public static function formatDate(string $date, bool $isStart = true): DateTime {
+	public static function formatDate(string $date, bool $isStart = true): \DateTime {
 
 		// Supported date formats
 		// 18, 2018, 1.18, 10.18, 1.2018, 10.2018
@@ -280,39 +269,39 @@ class DateFilter implements \JsonSerializable {
 			return null;
 
 		switch($df) {
-			case self::PRECISON_Y :
-				$year = $date;
-				if(strlen($year) == 2)
-					$year = \DateTime::createFromFormat('y', $year)->format('Y');
-				return $isStart ?
-					new \DateTime('first day of January '.$year) :
-					new \DateTime('last day of December '.$year);
-			break;
+		case self::PRECISON_Y :
+			$year = $date;
+			if(strlen($year) == 2)
+				$year = \DateTime::createFromFormat('y', $year)->format('Y');
+			return $isStart ?
+				new \DateTime('first day of January '.$year) :
+				new \DateTime('last day of December '.$year);
+		break;
 
-			case self::PRECISON_MY :
-				$splitDate = self::getSplittedDate($date);
-				$year = $splitDate[1];
-				if(strlen($year) == 2)
-					$year = \DateTime::createFromFormat('y', $year)->format('Y');
-				$monthName = \DateTime::createFromFormat('!m', $splitDate[0])->format('F');
+		case self::PRECISON_MY :
+			$splitDate = self::getSplittedDate($date);
+			$year = $splitDate[1];
+			if(strlen($year) == 2)
+				$year = \DateTime::createFromFormat('y', $year)->format('Y');
+			$monthName = \DateTime::createFromFormat('!m', $splitDate[0])->format('F');
 
-				return $isStart ?
-					new \DateTime('first day of '.$monthName.' '. $year) :
-					new \DateTime('last day of '.$monthName.' '. $year);
-			break;
+			return $isStart ?
+				new \DateTime('first day of '.$monthName.' '. $year) :
+				new \DateTime('last day of '.$monthName.' '. $year);
+		break;
 
-			case self::PRECISON_DMY :
-				$splitDate = self::getSplittedDate($date);
-				$year = $splitDate[2];
-				if(strlen($year) == 2)
-					$year = \DateTime::createFromFormat('y', $year)->format('Y');
-				$monthName = \DateTime::createFromFormat('!m', $splitDate[1])->format('F');
-				return \DateTime::createFromFormat('j-F-Y',  $splitDate[0].'-'.$monthName.'-'.$year);
-
-			break;
+		case self::PRECISON_DMY :
+			$splitDate = self::getSplittedDate($date);
+			$year = $splitDate[2];
+			if(strlen($year) == 2)
+				$year = \DateTime::createFromFormat('y', $year)->format('Y');
+			$monthName = \DateTime::createFromFormat('!m', $splitDate[1])->format('F');
+			return \DateTime::createFromFormat('j-F-Y',  $splitDate[0].'-'.$monthName.'-'.$year);
+		break;
 		}
-	}
 
+		throw new \dophp\NotImplementedException("Unsupported format $df");
+	}
 
 	/**
 	 * Returns a new DateWithPrecision object from given string $date, according to $isStart parameter
@@ -320,12 +309,11 @@ class DateFilter implements \JsonSerializable {
 	 * @param $date string: The unformatted filter date (eg. 2018, 10.2018, 01-11-2018)
 	 * @param $isStart bool: It's true if the $date have to be considered a start date
 	 *
-	 * @return DateWithPrecision
+	 * @return DateWithPrecision or null on error
 	 *
 	 */
-	public static function strToDateWithPrecision(string $date, bool $isStart) {
+	public static function strToDateWithPrecision(string $date, bool $isStart): ?DateWithPrecision {
 
-		$dateWithPrec = null;
 		$prec = self::getDatePrecision($date);
 		$formattedDate = self::formatDate($date, $isStart);
 
@@ -340,31 +328,41 @@ class DateFilter implements \JsonSerializable {
 		return $json;
 	}
 
-	public function getSearchFilter(string $columnName) {
+	/**
+	 * Returns the SQL code and params for building a date filter
+	 *
+	 * When this is not valid or empty, returns null instead of SQL
+	 *
+	 * @param $columnName string: The column to search into (already quoted if needed)
+	 * @param $parPrefix string: The prefix for parameters (must begin with ':')
+	 *
+	 * @return [ string: sql or null, array: associative array of params ]
+	 */
+	public function getSqlSearchFilter(string $columnName, string $parPrefix=':dateFilter_'): array {
+		if( ! $this->isValid() )
+			return [ null, [] ];
 
-		// if the DateFilter it's not valid, avoid HAVING clause with '1'
-		if(!$this->isValid())
-			return '1';
+		if( $this->_startDate && $this->_endDate )
+			return [
+				"$columnName BETWEEN {$parPrefix}start AND {$parPrefix}end",
+				[ "{$parPrefix}start" => $this->_startDate, "{$parPrefix}end" => $this->_endDate ]
+			];
 
-		$searchFilter = "( ";
+		if( $this->_startDate )
+			return [
+				"$columnName >= {$parPrefix}start",
+				[ "{$parPrefix}start" => $this->_startDate ]
+			];
 
-		if(isset($this->_startDate)){
-			$sd = $this->_startDate->format('Y-m-d');
-			$searchFilter .= $columnName.">='".$sd."'";
-			if(isset($this->_endDate))
-				$searchFilter .= ' && ';
-		}
+		if( $this->endDate )
+			return [
+				"$columnName <= {$parPrefix}end",
+				[ "{$parPrefix}end" => $this->_endDate ]
+			];
 
-		if(isset($this->_endDate)){
-			$ed = $this->_endDate->format('Y-m-d');
-			$searchFilter .= $columnName."<='".$ed."'";
-		}
-
-		$searchFilter .= " )";
-
-		return $searchFilter;
+		// Empty / no filter
+		return [ null, [] ];
 	}
-
 }
 
 
@@ -372,7 +370,7 @@ class DateFilter implements \JsonSerializable {
 * Define a date class with precision level
 *
 */
-class DateWithPrecision extends Date implements \JsonSerializable {
+class DateWithPrecision extends \dophp\Date implements \JsonSerializable {
 
 	const SUPPORTED_PRECISON = [
 		DateFilter::PRECISON_Y,
@@ -411,6 +409,6 @@ class DateWithPrecision extends Date implements \JsonSerializable {
 
 }
 
-class UnsupportedPrecisionException extends Exception {}
-class WrongFormatException extends Exception {}
 
+class UnsupportedPrecisionException extends \Exception {}
+class WrongFormatException extends \Exception {}
