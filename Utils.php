@@ -67,7 +67,7 @@ class Utils {
 	 * @example Utils::combinations(['A','B','C'], 2) = ['A','B'], ['A','C'], ['B','C']
 	 * @param $in mixed: Input to make combinations of (array or string)
 	 * @param $num int: number of elements per combinations
-	 * @yields combined elements
+	 * @return yields combined elements
 	 */
 	public static function combinations($in, $num) {
 		if( is_array($in) )
@@ -519,7 +519,7 @@ class Utils {
 	/**
 	 * Returns list of accepted HTTP encodings based on the Accept header
 	 *
-	 * @yields string: Accepted HTTP encodings, sorted by preference
+	 * @return yields string: Accepted HTTP encodings, sorted by preference
 	 */
 	public static function listHttpAccept() {
 		if( ! isset($_SERVER['HTTP_ACCEPT']) )
