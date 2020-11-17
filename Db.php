@@ -1363,7 +1363,9 @@ class Table {
 			return self::DATA_TYPE_DECIMAL;
 		case 'BPCHAR':
 		case 'CHAR':
+		case 'NCHAR':
 		case 'VARCHAR':
+		case 'NVARCHAR':
 		case 'BINARY':
 		case 'VARBINARY':
 		case 'TINYBLOB':
