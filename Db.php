@@ -1362,7 +1362,9 @@ class Table {
 		case 'NEWDECIMAL':
 			return self::DATA_TYPE_DECIMAL;
 		case 'CHAR':
+		case 'NCHAR':
 		case 'VARCHAR':
+		case 'NVARCHAR':
 		case 'BINARY':
 		case 'VARBINARY':
 		case 'TINYBLOB':
