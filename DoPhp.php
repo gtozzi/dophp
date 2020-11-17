@@ -492,7 +492,7 @@ class DoPhp {
 	*
 	* @param $conf array: The configuration variable
 	* @param $page string: The page name
-	* @yields possible paths to search for
+	* @return yields possible paths to search for
 	*/
 	private function __pagePaths($conf, $page) {
 		if( strpos('/', $page) !== false || strpos('\\', $page) !== false )
@@ -509,7 +509,7 @@ class DoPhp {
 	 *
 	 * @param $page string: The input page name
 	 * @example 'a.b.c' generates [ 'a.b.c', 'a/b.c', 'a.b/c', 'a/b/c' ]
-	 * @yields string
+	 * @return yields string
 	 */
 	private function __pageNameCombos($page) {
 		yield $page;

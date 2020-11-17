@@ -82,6 +82,7 @@ class Db {
 		case 'dblib':
 			$this->_type = self::TYPE_MSSQL;
 			$this->_pdo->exec('SET ARITHABORT ON');
+			$this->_pdo->exec('SET DATEFORMAT ymd');
 			break;
 		case 'pgsql':
 			$this->_type = self::TYPE_PGSQL;
@@ -773,9 +774,13 @@ class Result implements \Iterator {
 			if( ! $meta )
 				throw new \InvalidArgumentException("No meta for column $idx");
 
-			if( isset($this->_types[$meta['name']]) )
+			if( isset($this->_types[$meta['name']]) ) {
 				$type = $this->_types[$meta['name']];
-			elseif( ! isset($meta['native_type']) ) {
+			} elseif( isset($meta['sqlsrv:decl_type']) && $meta['sqlsrv:decl_type'] ) {
+				// Apparently the sqlsrv driver uses a different key for types
+				$declType = explode(' ', $meta['sqlsrv:decl_type'], 2)[0];
+				$type = Table::getType($declType, $meta['len']);
+			} elseif( ! isset($meta['native_type']) ) {
 				// Apparently JSON fields have no native_type
 				throw new \InvalidArgumentException("Missing native_type form column $idx, must declare type explicitly");
 			} else
@@ -898,6 +903,9 @@ class Result implements \Iterator {
 		$this->_current = $this->fetch();
 	}
 
+	public function rowCount(): int {
+		return $this->_st->rowCount();
+	}
 }
 
 
@@ -1353,8 +1361,11 @@ class Table {
 		case 'DEC':
 		case 'NEWDECIMAL':
 			return self::DATA_TYPE_DECIMAL;
+		case 'BPCHAR':
 		case 'CHAR':
+		case 'NCHAR':
 		case 'VARCHAR':
+		case 'NVARCHAR':
 		case 'BINARY':
 		case 'VARBINARY':
 		case 'TINYBLOB':
@@ -1860,7 +1871,7 @@ class SelectQuery {
 		//TODO: improve, many bugs
 		$parts = explode('.', $colname);
 		foreach( $parts as &$p )
-			$p = trim($p, '`');
+			$p = trim($p, '"');
 		unset($p);
 		return $parts;
 	}

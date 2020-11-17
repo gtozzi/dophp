@@ -10,6 +10,7 @@
 namespace dophp\widgets;
 
 require_once(__DIR__ . '/../Page.php');
+require_once(__DIR__ . '/../DateFilter.php');
 
 
 /**
@@ -78,7 +79,7 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 		"m" => "m",
 		"y" => "y",
 		"my" => "my",
-		"my_sql" => "my_sql",
+		"m.y" => "m.y",
 		"ud" => "ud"
 	);
 
@@ -151,7 +152,8 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 	 * Provides the query for the cache freshness check default implementation
 	 * must be defined in child and return only a row and col
 	 *
-	 * @example SELECT MAX(last_updated) FROM table
+	 * Example: SELECT MAX(last_updated) FROM table
+	 *
 	 * @see self::_getCountCacheFreshnessCheckVal()
 	 */
 	protected $_countCacheFreshQuery = null;
@@ -525,7 +527,7 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 	/**
 	 * Sets the super filter from array
 	 *
-	 * @param $sfilter array: Associative array of field->status, unknown keys
+	 * @param $params array: Associative array of field->status, unknown keys
 	 *                         are ignored
 	 */
 	public function setSFilter(array $params) {
@@ -536,7 +538,7 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 	/**
 	 * Sets the initial params (filter/search) from $_GET array
 	 *
-	 * @param $pars: array of parameters, associative
+	 * @param $params array of parameters, associative
 	 * @see https://datatables.net/manual/server-side
 	 */
 	public function setGParams(array $params) {
@@ -706,32 +708,14 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 
 			// checks if filter is a date filter and calculate where clause
 			if($c->type == \dophp\Table::DATA_TYPE_DATE){
-				$firstElem = $search;
-				$isDateRange = false;
-				// check if search string is a range of dates,
-				// if yes retrieve first element to parse its type
-				if(strpos($search,static::DFILTER_DIVIDER)){
-					$firstElem = $this->agGetFirstDateInRange($search);
-					$isDateRange = true;
-				}
-				$agDateType = $this->agGetDateType($firstElem);
-
-				// proceed only if date_type has been identified
-				if($agDateType){
-					$search = $this->getDateFilter($search,$agDateType,$isDateRange,$c->qname);					
-					$filter[] = $search;
-				}
-				// if data type is unknown return no results
-				else{
-					$filter[] = " FALSE ";
-				}
-			} elseif ($search == '-') {
-				$filter[] = "{$c->qname} IS NULL";
+				$dateFilter = new \dophp\DateFilter($search, self::DFILTER_DIVIDER);
+				list($sql, $params) = $dateFilter->getSqlSearchFilter($c->qname, ":f{$idx}_");
+				$filter[] = $sql;
+				$filterArgs = array_merge($filterArgs, $params);
 			} else {
 				$filter[] = "{$c->qname} LIKE :f$idx";
 				$filterArgs[":f$idx"] = "%$search%";
 			}
-
 		}
 		$filter = new DataTableDataFilter($filter, $filterArgs);
 		// Save the search filter
@@ -978,494 +962,21 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 	}
 
 	/**
-	 * Returns month number from month name
+	 * Returns a list of month-year string for date filter picker (used in the UI)
+	 *
+	 * @return associative array (ie. [ 2020 => [ 1 => [ 'number' => '…', 'name' => '…' ], … ], … ])
 	 */
-	public function agStrToMonthNumb($month=""){
+	public function getMonthYearList(): array {
+		$list = [];
 
-		$month_number = false;
+		for( $currY = (int)date("Y"); $currY > 1970; $currY-- ) {
+			$list[$currY] = [];
 
-		if((trim($month))!=""){
-
-			$months_list = array(
-				"gen" => 1,
-				"feb" => 2,
-				"mar" => 3,
-				"apr" => 4,
-				"mag" => 5,
-				"giu" => 6,
-				"lug" => 7,
-				"ago" => 8,
-				"set" => 9,
-				"ott" => 10,
-				"nov" => 11,
-				"dic" => 12
-			);
-			$month = trim($month);
-			if(array_key_exists(strtolower($month),$months_list)){
-				$month = strtolower($month);
-				$month = $months_list[$month]."";
-				$month = str_pad($month,2,"0",STR_PAD_LEFT);
-				$month_number = $month;
+			for( $m = 12; $m > 0; $m-- ) {
+				$mpadded = str_pad((string)($m),2,"0",STR_PAD_LEFT);
+				$list[$currY][$m]["number"] = $mpadded;
+				$list[$currY][$m]["name"] = \dophp\Utils::formatDateTimeLocale(new \DateTime("15-$mpadded-$currY"), '%h');
 			}
-		}
-
-		return $month_number;
-	}
-
-
-	/**
-	 * Returns month name from month number
-	 */
-	public function agMonthNumbToStr($month=""){
-
-		$month_name = false;
-
-		if((intval($month))>0){
-
-			$months_list = array(
-				1 => "gen",
-				2 => "feb",
-				3 => "mar",
-				4 => "apr",
-				5 => "mag",
-				6 => "giu",
-				7 => "lug",
-				8 => "ago",
-				9 => "set",
-				10 => "ott",
-				11 => "nov",
-				12 => "dic"
-			);
-			if(array_key_exists(intval($month),$months_list)){
-				$month_name = $months_list[intval($month)];
-			}
-		}
-
-		return $month_name;
-	}
-
-
-	/**
-	 * Returns data filter type by parsing the search string
-	 */
-	public function agGetDateType($string=""){
-
-		$type=false;
-
-
-		//TODO: this needs to be rewritten
-		if((trim($string))!=""){
-
-			switch(true){
-				// 2018
-				case(preg_match("/^[0-9]{4}$/",$string)):
-					$type=static::DTYPE_LIST["y"];
-				break;
-
-				// specific month of this year
-				// e.g.:
-				// gen
-				case(preg_match("/^[a-zA-Z]{3}$/",$string)):
-
-					// check if inserted string is an existing month
-					if($this->agStrToMonthNumb($string)){
-						$type=static::DTYPE_LIST["m"];
-					}
-				break;
-
-				// month of a given year
-				// e.g.:
-				// gen2018 gen 2018
-				case(preg_match("/^[a-zA-Z]{3}[ ]*[0-9]{4}$/",$string)):
-
-					// check if inserted string is an existing month
-					if($this->agStrToMonthNumb(substr($string,0,3))){
-						$type=static::DTYPE_LIST["my"];
-					}
-
-				break;
-
-				// already sql friendly string
-				// 2018-01
-				case(preg_match("/^[0-9]{4}\-[0-9]{2}$/",$string)):
-					$type=static::DTYPE_LIST["my_sql"];
-				break;
-
-				// specific day
-				// e.g.:
-				// 01/01/2018
-				// 01-01-2018
-				// 01.01.2018
-				// 1/1/2018
-				// 1-1-2018
-				// 1.1.2018
-				case(preg_match("/^[0-9]{1,2}\/[0-9]{1,2}\/[0-9]{4}$/",$string)):
-				case(preg_match("/^[0-9]{1,2}\-[0-9]{1,2}\-[0-9]{4}$/",$string)):
-				case(preg_match("/^[0-9]{1,2}\.[0-9]{1,2}\.[0-9]{4}$/",$string)):
-					$type=static::DTYPE_LIST["d"];
-				break;
-
-
-				// until_day case
-				// e.g.:
-				// 01/01/2018
-				// 01-01-2018
-				// 01.01.2018
-				// 1/1/2018
-				// 1-1-2018
-				// 1.1.2018
-				case(preg_match("/||^[0-9]{1,2}\/[0-9]{1,2}\/[0-9]{4}$/",$string)):
-				case(preg_match("/||^[0-9]{1,2}\-[0-9]{1,2}\-[0-9]{4}$/",$string)):
-				case(preg_match("/||^[0-9]{1,2}\.[0-9]{1,2}\.[0-9]{4}$/",$string)):
-					$type=static::DTYPE_LIST["ud"];
-				break;
-			}
-		}
-
-		return $type;
-	}
-
-
-	/**
-	 * Returns the first element from a range of dates
-	 */
-	public function agGetFirstDateInRange($search=""){
-		$el="";
-		if((trim($search))!=""){
-			$el= explode(static::DFILTER_DIVIDER,$search);
-			$el= $el[0];
-		}
-		return $el;
-	}
-
-
-	/**
-	 * Returns the where condition based on date filter type
-	 */
-	public function getDateFilter($string="",$type="",$range=null,$columnName=""){
-		$search="";
-
-		if(isset($columnName)&&(trim($columnName)!="")){
-
-			$search=" FALSE ";
-
-			if(!is_null($range)){
-				if(!$range){
-					switch($type){
-						// 2018-01-01
-						case static::DTYPE_LIST["d"]:
-							$date = $this->formatDateIt2En($string);
-							if($date){
-								$search=$columnName.">='".$date."'";
-							}
-						break;
-						// 2018-01-01
-						case static::DTYPE_LIST["ud"]:
-							$string= substr($string,-10);
-							$date = $this->formatDateIt2En($string);
-							if($date){
-								$search=$columnName."<='".$date."'";
-							}
-						break;
-						// gen
-						case static::DTYPE_LIST["m"]:
-							if($date=$this->makeYearMonthString(date("Y"),$string)){
-								$search=$columnName.">='".$date."'";
-							}
-						break;
-						// gen 2018
-						// gen2018
-						case static::DTYPE_LIST["my"]:
-							$monthName = substr($string,0,3);
-							$year = substr($string,-4);
-							if($date=$this->makeYearMonthString($year,$monthName)){
-								//$search=$columnName.">='".$date."'";
-								if( $this->_db->type() == $this->_db::TYPE_PGSQL )
-									$search= " EXTRACT(YEAR FROM ".$columnName.") = '".intval(substr($date,0,4))."' AND EXTRACT(MONTH FROM ".$columnName.") = '".intval(substr($date,5,7))."' ";
-								else
-									$search= " YEAR(".$columnName.") = '".intval(substr($date,0,4))."' AND MONTH(".$columnName.") = '".intval(substr($date,5,7))."' ";
-							}
-						break;
-						// 2018-01
-						case static::DTYPE_LIST["my_sql"]:
-							//$search=$columnName.">='".$string."'";
-							if( $this->_db->type() == $this->_db::TYPE_PGSQL )
-								$search= " EXTRACT(YEAR FROM ".$columnName.") = '".intval(substr($string,0,4))."' AND EXTRACT(MONTH FROM ".$columnName.") = '".intval(substr($string,5,7))."' ";
-							else
-								$search= " YEAR(".$columnName.") = '".intval(substr($string,0,4))."' AND MONTH(".$columnName.") = '".intval(substr($string,5,7))."' ";
-						break;
-
-						// 2018
-						case static::DTYPE_LIST["y"]:
-							if( $this->_db->type() == $this->_db::TYPE_PGSQL )
-								$search=" EXTRACT(YEAR FROM ".$columnName.") = '".$string."'";
-							else
-								$search=" YEAR(".$columnName.") = '".$string."'";
-						break;
-
-						default:
-							$search=" FALSE ";
-						break;
-					}
-				}
-				else{
-
-					$items= explode(static::DFILTER_DIVIDER,$string);
-					if( (strlen(trim($items[0]))!="")&&
-						 (strlen(trim($items[1]))!="") ){
-						switch($type){
-							// 2018-01-01||2018-02-02
-							case static::DTYPE_LIST["d"]:
-
-								if(count($items)>=2){
-									$start = $this->formatDateIt2En($items[0]);
-									$end = $this->formatDateIt2En($items[1]);
-
-									if($start&&$end){
-										$search=" ( ".$columnName.">='".$start."' AND ".$columnName."<='".$end."' ) ";
-									}
-								}
-
-							break;
-							// gen||feb
-							case static::DTYPE_LIST["m"]:
-
-								if(count($items)>=2){
-									$start = $this->makeYearMonthString(date("Y"),$items[0]);
-									$end = $this->makeYearMonthString(date("Y"),$items[1]);
-
-									if($start&&$end){
-										$search=" ( ".$columnName.">='".$start."' AND ".$columnName."<='".$end."' ) ";
-									}
-								}
-							break;
-							// gen 2018||feb 2018
-							// gen2018||feb2018
-							case static::DTYPE_LIST["my"]:
-
-								if(count($items)>=2){
-
-									$startMonth = substr($items[0],0,3);
-									$startYear = substr($items[0],-4);
-
-									$endMonth = substr($items[1],0,3);
-									$endYear = substr($items[1],-4);
-
-									if($this->agStrToMonthNumb($startMonth)&&
-										$this->agStrToMonthNumb($endMonth) ){
-										$start = $this->makeYearMonthString($startYear,$startMonth);
-										$end = $this->makeYearMonthString($endYear,$endMonth);
-
-										if($start&&$end){
-
-											$end=date("Y-m-t",strtotime($end));
-
-											$search=" ( ".$columnName.">='".$start."' AND ".$columnName."<='".$end."' ) ";
-										}
-									}
-								}
-							break;
-							// 2018-01||2018-02
-							case static::DTYPE_LIST["my_sql"]:
-
-								if(count($items)>=2){
-
-									$start = $items[0];
-									$end = $items[1];
-
-									$startTmp=explode("-",$start);
-									$endTmp=explode("-",$end);
-
-									if($start&&$end
-										&&(count($startTmp)==2)
-										&&(count($endTmp)==2)
-										&&checkdate(intval($startTmp[1]),1,intval($startTmp[0]))
-										&&checkdate((intval($endTmp[1])) ,1,intval($endTmp[0]))  ){
-
-										$startSec=strtotime($start);
-										$endSec=strtotime($end);
-
-										if($startSec>$endSec){
-											$endTmp=$end;
-											$end=$start;
-											$start=$endTmp;
-										}
-
-										$end=date("Y-m-t",strtotime($end));
-										$start=date("Y-m-t",strtotime($start));
-
-										$search=" ( ".$columnName.">='".$start."' AND ".$columnName."<='".$end."' ) ";
-									}
-								}
-
-							break;
-
-							// 2018||2019
-							case static::DTYPE_LIST["y"]:
-
-								if(count($items)>=2){
-
-									$start = $items[1]."-01-01";
-									$end = $items[0]."-12-31";
-
-									$startSec=strtotime($start);
-									$endSec=strtotime($end);
-
-									if($startSec>$endSec){
-										$endTmp=$end;
-										$end=$start;
-										$start=$endTmp;
-									}
-
-									if($start&&$end){
-										$search=" ( ".$columnName.">='".$start."' AND ".$columnName."<='".$end."' ) ";
-									}
-								}
-
-							break;
-
-							default:
-								$search=" FALSE ";
-							break;
-						}
-					}
-					else{
-						$search=" FALSE ";
-					}
-				}
-			}
-		}
-
-		return $search;
-	}
-
-
-	/**
-	 * Accept various it date format and
-	 * returns the date in english format
-	 */
-	public function formatDateIt2En($string=""){
-
-		$date=false;
-		if((trim($string))!=""){
-			if( preg_match("/^[0-9]{1,2}\/[0-9]{1,2}\/[0-9]{4}$/",$string) ||
-				preg_match("/^[0-9]{1,2}\-[0-9]{1,2}\-[0-9]{4}$/",$string) ||
-				preg_match("/^[0-9]{1,2}\.[0-9]{1,2}\.[0-9]{4}$/",$string) ){
-
-				$string = str_replace(array("/",".","."),"-",$string);
-				$string = explode("-",$string);
-				if(checkdate(intval($string[1]),intval($string[0]),intval($string[2]))){
-					$date= $string[2]."-".$string[1]."-".$string[0];
-				}
-
-			}
-
-		}
-
-		return $date;
-	}
-
-
-	/**
-	 * Return the first day of month in english
-	 * format for the last 12 months
-	 */
-	public function getLast12MonthsDate(){
-
-		$last12Month= array();
-
-		$firstDayOfMonth = date("Y-m-01");
-		$firstDayOfMonth_int = strtotime($firstDayOfMonth);
-
-		for($m=0;$m<12;$m++){
-		    $month = strtotime("-".$m." month",$firstDayOfMonth_int);
-		    $last12Months[]= date("Y-m-d",$month);
-		}
-		return $last12Months;
-	}
-
-
-	/**
-	 * Return a list of month-year string
-	 */
-	public function getMonthYearList(){
-
-		$count=0;
-		$count2=0;
-		$list=array();
-
-		for($currY=date("Y");$currY>1970&&$count<150;$currY--){
-
-			$list[$currY]=array();
-			for($m=12;$m>0&&$count2<1500;$m--){
-				$list[$currY][$m]["number"]=str_pad((string)($m),2,"0",STR_PAD_LEFT);
-				$list[$currY][$m]["name"]=$this->agMonthNumbToStr($m);
-
-				$count2++;
-			}
-			$count++;
-		}
-		return $list;
-	}
-
-
-	/**
-	 * Return a list of years string grouped by
-	 * the number given from the step variable
-	 */
-	public function getYearList(){
-
-		$count=0;
-		$count2=0;
-		$list=array();
-		$step = 10;
-		$currY = date("Y");
-
-
-		// calculate the nearest year to the fixed step
-		// rounded to the highest value
-		// e.g. 2018 with step 10 ==> 2020
-		$maxRange= $currY;
-		$remainder = $currY%$step;
-		if($remainder>0){
-		    $missingToStep = $step-$remainder;
-		    $maxRange=$currY+$missingToStep;
-		}
-
-
-		$yearMax = $maxRange;
-		$yearMin = $yearMax - $step;
-		$currBlockLabel="";
-		// cycle for year block labels
-		for($yearMax=$yearMax;$yearMax>1970&&$count<150;$yearMax=$yearMax-$step){
-
-			// label to be shown as years_block title
-			$currBlockLabel=$yearMax." - ".($yearMin+1);
-
-			// label e.g. 2020-2011
-			$list[$currBlockLabel]=array();
-
-			// cycle for year calculation
-			for($y=0;$y<$step&&$count2<1500;$y++){
-				$list[$currBlockLabel][$y]=$currY;
-
-				$count2++;
-
-				// if current year is divisible by $step
-				// go to the next block of years
-				if(($currY%$step)==1){
-					$currY--;
-					break;
-				}
-
-				// decrease year of the list by one
-				$currY--;
-			}
-			// set new year_labels range
-			$yearMin= $yearMin - $step;
-
-			$count++;
-
 		}
 
 		return $list;
@@ -1473,45 +984,25 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 
 
 	/**
-	 * Return false on error or a string in numeric year-month format
-	 * e.g.:
-	 * 2018-01
+	 * Return a list of years string grouped by decade (used in the UI)
+	 *
+	 * @return associative array ( ie. [ '2019-2010' => [ 2020 => '2020', … ], … ])
 	 */
-	public function makeYearMonthString($year=0,$monthName=""){
+	public function getYearList(): array {
+		$list = [];
 
-		$date= false;
-		if((intval($year)>0)&&(trim($monthName)!="")){
+		foreach( $this->getMonthYearList() as $year => $v ) {
+			$decade = (int)floor($year / 10);
+			$decadeStr = "{$decade}9 - {$decade}0";
 
-			// if string is a known month return a
-			// a string with given year and month number
-			// e.g.:
-			// 2018-01
-			if($this->agStrToMonthNumb($monthName)){
-				$monthNumb=$this->agStrToMonthNumb($monthName);
-				$date=$year."-".$monthNumb;
-			}
+			if( ! array_key_exists($decadeStr, $list) )
+				$list[$decadeStr] = [];
 
+			$list[$decadeStr][$year] = (string)$year;
 		}
-		return $date;
 
+		return $list;
 	}
-
-
-	/**
-	 * Returns the parameters list purged from null values, 
-	 * compliant with the PostgreSQL driver requirements
-	 */
-	protected function _getFilledParams($params) {
-		$fParams = [];
-		foreach ($params as $key => $p) {
-			if( $p ) {
-				$fParams[$key] = $p;
-			}
-		}
-		return $fParams;
-	}
-
-
 
 }
 
@@ -1652,7 +1143,7 @@ class DataTableButton {
 	 *        included by default:
 	 *        - base: base url for the page
 	 */
-	public function __construct(DataTable $table, string $id, array $opt = [], array $params = []) {
+	public function __construct(DataTableInterface $table, string $id, array $opt = [], array $params = []) {
 		$this->_table = $table;
 		$this->_id = $id;
 
@@ -1681,7 +1172,8 @@ class DataTableButton {
 		$replaces = [];
 		foreach( array_merge($this->_table->params, $this->_params) as $name => $val ) {
 			$searches[] = static::PARAM_START . $name . static::PARAM_END;
-			$replaces[] = $val;
+			// TODO: Proper conversion to machine format?
+			$replaces[] = \dophp\Utils::format($val);
 		}
 		return str_replace($searches, $replaces, $this->url);
 	}
@@ -1727,7 +1219,7 @@ class DataTableRowButton extends DataTableButton {
 	 * @param $opt array of options, like DataTableButton, extra options:
 	 *        - show mixed: bool or callable($row), tells if the button should be shown
 	 */
-	public function __construct(DataTable $table, string $id, array $opt = [], array $params = []) {
+	public function __construct(DataTableInterface $table, string $id, array $opt = [], array $params = []) {
 		parent::__construct($table, $id, $opt, $params);
 	}
 
@@ -2031,7 +1523,7 @@ class DataTable extends BaseDataTable {
 			$having[] = '( ' . implode(' AND ', $filter->getFilter()) . ' )';
 			$p = array_merge($p, $filter->getArgs());
 		}
-		
+
 		// Apply where clause
 		if( $where )
 			$q .= "\nWHERE " . implode(' AND ', $where);
@@ -2062,7 +1554,7 @@ class DataTable extends BaseDataTable {
 				$q .= "\nOFFSET " . ( $limit->getStart() ) . ' LIMIT ' . $limit->getLength();
 			else
 				$q .= "\nLIMIT " . ( $limit->getStart() ) . ',' . $limit->getLength();
-		}		
+		}
 
 		return $this->_db->xrun($q, $p, $this->_getColumnExplicitTypes())->fetchAll();
 	}
@@ -2144,8 +1636,8 @@ class DataTable extends BaseDataTable {
 
 	public static function _getGroupConcat($column, $db): string {
 		if ($db->type() == $db::TYPE_PGSQL)
-			return "string_agg($column, \', \')";
-		else 
+			return "STRING_AGG($column, \', \')";
+		else
 			return "GROUP_CONCAT($column SEPARATOR \', \')";
 	}
 }

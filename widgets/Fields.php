@@ -700,7 +700,7 @@ class SelectField extends InputField {
 	 *              - params: the base option params
 	 *              - extra: Extra params
 	 *
-	 * @yield SelectOption
+	 * @return yield SelectOption
 	 */
 	public function getOptions(array $ajax=null): \Generator {
 		if( ! isset($this->_options) )
@@ -1119,7 +1119,7 @@ class MultiSelectField extends BaseField {
 	/**
 	 * Yields list of selected items
 	 *
-	 * @yield MultiSelectFieldOption
+	 * @return yield MultiSelectFieldOption
 	 */
 	public function getSelected(): \Generator {
 		foreach( $this->_options as $o )
