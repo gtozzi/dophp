@@ -82,6 +82,7 @@ class Db {
 		case 'dblib':
 			$this->_type = self::TYPE_MSSQL;
 			$this->_pdo->exec('SET ARITHABORT ON');
+			$this->_pdo->exec('SET DATEFORMAT ymd');
 			break;
 		case 'pgsql':
 			$this->_type = self::TYPE_PGSQL;
