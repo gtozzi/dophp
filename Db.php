@@ -1361,6 +1361,7 @@ class Table {
 		case 'DEC':
 		case 'NEWDECIMAL':
 			return self::DATA_TYPE_DECIMAL;
+		case 'BPCHAR':
 		case 'CHAR':
 		case 'VARCHAR':
 		case 'BINARY':
