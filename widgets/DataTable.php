@@ -1636,7 +1636,7 @@ class DataTable extends BaseDataTable {
 
 	public static function _getGroupConcat($column, $db): string {
 		if ($db->type() == $db::TYPE_PGSQL)
-			return "string_agg($column, \', \')";
+			return "STRING_AGG($column, \', \')";
 		else
 			return "GROUP_CONCAT($column SEPARATOR \', \')";
 	}
