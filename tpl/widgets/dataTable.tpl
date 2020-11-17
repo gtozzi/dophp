@@ -263,7 +263,6 @@
 							case 'string':
 								return data;
 							case 'boolean':
-								return data ? 'Sì' : 'No';
 							case 'number':
 							case 'undefined':
 								return getValueRepr(data);

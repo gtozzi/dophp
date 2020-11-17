@@ -709,13 +709,13 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 			// checks if filter is a date filter and calculate where clause
 			if($c->type == \dophp\Table::DATA_TYPE_DATE){
 				$dateFilter = new \dophp\DateFilter($search, self::DFILTER_DIVIDER);
-				$search = $dateFilter->getSearchFilter($c->qname);
-				$filter[] = $search;
+				list($sql, $params) = $dateFilter->getSqlSearchFilter($c->qname, ":f{$idx}_");
+				$filter[] = $sql;
+				$filterArgs = array_merge($filterArgs, $params);
 			} else {
 				$filter[] = "{$c->qname} LIKE :f$idx";
 				$filterArgs[":f$idx"] = "%$search%";
 			}
-
 		}
 		$filter = new DataTableDataFilter($filter, $filterArgs);
 		// Save the search filter
@@ -962,118 +962,43 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 	}
 
 	/**
-	 * Returns month name from month number
+	 * Returns a list of month-year string for date filter picker (used in the UI)
+	 *
+	 * @return associative array (ie. [ 2020 => [ 1 => [ 'number' => '…', 'name' => '…' ], … ], … ])
 	 */
+	public function getMonthYearList(): array {
+		$list = [];
 
-	 public function agMonthNumbToStr($month=""){
+		for( $currY = (int)date("Y"); $currY > 1970; $currY-- ) {
+			$list[$currY] = [];
 
-		$month_name = false;
-
-		if((intval($month))>0){
-
-			$months_list = array(
-				1 => "gen",
-				2 => "feb",
-				3 => "mar",
-				4 => "apr",
-				5 => "mag",
-				6 => "giu",
-				7 => "lug",
-				8 => "ago",
-				9 => "set",
-				10 => "ott",
-				11 => "nov",
-				12 => "dic"
-			);
-			if(array_key_exists(intval($month),$months_list)){
-				$month_name = $months_list[intval($month)];
+			for( $m = 12; $m > 0; $m-- ) {
+				$mpadded = str_pad((string)($m),2,"0",STR_PAD_LEFT);
+				$list[$currY][$m]["number"] = $mpadded;
+				$list[$currY][$m]["name"] = \dophp\Utils::formatDateTimeLocale(new \DateTime("15-$mpadded-$currY"), '%h');
 			}
 		}
 
-		return $month_name;
-	}
-
-	/**
-	 * Return a list of month-year string
-	 */
-	public function getMonthYearList(){
-
-		$count=0;
-		$count2=0;
-		$list=array();
-
-		for($currY=date("Y");$currY>1970&&$count<150;$currY--){
-
-			$list[$currY]=array();
-			for($m=12;$m>0&&$count2<1500;$m--){
-				$list[$currY][$m]["number"]=str_pad((string)($m),2,"0",STR_PAD_LEFT);
-				$list[$currY][$m]["name"]=$this->agMonthNumbToStr($m);
-
-				$count2++;
-			}
-			$count++;
-		}
 		return $list;
 	}
 
 
 	/**
-	 * Return a list of years string grouped by
-	 * the number given from the step variable
+	 * Return a list of years string grouped by decade (used in the UI)
+	 *
+	 * @return associative array ( ie. [ '2019-2010' => [ 2020 => '2020', … ], … ])
 	 */
-	public function getYearList(){
+	public function getYearList(): array {
+		$list = [];
 
-		$count=0;
-		$count2=0;
-		$list=array();
-		$step = 10;
-		$currY = date("Y");
+		foreach( $this->getMonthYearList() as $year => $v ) {
+			$decade = (int)floor($year / 10);
+			$decadeStr = "{$decade}9 - {$decade}0";
 
+			if( ! array_key_exists($decadeStr, $list) )
+				$list[$decadeStr] = [];
 
-		// calculate the nearest year to the fixed step
-		// rounded to the highest value
-		// e.g. 2018 with step 10 ==> 2020
-		$maxRange= $currY;
-		$remainder = $currY%$step;
-		if($remainder>0){
-		    $missingToStep = $step-$remainder;
-		    $maxRange=$currY+$missingToStep;
-		}
-
-
-		$yearMax = $maxRange;
-		$yearMin = $yearMax - $step;
-		$currBlockLabel="";
-		// cycle for year block labels
-		for($yearMax=$yearMax;$yearMax>1970&&$count<150;$yearMax=$yearMax-$step){
-
-			// label to be shown as years_block title
-			$currBlockLabel=$yearMax." - ".($yearMin+1);
-
-			// label e.g. 2020-2011
-			$list[$currBlockLabel]=array();
-
-			// cycle for year calculation
-			for($y=0;$y<$step&&$count2<1500;$y++){
-				$list[$currBlockLabel][$y]=$currY;
-
-				$count2++;
-
-				// if current year is divisible by $step
-				// go to the next block of years
-				if(($currY%$step)==1){
-					$currY--;
-					break;
-				}
-
-				// decrease year of the list by one
-				$currY--;
-			}
-			// set new year_labels range
-			$yearMin= $yearMin - $step;
-
-			$count++;
-
+			$list[$decadeStr][$year] = (string)$year;
 		}
 
 		return $list;
