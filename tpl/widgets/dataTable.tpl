@@ -909,7 +909,7 @@
 		$(".wp-date-filter-cont").removeClass("do-hide");
 
 		if(filterValue != null && filterValue != "")
-			 rpcDateFilter(filterValue);
+			rpcDateFilter(filterValue);
 
 		$(".wp-date-filter-cont #wp-date-filter-colNo").val(currColNo);
 

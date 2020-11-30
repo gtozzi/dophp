@@ -174,15 +174,15 @@ class DateFilter implements \JsonSerializable {
 	 *
 	 */
 
-	 protected static function isValidYear(string $year) : bool {
+	protected static function isValidYear(string $year) : bool {
 		$len = \strlen($year);
 		// Check if the year is numeric and it's 2 o 4 digit
 		if(($len != 2 && $len != 4 ) || !\is_numeric($year))
 			return false;
 		return true;
-	 }
+	}
 
-	 protected static function isValidMonth(string $month) : bool {
+	protected static function isValidMonth(string $month) : bool {
 		// Check if $month is numeric
 		if(!\is_numeric($month))
 			return false;
@@ -219,7 +219,7 @@ class DateFilter implements \JsonSerializable {
 	 * @return bool: true if all the parts of the $date are in the right format
 	 *
 	 */
-	 protected static function validateFormat($date, $precision) : bool {
+	protected static function validateFormat($date, $precision) : bool {
 
 		switch($precision) {
 		case self::PRECISON_Y :
