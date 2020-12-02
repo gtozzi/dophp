@@ -1432,8 +1432,25 @@ class Table {
 	 * @return mixed: The casted value
 	 */
 	public static function castVal($val, $type) {
-		if( $val === null )
-			return null;
+
+		switch( getType($val) ) {
+		case 'boolean':
+		case 'integer':
+		case 'double':
+		case 'float':
+		case 'array':
+		case 'NULL':
+		case 'null':
+			// Leave driver-encoded vals unmolested
+			return $val;
+
+		case 'string':
+			// go on
+			break;
+
+		default:
+			throw new \dophp\NotImplementedException('Unexpected type "' . getType($val) . '"');
+		}
 
 		// Using self::normNumber() because it looks like PDO may return
 		// numbers in localized format
