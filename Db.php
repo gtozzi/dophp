@@ -1389,6 +1389,7 @@ class Table {
 		case 'TIMESTAMPTZ':
 			return self::DATA_TYPE_DATETIME;
 		case 'TIME':
+		case 'TIMETZ':
 			return self::DATA_TYPE_TIME;
 		case 'JSON':
 			return self::DATA_TYPE_JSON;
