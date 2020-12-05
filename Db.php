@@ -82,6 +82,7 @@ class Db {
 		case 'dblib':
 			$this->_type = self::TYPE_MSSQL;
 			$this->_pdo->exec('SET ARITHABORT ON');
+			$this->_pdo->exec('SET DATEFORMAT ymd');
 			break;
 		case 'pgsql':
 			$this->_type = self::TYPE_PGSQL;
@@ -773,9 +774,13 @@ class Result implements \Iterator {
 			if( ! $meta )
 				throw new \InvalidArgumentException("No meta for column $idx");
 
-			if( isset($this->_types[$meta['name']]) )
+			if( isset($this->_types[$meta['name']]) ) {
 				$type = $this->_types[$meta['name']];
-			elseif( ! isset($meta['native_type']) ) {
+			} elseif( isset($meta['sqlsrv:decl_type']) && $meta['sqlsrv:decl_type'] ) {
+				// Apparently the sqlsrv driver uses a different key for types
+				$declType = explode(' ', $meta['sqlsrv:decl_type'], 2)[0];
+				$type = Table::getType($declType, $meta['len']);
+			} elseif( ! isset($meta['native_type']) ) {
 				// Apparently JSON fields have no native_type
 				throw new \InvalidArgumentException("Missing native_type form column $idx, must declare type explicitly");
 			} else
@@ -898,6 +903,9 @@ class Result implements \Iterator {
 		$this->_current = $this->fetch();
 	}
 
+	public function rowCount(): int {
+		return $this->_st->rowCount();
+	}
 }
 
 
@@ -1353,8 +1361,11 @@ class Table {
 		case 'DEC':
 		case 'NEWDECIMAL':
 			return self::DATA_TYPE_DECIMAL;
+		case 'BPCHAR':
 		case 'CHAR':
+		case 'NCHAR':
 		case 'VARCHAR':
+		case 'NVARCHAR':
 		case 'BINARY':
 		case 'VARBINARY':
 		case 'TINYBLOB':
@@ -1378,6 +1389,7 @@ class Table {
 		case 'TIMESTAMPTZ':
 			return self::DATA_TYPE_DATETIME;
 		case 'TIME':
+		case 'TIMETZ':
 			return self::DATA_TYPE_TIME;
 		case 'JSON':
 			return self::DATA_TYPE_JSON;
@@ -1420,8 +1432,25 @@ class Table {
 	 * @return mixed: The casted value
 	 */
 	public static function castVal($val, $type) {
-		if( $val === null )
-			return null;
+
+		switch( getType($val) ) {
+		case 'boolean':
+		case 'integer':
+		case 'double':
+		case 'float':
+		case 'array':
+		case 'NULL':
+		case 'null':
+			// Leave driver-encoded vals unmolested
+			return $val;
+
+		case 'string':
+			// go on
+			break;
+
+		default:
+			throw new \dophp\NotImplementedException('Unexpected type "' . getType($val) . '"');
+		}
 
 		// Using self::normNumber() because it looks like PDO may return
 		// numbers in localized format

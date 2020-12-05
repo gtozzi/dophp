@@ -144,7 +144,7 @@
 													{{assign var="contatore_item" value=0}}
 													{{foreach $childs as $c}}
 														{{assign var="contatore_item" value=$contatore_item+1}}
-														{{if $childs|@count > 10 && $childs|@count < 21 && ($contatore_item == 1 || $contatore_item == 11)}}<div class="col-sm-6">{{elseif $childs|@count > 20 && ($contatore_item == 1 || $contatore_item == 11 || $contatore_item == 21)}}<div class="col-sm-4">{{/if}}
+														{{if $childs|@count > 10 && $childs|@count < 21 && ($contatore_item == 1 || $contatore_item == 11)}}<div class="col-sm-6">{{elseif $childs|@count > 20 && $contatore_item % 10 == 1 }}<div class="col-sm-4">{{/if}}
 														{{if $c->getUrl() || $c->getLabel()}}
 															<a class="dropdown-item menu-link" href="{{$c->getUrl()}}"
 																data-label={{$m->getLabel()|json_encode}}

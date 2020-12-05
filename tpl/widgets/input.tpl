@@ -491,7 +491,7 @@
 
 			<div class="offset-sm-2 col-sm-10">
 				<div class="progress ag-progress ag-prog-itm_{{$id}}">
-				  <div class="progress-bar ag-progress_{{$id}}" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+					<div class="progress-bar ag-progress_{{$id}}" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
 				</div>
 			</div>
 		</div>

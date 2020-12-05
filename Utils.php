@@ -67,7 +67,7 @@ class Utils {
 	 * @example Utils::combinations(['A','B','C'], 2) = ['A','B'], ['A','C'], ['B','C']
 	 * @param $in mixed: Input to make combinations of (array or string)
 	 * @param $num int: number of elements per combinations
-	 * @yields combined elements
+	 * @return yields combined elements
 	 */
 	public static function combinations($in, $num) {
 		if( is_array($in) )
@@ -114,6 +114,25 @@ class Utils {
 
 			yield $makeComb($keys);
 		}
+	}
+
+	/**
+	 * Returns a formatted version of a DateTime object according to current locale
+	 *
+	 * @see strftime()
+	 * @param $dt \DateTime: The object to be formatted
+	 * @param $format string: The format, in strftime() synta
+	 * @return string The formatted string
+	 * @throws InvalidArgumentException on invalid format or date
+	 */
+	public static function formatDateTimeLocale(\DateTime $dt, string $format) {
+		$ts = $dt->getTimestamp();
+
+		$str = strftime($format, $ts);
+		if( $str === false || $str === null )
+			throw new \InvalidArgumentException('Format failed');
+
+		return $str;
 	}
 
 	/**
@@ -519,7 +538,7 @@ class Utils {
 	/**
 	 * Returns list of accepted HTTP encodings based on the Accept header
 	 *
-	 * @yields string: Accepted HTTP encodings, sorted by preference
+	 * @return yields string: Accepted HTTP encodings, sorted by preference
 	 */
 	public static function listHttpAccept() {
 		if( ! isset($_SERVER['HTTP_ACCEPT']) )
