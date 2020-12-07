@@ -707,7 +707,9 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 			$saveFilter[$c->id] = $search;
 
 			// checks if filter is a date filter and calculate where clause
-			if($c->type == \dophp\Table::DATA_TYPE_DATE){
+			if($search == '-') {
+				$filter[] = "{$c->qname} IS NULL";
+			} elseif($c->type == \dophp\Table::DATA_TYPE_DATE){
 				$dateFilter = new \dophp\DateFilter($search, self::DFILTER_DIVIDER);
 				list($sql, $params) = $dateFilter->getSqlSearchFilter($c->qname, ":f{$idx}_");
 				$filter[] = $sql;
@@ -1636,7 +1638,7 @@ class DataTable extends BaseDataTable {
 
 	public static function _getGroupConcat($column, $db): string {
 		if ($db->type() == $db::TYPE_PGSQL)
-			return "string_agg($column, \', \')";
+			return "STRING_AGG($column, \', \')";
 		else
 			return "GROUP_CONCAT($column SEPARATOR \', \')";
 	}

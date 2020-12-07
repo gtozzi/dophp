@@ -796,14 +796,17 @@ class Result implements \Iterator {
 	/**
 	 * Returns next result
 	 *
+	 * @param $column string: The column name; if given, only returns this column's value
+	 *                        (or null if no result is found)
 	 * @return array: The associative result, with properyl typed data
+	 *                (or false/null when no column is found)
 	 */
-	public function fetch() {
+	public function fetch(string $column=null) {
 		$this->_key++;
 
 		$raw = $this->_st->fetch( \PDO::FETCH_NUM );
 		if( $raw === false )
-			return false;
+			return $column ? null : false;
 
 		$res = [];
 		foreach( $raw as $idx => $val ) {
@@ -811,7 +814,7 @@ class Result implements \Iterator {
 			$res[$col->name] = Table::castVal($val, $col->type);
 		}
 
-		return $res;
+		return $column ? $res[$column] :  $res;
 	}
 
 	/**
@@ -1361,6 +1364,7 @@ class Table {
 		case 'DEC':
 		case 'NEWDECIMAL':
 			return self::DATA_TYPE_DECIMAL;
+		case 'BPCHAR':
 		case 'CHAR':
 		case 'NCHAR':
 		case 'VARCHAR':
@@ -1388,6 +1392,7 @@ class Table {
 		case 'TIMESTAMPTZ':
 			return self::DATA_TYPE_DATETIME;
 		case 'TIME':
+		case 'TIMETZ':
 			return self::DATA_TYPE_TIME;
 		case 'JSON':
 			return self::DATA_TYPE_JSON;
@@ -1430,8 +1435,25 @@ class Table {
 	 * @return mixed: The casted value
 	 */
 	public static function castVal($val, $type) {
-		if( $val === null )
-			return null;
+
+		switch( getType($val) ) {
+		case 'boolean':
+		case 'integer':
+		case 'double':
+		case 'float':
+		case 'array':
+		case 'NULL':
+		case 'null':
+			// Leave driver-encoded vals unmolested
+			return $val;
+
+		case 'string':
+			// go on
+			break;
+
+		default:
+			throw new \dophp\NotImplementedException('Unexpected type "' . getType($val) . '"');
+		}
 
 		// Using self::normNumber() because it looks like PDO may return
 		// numbers in localized format
