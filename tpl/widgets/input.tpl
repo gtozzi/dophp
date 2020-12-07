@@ -443,6 +443,11 @@
 							dropdownCssClass: {{$reqCls|json_encode}},
 							width: 'style',
 							{{if $field->isAjax()}}
+								 placeholder: {
+									id: '',
+									text: '',
+								},
+								allowClear: true,
 								ajax: {
 									url: {{$field->getForm()->action()->asString()|json_encode}},
 									delay: 100,
