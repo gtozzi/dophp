@@ -492,7 +492,7 @@ class NumberField extends TextField {
 	protected $_max = null;
 	/** The allowed step (null = any) */
 	protected $_step = null;
-	/** Float numbers only: the shown decimals (null = PHP default) */
+	/** Float numbers only: the shown decimals (null = PHP default), guess from step */
 	protected $_decimals = null;
 
 	protected $_type = 'number';
@@ -519,6 +519,9 @@ class NumberField extends TextField {
 		if( is_float($this->_min) || is_float($this->_max) || is_float($this->_step) )
 			$this->_vtype = 'double';
 
+		if( $this->_decimals === null && $this->_step !== null )
+			$this->_decimals = \dophp\Utils::guessDecimals($this->_step);
+
 		parent::_afterConstruct();
 	}
 
@@ -534,10 +537,10 @@ class NumberField extends TextField {
 	}
 
 	public function format($value) {
-		if( is_float($value) )
-			return \dophp\Utils::formatCFloat($value, $this->_decimals);
+		if( $this->_vtype == 'int' )
+			return (string)$value;
 
-		return (string)$value;
+		return \dophp\Utils::formatCFloat($value, $this->_decimals);
 	}
 }
 
@@ -596,6 +599,7 @@ class DurationField extends TextField {
 
 	protected $_type = 'duration';
 	protected $_vtype = 'duration';
+	protected $_placeholder = 'hh:mm:ss';
 
 	/** The time separator */
 	protected $_sep = ':';
@@ -606,12 +610,15 @@ class DurationField extends TextField {
 		$this->_vopts['sep'] = & $this->_sep;
 	}
 
-	public function getSep(): string {
-		return $this->_sep;
+	protected function _afterConstruct() {
+		if( $this->_placeholder === null )
+			$this->_placeholder = "hh{$this->_sep}mm{$this->_sep}ss";
+
+		parent::_afterConstruct();
 	}
 
-	public function getPlaceholder() {
-		return "00:00:00";
+	public function getSep(): string {
+		return $this->_sep;
 	}
 
 	public function format($value) {
