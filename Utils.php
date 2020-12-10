@@ -639,11 +639,13 @@ class Utils {
 
 	/**
 	 * Converts a float to string non locale-aware
+	 *
+	 * @param $decimals int: Number of decimals to display (null = auto)
+	 * @return string
 	 */
-	public static function formatCFloat($float, $decimals = null) {
-		if (!$decimals || !is_int($decimals))
-			return sprintf('%F', $float);
-		return sprintf("%.${decimals}F", $float);
+	public static function formatCFloat(float $float, int $decimals=null) {
+		$decstr = $decimals ? (string)$decimals : '';
+		return sprintf("%.${decstr}F", $float);
 	}
 
 	/**
