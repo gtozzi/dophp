@@ -273,7 +273,7 @@ abstract class PageBase {
 	 * @param $res mixed: The data to be encoded
 	 * @param $opts int: Json options
 	 * @return string: The json encoded data
-	 * @throws \Exception en json_encode error
+	 * @throws Exception en json_encode error
 	 */
 	protected function _jsonEncode($res, $opts=0) {
 		$this->_jsonSerialize($res);
