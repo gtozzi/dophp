@@ -640,8 +640,10 @@ class Utils {
 	/**
 	 * Converts a float to string non locale-aware
 	 */
-	public static function formatCFloat($float) {
-		return sprintf('%F', $float);
+	public static function formatCFloat($float, $decimals = null) {
+		if (!$decimals || !is_int($decimals))
+			return sprintf('%F', $float);
+		return sprintf("%.${decimals}F", $float);
 	}
 
 	/**
