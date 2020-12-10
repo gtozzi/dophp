@@ -492,6 +492,8 @@ class NumberField extends TextField {
 	protected $_max = null;
 	/** The allowed step (null = any) */
 	protected $_step = null;
+	/** Float numbers only: the shown decimals (null = PHP default) */
+	protected $_decimals = null;
 
 	protected $_type = 'number';
 	/** @see self::_afterConstruct */
@@ -507,6 +509,10 @@ class NumberField extends TextField {
 
 	public function getStep() {
 		return $this->_step;
+	}
+
+	public function getDecimals() {
+		return $this->_decimals;
 	}
 
 	protected function _afterConstruct() {
@@ -529,7 +535,7 @@ class NumberField extends TextField {
 
 	public function format($value) {
 		if( is_float($value) )
-			return \dophp\Utils::formatCFloat($value);
+			return \dophp\Utils::formatCFloat($value, $this->_decimals);
 
 		return (string)$value;
 	}
