@@ -419,8 +419,8 @@ formUtil['DurationFormControlHandler'] = class extends formUtil['FormControlHand
 
 		// Split by separator
 		let parts = str.split(this.sep);
-		if (parts.length < 2 | parts.length > 3) {
-			console.error('Date must contain at least Hours and Minutes, at most Hours, Minutes and Seconds');
+		if (parts.length < 1 | parts.length > 3) {
+			console.error('Date must contain at least Minutes, at most Hours, Minutes and Seconds');
 			return null;
 		}
 		// Check every part is an integer
@@ -431,17 +431,20 @@ formUtil['DurationFormControlHandler'] = class extends formUtil['FormControlHand
 			}
 		}
 		let sec = 0
-		if (parts.length === 3) {
+		if (parts.length > 2) {
 			sec = parseInt(parts[2]);
 			if (sec > 59) {
 				console.error('Seconds must be in the range 0-59', typeof str, str);
-				return null;
+				sec = 59;
 			}
 		}
-		let min = parseInt(parts[1]);
-		if (min > 59) {
-			console.error('Minutes must be in the range 0-59', typeof str, str);
-			return null;
+		let min = 0
+		if (parts.length > 1) {
+			min = parseInt(parts[1]);
+			if (min > 59) {
+				console.error('Minutes must be in the range 0-59', typeof str, str);
+				min = 59;
+			}
 		}
 		sec += (min * 60) + (parseInt(parts[0]) * 60 * 60);	// Minutes and hours
 		return sec;
