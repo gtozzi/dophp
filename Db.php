@@ -1384,6 +1384,7 @@ class Table {
 		case 'ENUM':
 		case 'VAR_STRING':
 		case 'STRING':
+		case 'CITEXT':
 			return self::DATA_TYPE_STRING;
 		case 'DATE':
 			return self::DATA_TYPE_DATE;
