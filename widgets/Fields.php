@@ -428,6 +428,11 @@ class TextAreaField extends TextField {
  */
 class PasswordField extends TextField {
 	protected $_type = 'password';
+	protected $_autocomplete = 'new-password';
+
+	public function getAutocomplete(): ?string {
+		return $this->_autocomplete;
+	}
 }
 
 
