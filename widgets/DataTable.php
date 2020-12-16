@@ -714,6 +714,8 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 				list($sql, $params) = $dateFilter->getSqlSearchFilter($c->qname, ":f{$idx}_");
 				$filter[] = $sql;
 				$filterArgs = array_merge($filterArgs, $params);
+			} elseif($c->type == \dophp\Table::DATA_TYPE_BOOLEAN) {
+				$filter[] = ( $search ? '' : 'NOT ' ) . $c->qname;
 			} else {
 				$filter[] = "{$c->qname} LIKE :f$idx";
 				$filterArgs[":f$idx"] = "%$search%";
