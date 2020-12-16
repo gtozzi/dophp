@@ -187,6 +187,9 @@
 						type="{{if $type=='date'}}text{{else}}{{$type}}{{/if}}"
 						value="{{if $type=='checkbox'}}1{{else}}{{$value|htmlentities}}{{/if}}"
 					{{/if}}
+					{{if $type=='password' && $field->getAutocomplete()}}
+						autocomplete="{{$field->getAutocomplete()}}"
+					{{/if}}
 					{{if $type!='select'}}
 						{{if isset($placeholder)}}placeholder="{{$placeholder|htmlentities}}"{{/if}}
 					{{/if}}
