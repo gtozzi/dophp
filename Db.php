@@ -1094,20 +1094,39 @@ class Table {
 
 			// Read primary keys (if not done earlier)
 			if( ! $colKey ) {
-				list($twCol, $tpCol) = $tableWhere('col');
-				$q = '
-					SELECT
-						COLUMN_NAME AS "COLUMN_NAME"
-					FROM
-						information_schema.TABLE_CONSTRAINTS AS "tab",
-						information_schema.CONSTRAINT_COLUMN_USAGE AS "col"
-					WHERE
-						"col".CONSTRAINT_NAME = "tab".CONSTRAINT_NAME
-						AND "col".TABLE_NAME = "tab".TABLE_NAME
-						AND CONSTRAINT_TYPE = \'PRIMARY KEY\'
-						AND ' . $twCol;
-				foreach( $this->_db->run($q, $tpCol)->fetchAll() as $c )
-					$this->_pk[] = $c['COLUMN_NAME'];
+				if( $this->_db->type() === Db::TYPE_PGSQL ) {
+					// PgSQL does not allow a normal user to read data from
+					// information_schema.CONSTRAINT_COLUMN_USAGE unless owner
+					// of the table (may be a PgSQL bug)
+					$quotedme = Db::quoteObjFor($this->_schema, Db::TYPE_PGSQL)
+						. '.' . Db::quoteObjFor($this->_name, Db::TYPE_PGSQL);
+					$q = '
+						SELECT
+							a.attname AS "COLUMN_NAME"
+						FROM pg_index AS i
+						JOIN pg_attribute AS a
+							ON a.attrelid = i.indrelid
+							AND a.attnum = ANY(i.indkey)
+						WHERE i.indrelid = \'' . $quotedme . '\'::regclass
+							AND i.indisprimary
+					';
+					$p = [];
+				} else {
+					list($twCol, $p) = $tableWhere('col');
+					$q = '
+						SELECT
+							COLUMN_NAME AS "COLUMN_NAME"
+						FROM
+							information_schema.TABLE_CONSTRAINTS AS "tab",
+							information_schema.CONSTRAINT_COLUMN_USAGE AS "col"
+						WHERE
+							"col".CONSTRAINT_NAME = "tab".CONSTRAINT_NAME
+							AND "col".TABLE_NAME = "tab".TABLE_NAME
+							AND CONSTRAINT_TYPE = \'PRIMARY KEY\'
+							AND ' . $twCol;
+				}
+				foreach( $this->_db->run($q, $p)->fetchAll() as $c )
+						$this->_pk[] = $c['COLUMN_NAME'];
 			}
 
 			// Read and cache references structure
@@ -1545,7 +1564,7 @@ class Table {
 	public function parsePkArgs($pk) {
 		// Check parameters
 		if( ! $this->_pk )
-			throw new \LogicException('Table doesn\'t have a Primary Key');
+			throw new \LogicException("Table \"{$this->_name}\" doesn't have a Primary Key");
 		if( ! is_array($pk) )
 			$pk = array($pk);
 		if( count($this->_pk) != count($pk) )
