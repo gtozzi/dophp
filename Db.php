@@ -1403,7 +1403,8 @@ class Table {
 		case 'ENUM':
 		case 'VAR_STRING':
 		case 'STRING':
-		case 'CITEXT':
+		case 'CITEXT': // case-insensitive text extension in pgsql
+		case 'NAME': // a 63 byte (varchar) type used for storing system identifiers by pgsql
 			return self::DATA_TYPE_STRING;
 		case 'DATE':
 			return self::DATA_TYPE_DATE;
