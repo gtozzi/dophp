@@ -545,6 +545,9 @@ class NumberField extends TextField {
 		if( $this->_vtype == 'int' )
 			return (string)$value;
 
+		if( $value === null )
+			return '';
+
 		return \dophp\Utils::formatCFloat($value, $this->_decimals);
 	}
 }
