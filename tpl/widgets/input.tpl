@@ -184,7 +184,7 @@
 					{{if $type=='asyncFile'}}
 						type="file"
 					{{elseif $type!='select' && $type!='textarea'}}
-						type="{{if $type=='date'}}text{{else}}{{$type}}{{/if}}"
+						type="{{if $type=='date' || $type=='currency'}}text{{else}}{{$type}}{{/if}}"
 						value="{{if $type=='checkbox'}}1{{else}}{{$value|htmlentities}}{{/if}}"
 					{{/if}}
 					{{if $type=='password' && $field->getAutocomplete()}}
