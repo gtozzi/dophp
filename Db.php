@@ -163,6 +163,7 @@ class Db {
 				$p = $p->format('H:i:s');
 			elseif( $p instanceof \DateTime )
 				$p = $p->format('Y-m-d H:i:s');
+		unset($p);
 
 		if( $dbgquery )
 			$dbgquery->built($query, $params);
@@ -1360,7 +1361,6 @@ class Table {
 		case 'INT2':
 		case 'INT4':
 		case 'INT8':
-		case 'NUMERIC':
 		case 'SERIAL':
 		case 'BIGSERIAL':
 			return self::DATA_TYPE_INTEGER;
@@ -1382,6 +1382,7 @@ class Table {
 		case 'DECIMAL':
 		case 'DEC':
 		case 'NEWDECIMAL':
+		case 'NUMERIC':
 			return self::DATA_TYPE_DECIMAL;
 		case 'BPCHAR':
 		case 'CHAR':
