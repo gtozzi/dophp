@@ -129,26 +129,55 @@ abstract class AuthBase implements AuthInterface {
 	*/
 	public function logout() {
 		$this->_uid = null;
-		if( isset($_SESSION[self::SESS_VAR]) )
-			unset($_SESSION[self::SESS_VAR]);
+		$this->clearSession();
 	}
 
 	/**
 	* Save login credentials in session
 	*
 	* @param $user string: The username
-	* @param $pwd string: The password (or equivalent)
+	* @param $tok string: The hash or token (using password directly is unsafe)
 	* @return bool: True if session has been saved
 	*/
-	public function saveSession($user, $pwd) {
-		if( $this->_sess ) {
-			if( ! isset($_SESSION[self::SESS_VAR]) || ! is_array($_SESSION[self::SESS_VAR]) )
-				$_SESSION[self::SESS_VAR] = [];
-			$_SESSION[self::SESS_VAR][self::SESS_VUSER] = $user;
-			$_SESSION[self::SESS_VAR][self::SESS_VPASS] = $pwd;
-			return true;
-		}
-		return false;
+	public function saveSession($user, $tok) {
+		if( ! $this->_sess )
+			return false;
+
+
+		if( ! isset($_SESSION[self::SESS_VAR]) || ! is_array($_SESSION[self::SESS_VAR]) )
+			$_SESSION[self::SESS_VAR] = [];
+		$_SESSION[self::SESS_VAR][self::SESS_VUSER] = $user;
+		$_SESSION[self::SESS_VAR][self::SESS_VPASS] = $tok;
+		return true;
+	}
+
+	/**
+	 * Load login credentials from session
+	 *
+	 * @return array [ $username, $token ] or null
+	 */
+	public function loadSession() {
+		if( ! $this->_sess )
+			return null;
+
+		if( ! isset($_SESSION[self::SESS_VAR][self::SESS_VUSER]) )
+			return null;
+
+		if( ! isset($_SESSION[self::SESS_VAR][self::SESS_VPASS]) )
+			return null;
+
+		return [
+			$_SESSION[self::SESS_VAR][self::SESS_VUSER],
+			$_SESSION[self::SESS_VAR][self::SESS_VPASS]
+		];
+	}
+
+	/**
+	 * Erase session credentials
+	 */
+	public function clearSession() {
+		if( isset($_SESSION[self::SESS_VAR]) )
+			unset($_SESSION[self::SESS_VAR]);
 	}
 
 	/**
@@ -204,10 +233,15 @@ abstract class AuthBase implements AuthInterface {
 * Database MUST implement a login($user, $password) method returning the user's
 * ID on succesfull login
 */
-class AuthBasic extends AuthBase {
+abstract class AuthBasic extends AuthBase {
 
 	/** Standard HTTP Authorization header */
 	const HEAD_HTTP_AUTH = 'AUTHORIZATION';
+
+	const SOURCE_HEADERS = 'headers';
+	const SOYRCE_HAND = 'hand';
+	const SOURCE_USER = 'user';
+	const SOURCE_SESSION = 'session';
 
 	/**
 	 * Method the may be called manually by a page script to login an user
@@ -217,10 +251,11 @@ class AuthBasic extends AuthBase {
 	public function handLogin($username, $password) {
 		$this->_beforeLogin();
 
-		$uid = $this->_login($username, $password, 'hand');
-		if( $uid ) {
-			$this->saveSession($username, $password);
-		}
+		list( $uid, $token ) = $this->__checkedLogin($username, $password, self::SOYRCE_HAND);
+		if( $uid && $token )
+			$this->saveSession($username, $token);
+		else
+			$this->clearSession();
 
 		return $this->_processLogin($uid);
 	}
@@ -234,10 +269,13 @@ class AuthBasic extends AuthBase {
 			return null;
 
 		list( $user, $pwd, $source ) = $detected;
+		list( $uid, $token ) = $this->__checkedLogin($user, $pwd, $source);
 
-		$uid = $this->_login($user, $pwd, $source);
+		if( $uid && $token )
+			$this->saveSession($user, $token);
+		else
+			$this->clearSession();
 
-		$this->saveSession($user, $pwd);
 		return $uid;
 	}
 
@@ -260,33 +298,50 @@ class AuthBasic extends AuthBase {
 					$parts2 = explode(':', $auth);
 
 					if( count($parts2) == 2 )
-						return [ $parts2[0], $parts2[1], 'headers' ];
+						return [ $parts2[0], $parts2[1], self::SOURCE_HEADERS ];
 				}
 			}
 		}
 
-		if( $this->_sess && isset($_SESSION[self::SESS_VAR][self::SESS_VUSER]) &&
-				isset($_SESSION[self::SESS_VAR][self::SESS_VPASS]) )
+		$sess = $this->loadSession();
+		if( $sess )
 			return [
-				$_SESSION[self::SESS_VAR][self::SESS_VUSER],
-				$_SESSION[self::SESS_VAR][self::SESS_VPASS],
-				'session'
+				$sess[0],
+				$sess[1],
+				self::SOURCE_SESSION
 			];
 
 		return null;
 	}
 
 	/**
-	* Reads user's ID from database, if password is correct
+	 * Wrapper over $this->_login, checks output for backward compatibility
+	 */
+	private function __checkedLogin($user, $pwd, $source): array {
+		$ret = $this->_login($user, $pwd, $source);
+		if( ! $ret )
+			return [ null, null ];
+
+		if( ! is_array($ret) )
+			throw new \UnexpectedValueException('Returning a single value from _login() is deprecated');
+		if( count($ret) != 2 )
+			throw new \UnexpectedValueException('_login() array must contain two values [id,token]');
+
+		return $ret;
+	}
+
+	/**
+	* Perform the login, must be implemented in child
 	*
 	* @param $user string: The username
-	* @param $pwd string: The password
-	* @param $source string: The source for the credendials (headers|user|session|hand)
-	* @return integer The user's ID on success
+	* @param $pwd string: The password or the token, depends on $source
+	* @param $source string: The source for the credendials (headers|user|session|hand),
+	*                        SOURCE_* consts
+	* @return array [ The user's ID, session token or null ] on success, null on failure
+	*               When session token is given, will be saved in session and passwd
+	*               back as $pwd argument on subsequent login calls
 	*/
-	protected function _login($user, $pwd, $source) {
-		return $this->_db->login($user, $pwd, $source);
-	}
+	abstract protected function _login($user, $pwd, $source);
 
 }
 
@@ -301,7 +356,7 @@ class AuthBasic extends AuthBase {
 * Database MUST implement a login($user, $password) method returning the user's
 * ID on succesfull login
 */
-class AuthPlain extends AuthBasic {
+abstract class AuthPlain extends AuthBasic {
 
 	/** UserId header name ($_SERVER key name) */
 	const HEAD_USER = 'HTTP_X_AUTH_USER';
@@ -315,18 +370,18 @@ class AuthPlain extends AuthBasic {
 	 */
 	protected function _detectLogin() {
 		if( isset($_SERVER[self::HEAD_USER]) && isset($_SERVER[self::HEAD_PASS]) )
-			return [ $_SERVER[self::HEAD_USER], $_SERVER[self::HEAD_PASS], 'headers' ];
+			return [ $_SERVER[self::HEAD_USER], $_SERVER[self::HEAD_PASS], self::SOURCE_HEADERS ];
 
 		if( isset($_REQUEST['login']) && $_REQUEST['login']
 				&& isset($_REQUEST['username']) && isset($_REQUEST['password']) )
-			return [ $_REQUEST['username'], $_REQUEST['password'], 'user' ];
+			return [ $_REQUEST['username'], $_REQUEST['password'], self::SOURCE_USER ];
 
-		if( $this->_sess && isset($_SESSION[self::SESS_VAR][self::SESS_VUSER]) &&
-				isset($_SESSION[self::SESS_VAR][self::SESS_VPASS]) )
+		$sess = $this->loadSession();
+		if( $sess )
 			return [
-				$_SESSION[self::SESS_VAR][self::SESS_VUSER],
-				$_SESSION[self::SESS_VAR][self::SESS_VPASS],
-				'session'
+				$sess[0],
+				$sess[1],
+				self::SOURCE_SESSION
 			];
 
 		return null;
@@ -361,13 +416,12 @@ class AuthSign extends AuthBase {
 
 		$user = null;
 		$sign = null;
+		$sess = $this->loadSession();
 		if( isset($_SERVER[self::HEAD_USER]) && isset($_SERVER[self::HEAD_SIGN]) ) {
 			$user = $_SERVER[self::HEAD_USER];
 			$sign = $_SERVER[self::HEAD_SIGN];
-		}elseif( $this->_sess ) {
-			$user = $_SESSION[self::SESS_VAR][self::SESS_VUSER];
-			$sign = $_SESSION[self::SESS_VAR][self::SESS_VPASS];
-		}
+		} elseif( $sess )
+			list( $user, $sign ) = $sess;
 		list($uid, $pwd) = $this->_getUserPwd($user);
 
 		if( ! $user || ! $sign || ! $pwd )
