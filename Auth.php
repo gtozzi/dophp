@@ -239,7 +239,7 @@ abstract class AuthBasic extends AuthBase {
 	const HEAD_HTTP_AUTH = 'AUTHORIZATION';
 
 	const SOURCE_HEADERS = 'headers';
-	const SOYRCE_HAND = 'hand';
+	const SOURCE_HAND = 'hand';
 	const SOURCE_USER = 'user';
 	const SOURCE_SESSION = 'session';
 
@@ -251,7 +251,7 @@ abstract class AuthBasic extends AuthBase {
 	public function handLogin($username, $password) {
 		$this->_beforeLogin();
 
-		list( $uid, $token ) = $this->__checkedLogin($username, $password, self::SOYRCE_HAND);
+		list( $uid, $token ) = $this->__checkedLogin($username, $password, self::SOURCE_HAND);
 		if( $uid && $token )
 			$this->saveSession($username, $token);
 		else
