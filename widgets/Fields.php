@@ -520,6 +520,14 @@ class NumberField extends TextField {
 		return $this->_decimals;
 	}
 
+	public function setInternalValue($value) {
+		$type = gettype($value);
+		if( ! $value instanceof \dophp\Decimal && ! in_array($type, ['NULL', 'integer', 'double']) )
+			throw new \TypeError("Unsupported type \"$type\"");
+
+		return parent::setInternalValue($value);
+	}
+
 	protected function _afterConstruct() {
 		if( is_float($this->_min) || is_float($this->_max) || is_float($this->_step) )
 			$this->_vtype = 'double';
@@ -542,6 +550,9 @@ class NumberField extends TextField {
 	}
 
 	public function format($value) {
+		if( $value instanceof \dophp\Decimal )
+			$value = $value->toDouble();
+
 		if( $this->_vtype == 'int' )
 			return (string)$value;
 
