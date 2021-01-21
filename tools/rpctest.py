@@ -101,7 +101,7 @@ class RpcTest:
 		if self.user or self.pwd:
 			# Build authentication
 			if self.auth == 'sign':
-				sign = hashlib.sha1()
+				sign = hashlib.sha512()
 				sign.update(self.user.encode('utf-8'))
 				sign.update(self.SEP.encode('utf-8'))
 				sign.update(self.pwd.encode('utf-8'))

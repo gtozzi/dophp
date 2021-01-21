@@ -238,7 +238,7 @@ class Utils {
 
 		$err =
 			'<h3>' . self::strAsHTML(get_class($exception)) . "</h3>\n" .
-			'<p>&quot;' . self::strAsHTML($exception->getCode()) . '.' . self::strAsHTML($exception->getMessage()) . "&quot;</p>\n" .
+			'<p>' . self::strAsHTML('“' . $exception->getCode() . '. ' . $exception->getMessage() . '„') . "</p>\n" .
 			'<ul>' .
 			'<li><b>File:</b> ' . self::strAsHTML($exception->getFile()) . "</li>\n" .
 			'<li><b>Line:</b> ' . self::strAsHTML($exception->getLine()) . "</li>\n" .
@@ -639,9 +639,13 @@ class Utils {
 
 	/**
 	 * Converts a float to string non locale-aware
+	 *
+	 * @param $decimals int: Number of decimals to display (null = auto)
+	 * @return string
 	 */
-	public static function formatCFloat($float) {
-		return sprintf('%F', $float);
+	public static function formatCFloat(float $float, int $decimals=null) {
+		$decstr = $decimals ? (string)$decimals : '';
+		return sprintf("%.${decstr}F", $float);
 	}
 
 	/**

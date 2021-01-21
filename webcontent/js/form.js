@@ -341,6 +341,143 @@ formUtil['CurrencyFormControlHandler'] = class extends formUtil['FormControlHand
 
 };
 
+/**
+ * Handles a time duration form control
+ */
+formUtil['DurationFormControlHandler'] = class extends formUtil['FormControlHandler'] {
+
+	constructor(el) {
+		super(el);
+
+		this.sep = this.el.data('sep');
+
+		if( ! this.sep)
+			console.error('"sep" option is required', el);
+
+		this.allowed = new RegExp('[0-9' + this.sep + ']', 'g');
+		this.forbidden = new RegExp('[^0-9' + this.sep + ']', 'g');
+	}
+
+	onFocus(ev) {
+		this.el.val(this.sanitize(this.el.val()));
+	}
+
+	onInput(ev) {
+		let val = this.el.val();
+		let ss = this.el[0].selectionStart;
+		let left = val.slice(0, ss);
+		let right = val.slice(ss);
+		let sleft = this.sanitize(left);
+		let sright = this.sanitize(right);
+		let newval = sleft + sright;
+
+		if (val != newval) {
+			this.el.val(newval);
+			this.el[0].setSelectionRange(sleft.length, sleft.length);
+		}
+	}
+
+	onTout(ev) {
+		// Do nothing on timeout (overrides default behavior), wait for onBlur
+	}
+
+	onBlur(ev) {
+		// Re-add separators
+		let val = this.el.val();
+		val = this.sanitize(val);
+
+		let num = this.parse(val);
+
+		let formatted = this.format(num);
+		this.el.val(formatted);
+		this.validate();
+	}
+
+	/**
+	 * Remove all unecessary chars from string
+	 *
+	 * @param str string: The input string
+	 * @return string: The cleaned string
+	 */
+	sanitize(str) {
+		return str.replace(this.forbidden, '');
+	}
+
+	/**
+	 * Parse a sanitized value into a number
+	 *
+	 * @param str string: The input string
+	 * @return float: The parsed float (or null)
+	 */
+	parse(str) {
+		if ( ! str.length )
+			return null;
+		if (typeof str != 'string') {
+			console.error('Input is not a string but', typeof str, str);
+			return null;
+		}
+
+		// Split by separator
+		let parts = str.split(this.sep);
+		if (parts.length < 1 | parts.length > 3) {
+			console.error('Date must contain at least Minutes, at most Hours, Minutes and Seconds');
+			return null;
+		}
+
+		// Check every part is an integer
+		for (let part in parts) {
+			if (isNaN(parseInt(part))) {
+				console.error('Hours, Minutes and Seconds must all be integers, not', typeof str, str);
+				return null;
+			}
+		}
+
+		let sec = 0
+		if (parts.length > 2) {
+			sec = parseInt(parts[2]);
+		}
+
+		let min = 0
+		if (parts.length > 1) {
+			min = parseInt(parts[1]);
+		}
+
+		sec += (min * 60) + (parseInt(parts[0]) * 60 * 60);	// Minutes and hours
+		return sec;
+	}
+
+	/**
+	 * Formats a number into string
+	 *
+	 * @param num float: The input number
+	 * @return string: The formatted string
+	 */
+	format(num) {
+		if (num === null)
+			return '';
+		if (typeof num != 'number' || !Number.isInteger(num)) {
+			console.error('Input is not a timestamp in seconds (integer number) but', typeof num, num);
+			return '';
+		}
+
+		let hours = Math.floor(num / (60 * 60));
+		let rest = num % (60 * 60);
+		let minutes = Math.floor(rest / 60);
+		rest = rest % 60;
+		let seconds = rest;
+		let str = `${this.toTwoDigits(hours)}${this.sep}${this.toTwoDigits(minutes)}${this.sep}${this.toTwoDigits(seconds)}`;
+		return str;
+	}
+
+	/**
+	 * Formats an integer to two digits string
+	 */
+	toTwoDigits(num) {
+		return num.toLocaleString('it-IT', {minimumIntegerDigits: 2, useGrouping:false});
+	}
+
+};
+
 
 (function( $ ) {
 	/**

@@ -174,6 +174,9 @@
 						data-thosep="{{$field->getThoSep()|htmlentities}}"
 						data-decdigits="{{$field->getDecDigits()|htmlentities}}"
 					{{/if}}
+					{{if $type=='duration'}}
+						data-sep="{{$field->getSep()|htmlentities}}"
+					{{/if}}
 
 					{{if $type=='textarea'}}
 						rows="{{$field->getRows()}}"
@@ -182,8 +185,11 @@
 					{{if $type=='asyncFile'}}
 						type="file"
 					{{elseif $type!='select' && $type!='textarea'}}
-						type="{{if $type=='date'}}text{{else}}{{$type}}{{/if}}"
+						type="{{if $type=='date' || $type=='currency'}}text{{else}}{{$type}}{{/if}}"
 						value="{{if $type=='checkbox'}}1{{else}}{{$value|htmlentities}}{{/if}}"
+					{{/if}}
+					{{if $type=='password' && $field->getAutocomplete()}}
+						autocomplete="{{$field->getAutocomplete()}}"
 					{{/if}}
 					{{if $type!='select'}}
 						{{if isset($placeholder)}}placeholder="{{$placeholder|htmlentities}}"{{/if}}

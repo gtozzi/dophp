@@ -163,6 +163,7 @@ class Db {
 				$p = $p->format('H:i:s');
 			elseif( $p instanceof \DateTime )
 				$p = $p->format('Y-m-d H:i:s');
+		unset($p);
 
 		if( $dbgquery )
 			$dbgquery->built($query, $params);
@@ -796,14 +797,17 @@ class Result implements \Iterator {
 	/**
 	 * Returns next result
 	 *
+	 * @param $column string: The column name; if given, only returns this column's value
+	 *                        (or null if no result is found)
 	 * @return array: The associative result, with properyl typed data
+	 *                (or false/null when no column is found)
 	 */
-	public function fetch() {
+	public function fetch(string $column=null) {
 		$this->_key++;
 
 		$raw = $this->_st->fetch( \PDO::FETCH_NUM );
 		if( $raw === false )
-			return false;
+			return $column ? null : false;
 
 		$res = [];
 		foreach( $raw as $idx => $val ) {
@@ -811,7 +815,7 @@ class Result implements \Iterator {
 			$res[$col->name] = Table::castVal($val, $col->type);
 		}
 
-		return $res;
+		return $column ? $res[$column] :  $res;
 	}
 
 	/**
@@ -1091,20 +1095,39 @@ class Table {
 
 			// Read primary keys (if not done earlier)
 			if( ! $colKey ) {
-				list($twCol, $tpCol) = $tableWhere('col');
-				$q = '
-					SELECT
-						COLUMN_NAME AS "COLUMN_NAME"
-					FROM
-						information_schema.TABLE_CONSTRAINTS AS "tab",
-						information_schema.CONSTRAINT_COLUMN_USAGE AS "col"
-					WHERE
-						"col".CONSTRAINT_NAME = "tab".CONSTRAINT_NAME
-						AND "col".TABLE_NAME = "tab".TABLE_NAME
-						AND CONSTRAINT_TYPE = \'PRIMARY KEY\'
-						AND ' . $twCol;
-				foreach( $this->_db->run($q, $tpCol)->fetchAll() as $c )
-					$this->_pk[] = $c['COLUMN_NAME'];
+				if( $this->_db->type() === Db::TYPE_PGSQL ) {
+					// PgSQL does not allow a normal user to read data from
+					// information_schema.CONSTRAINT_COLUMN_USAGE unless owner
+					// of the table (may be a PgSQL bug)
+					$quotedme = Db::quoteObjFor($this->_schema, Db::TYPE_PGSQL)
+						. '.' . Db::quoteObjFor($this->_name, Db::TYPE_PGSQL);
+					$q = '
+						SELECT
+							a.attname AS "COLUMN_NAME"
+						FROM pg_index AS i
+						JOIN pg_attribute AS a
+							ON a.attrelid = i.indrelid
+							AND a.attnum = ANY(i.indkey)
+						WHERE i.indrelid = \'' . $quotedme . '\'::regclass
+							AND i.indisprimary
+					';
+					$p = [];
+				} else {
+					list($twCol, $p) = $tableWhere('col');
+					$q = '
+						SELECT
+							COLUMN_NAME AS "COLUMN_NAME"
+						FROM
+							information_schema.TABLE_CONSTRAINTS AS "tab",
+							information_schema.CONSTRAINT_COLUMN_USAGE AS "col"
+						WHERE
+							"col".CONSTRAINT_NAME = "tab".CONSTRAINT_NAME
+							AND "col".TABLE_NAME = "tab".TABLE_NAME
+							AND CONSTRAINT_TYPE = \'PRIMARY KEY\'
+							AND ' . $twCol;
+				}
+				foreach( $this->_db->run($q, $p)->fetchAll() as $c )
+						$this->_pk[] = $c['COLUMN_NAME'];
 			}
 
 			// Read and cache references structure
@@ -1338,7 +1361,6 @@ class Table {
 		case 'INT2':
 		case 'INT4':
 		case 'INT8':
-		case 'NUMERIC':
 		case 'SERIAL':
 		case 'BIGSERIAL':
 			return self::DATA_TYPE_INTEGER;
@@ -1360,6 +1382,7 @@ class Table {
 		case 'DECIMAL':
 		case 'DEC':
 		case 'NEWDECIMAL':
+		case 'NUMERIC':
 			return self::DATA_TYPE_DECIMAL;
 		case 'BPCHAR':
 		case 'CHAR':
@@ -1381,6 +1404,8 @@ class Table {
 		case 'ENUM':
 		case 'VAR_STRING':
 		case 'STRING':
+		case 'CITEXT': // case-insensitive text extension in pgsql
+		case 'NAME': // a 63 byte (varchar) type used for storing system identifiers by pgsql
 			return self::DATA_TYPE_STRING;
 		case 'DATE':
 			return self::DATA_TYPE_DATE;
@@ -1541,7 +1566,7 @@ class Table {
 	public function parsePkArgs($pk) {
 		// Check parameters
 		if( ! $this->_pk )
-			throw new \LogicException('Table doesn\'t have a Primary Key');
+			throw new \LogicException("Table \"{$this->_name}\" doesn't have a Primary Key");
 		if( ! is_array($pk) )
 			$pk = array($pk);
 		if( count($this->_pk) != count($pk) )

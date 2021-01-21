@@ -428,6 +428,11 @@ class TextAreaField extends TextField {
  */
 class PasswordField extends TextField {
 	protected $_type = 'password';
+	protected $_autocomplete = 'new-password';
+
+	public function getAutocomplete(): ?string {
+		return $this->_autocomplete;
+	}
 }
 
 
@@ -492,6 +497,8 @@ class NumberField extends TextField {
 	protected $_max = null;
 	/** The allowed step (null = any) */
 	protected $_step = null;
+	/** Float numbers only: the shown decimals (null = PHP default), guess from step */
+	protected $_decimals = null;
 
 	protected $_type = 'number';
 	/** @see self::_afterConstruct */
@@ -509,9 +516,24 @@ class NumberField extends TextField {
 		return $this->_step;
 	}
 
+	public function getDecimals() {
+		return $this->_decimals;
+	}
+
+	public function setInternalValue($value) {
+		$type = gettype($value);
+		if( ! $value instanceof \dophp\Decimal && ! in_array($type, ['NULL', 'integer', 'double']) )
+			throw new \TypeError("Unsupported type \"$type\"");
+
+		return parent::setInternalValue($value);
+	}
+
 	protected function _afterConstruct() {
 		if( is_float($this->_min) || is_float($this->_max) || is_float($this->_step) )
 			$this->_vtype = 'double';
+
+		if( $this->_decimals === null && $this->_step !== null )
+			$this->_decimals = \dophp\Utils::guessDecimals($this->_step);
 
 		parent::_afterConstruct();
 	}
@@ -528,10 +550,16 @@ class NumberField extends TextField {
 	}
 
 	public function format($value) {
-		if( is_float($value) )
-			return \dophp\Utils::formatCFloat($value);
+		if( $value instanceof \dophp\Decimal )
+			$value = $value->toDouble();
 
-		return (string)$value;
+		if( $this->_vtype == 'int' )
+			return (string)$value;
+
+		if( $value === null )
+			return '';
+
+		return \dophp\Utils::formatCFloat($value, $this->_decimals);
 	}
 }
 
@@ -579,6 +607,47 @@ class CurrencyField extends NumberField {
 		else
 			$value = (float)$value;
 		return number_format($value, $this->_decDigits, $this->_decSep, $this->_thoSep);
+	}
+}
+
+
+/**
+ * A numeric field specifically for handling a time duration
+ */
+class DurationField extends TextField {
+
+	protected $_type = 'duration';
+	protected $_vtype = 'duration';
+	protected $_placeholder = 'hh:mm:ss';
+
+	/** The time separator */
+	protected $_sep = ':';
+
+	public function __construct(string $name, array $namespace = [], array $opts = []) {
+		parent::__construct($name, $namespace, $opts);
+
+		$this->_vopts['sep'] = & $this->_sep;
+	}
+
+	protected function _afterConstruct() {
+		if( $this->_placeholder === null )
+			$this->_placeholder = "hh{$this->_sep}mm{$this->_sep}ss";
+
+		parent::_afterConstruct();
+	}
+
+	public function getSep(): string {
+		return $this->_sep;
+	}
+
+	public function format($value) {
+		$hours = $value / (60 * 60);
+		$rest = $value % (60 * 60);
+		$minutes = $rest / 60;
+		$rest = $rest % 60;
+		$seconds = $rest;
+		$str = sprintf('%02d%s%02d%s%02d', $hours, $this->getSep(), $minutes, $this->getSep(), $seconds);
+		return $str;
 	}
 }
 
