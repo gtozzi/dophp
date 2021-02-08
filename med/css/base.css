@@ -1,0 +1,214 @@
+.wp-date-filter-cont {
+	position: absolute;
+	width: calc( 70% );
+	top: 26vh;
+	background: #f7f7f7;
+	z-index: 2000;
+	box-shadow: 2px 2px 8px #ccc;
+	margin-left: calc( 15% - 15px );
+	max-width: 400px;
+	min-width: 224px;
+}
+
+.wp-date-filter-head {
+	height: 50px;
+	background: var(--jm-primary, #1b75bb);
+	color: #f7f7f7;
+	font-weight: bold;
+	line-height: 47px;
+	padding-left: 15px;
+}
+
+.wp-date-filt-mthCont,
+.wp-date-filt-yeaCont {
+	max-height: 300px;
+	overflow-y: scroll;
+}
+
+.wp-date-filter-body ul li {
+	list-style: none;
+}
+
+.wpdf_month_list {
+	padding-left: 17px;
+}
+
+.wp-date-filter-tab {
+	float: left;
+	width: 33.33%;
+	background: #cccccc;
+	margin-left: 0px;
+	height: 34px;
+	line-height: 34px;
+	text-align: center;
+	border-right: 1px solid #eee;
+}
+
+.wp-date-filter-tab:nth-child(3){
+	border-right: none;
+}
+
+.wp-date-filter-tab.wp-active {
+	background: #f7f7f7;
+	border-bottom: 1px solid #ccc;
+}
+
+.wp-date-clear {
+	clear: both;
+}
+
+.wp-dfilt-dpck,
+.wp-date-filter-foot button {
+	background: #f2f2f2;
+	border: 1px solid #ccc;
+}
+
+.wp-dfilt-dpck{
+	padding: 7px;
+	width: 100%;
+}
+
+.wp-date-filter-foot button {
+	background: none;
+	color: var(--jm-primary, #1b75bb);
+	border: 1px solid var(--jm-primary, #1b75bb);
+	padding: 7px;
+	width: 78px;
+	margin: 15px;
+	display: block;
+	width: calc( 100% - 30px );
+}
+
+.wp-date-filter-foot button:hover {
+	background: var(--jm-primary, #1b75bb);
+	color: #f7f7f7;
+}
+
+.wp-date-filter-tab,
+.wp-date-filter-foot button{
+	cursor: pointer;
+}
+
+.wp-pck-blck>label {
+	display: block;
+	margin-bottom: 3px;
+}
+
+.wp-date-filter-dpck {
+	padding-top: 20px;
+	padding-bottom: 20px;
+}
+
+.wp-date-filter-dpck .wp-pck-blck {
+	display: inline-block;
+	text-align: left;
+	width: calc( 100% - 30px );
+	margin-left: 15px;
+}
+
+.wp-date-filter-dpck .wp-pck-blck>label {
+	display: block;
+	margin-bottom: 3px;
+}
+
+.wp-date-filter-foot {
+	text-align: center;
+	margin: 25px 0px 23px 0px;
+}
+
+.wp-date-filter-form {
+	display: none;
+}
+
+.wp-date-filter-form.wp-active {
+	display: block;
+}
+
+.wp-date-filt-mthCont .wp-mthUnit,
+.wp-date-filt-yeaCont .wp-yeaUnit{
+	display: inline-block;
+	background: #eee;
+	border: 1px solid #ddd;
+	width: 39%;
+	text-align: center;
+	margin: 7px;
+	padding: 7px;
+	cursor: pointer;
+}
+
+.wp-date-filt-mthCont,
+.wp-date-filt-yeaCont {
+	text-align: center;
+}
+
+.wp-date-filt-mthCont .wp-mthUnit.wp-active,
+.wp-date-filt-yeaCont .wp-yeaUnit.wp-active,
+.wp-date-filt-mthCont .wp-mthUnit.wp-range,
+.wp-date-filt-yeaCont .wp-yeaUnit.wp-range {
+	background: var(--jm-primary, #1b75bb);
+	color: #f7f7f7;
+	border: 1px solid var(--jm-primary, #1b75bb);
+}
+
+.wp-date-monthBlck-title,
+.wp-date-yearBlck-title{
+	font-weight: bold;
+	border-bottom: 2px solid var(--jm-primary, #1b75bb);
+	width: 53px;
+	margin: auto;
+	margin-top: 12px;
+	margin-bottom: 10px;
+	color: var(--jm-primary, #1b75bb);
+	font-size: 20px;
+}
+
+.wp-date-yearBlck-title{
+	width: 111px;
+}
+
+.wp-date-filter-cont.wp-closed {
+	height: 50px;
+	overflow: hidden;
+	top: 8px;
+	transition: 0.2s linear;
+}
+
+.wp-date-filter-head .wp-close,
+.wp-date-filter-head .wp-minimize {
+	float: right;
+	position: relative;
+	margin-right: 16px;
+	cursor: pointer;
+}
+
+.wp-date-filter-cont.wp-closed .wp-minimize {
+	transform: rotate(180deg);
+	top: 5px;
+}
+
+.wp-date-filter-head .wp-minimize{
+	display: none;
+}
+
+@media (min-width:568px){
+	.wp-date-filt-mthCont .wp-mthUnit,
+	.wp-date-filt-yeaCont .wp-yeaUnit{
+		width: 103px;
+	}
+}
+
+@media (min-width:600px){
+
+	.wp-date-filter-cont{
+		margin-left: calc( 50% - 200px );
+	}
+}
+
+@media (min-width: 768px){
+	.wp-date-filter-dpck .wp-pck-blck {
+		display: inline-block;
+		text-align: left;
+		width: calc( ( 100% - 50px ) / 2);
+		margin-left: 15px;
+	}
+}

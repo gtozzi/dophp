@@ -1024,10 +1024,10 @@
 	<div class="wp-date-filter-head">
 		Filtra data
 		<div class="wp-close">
-			<img src="med/img/dfilter/dfilter_close.png" alt="" />
+			<img src="{{$config['dophp']['url']}}/med/img/dfilter/dfilter_close.png" alt="" />
 		</div>
 		<div class="wp-minimize">
-			<img src="med/img/dfilter/dfilter_minimize.png" alt="" />
+			<img src="{{$config['dophp']['url']}}/med/img/dfilter/dfilter_minimize.png" alt="" />
 		</div>
 	</div>
 	<div class="wp-date-filter-body">
