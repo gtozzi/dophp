@@ -12,7 +12,7 @@
 
 .wp-date-filter-head {
 	height: 50px;
-	background: var(--jm-primary, #1b75bb);
+	background: var(--jm-primary, #343a40);
 	color: #f7f7f7;
 	font-weight: bold;
 	line-height: 47px;
@@ -70,8 +70,8 @@
 
 .wp-date-filter-foot button {
 	background: none;
-	color: var(--jm-primary, #1b75bb);
-	border: 1px solid var(--jm-primary, #1b75bb);
+	color: var(--jm-primary, #343a40);
+	border: 1px solid var(--jm-primary, #343a40);
 	padding: 7px;
 	width: 78px;
 	margin: 15px;
@@ -80,7 +80,7 @@
 }
 
 .wp-date-filter-foot button:hover {
-	background: var(--jm-primary, #1b75bb);
+	background: var(--jm-primary, #343a40);
 	color: #f7f7f7;
 }
 
@@ -145,20 +145,20 @@
 .wp-date-filt-yeaCont .wp-yeaUnit.wp-active,
 .wp-date-filt-mthCont .wp-mthUnit.wp-range,
 .wp-date-filt-yeaCont .wp-yeaUnit.wp-range {
-	background: var(--jm-primary, #1b75bb);
+	background: var(--jm-primary, #343a40);
 	color: #f7f7f7;
-	border: 1px solid var(--jm-primary, #1b75bb);
+	border: 1px solid var(--jm-primary, #343a40);
 }
 
 .wp-date-monthBlck-title,
 .wp-date-yearBlck-title{
 	font-weight: bold;
-	border-bottom: 2px solid var(--jm-primary, #1b75bb);
+	border-bottom: 2px solid var(--jm-primary, #343a40);
 	width: 53px;
 	margin: auto;
 	margin-top: 12px;
 	margin-bottom: 10px;
-	color: var(--jm-primary, #1b75bb);
+	color: var(--jm-primary, #343a40);
 	font-size: 20px;
 }
 
