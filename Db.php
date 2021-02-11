@@ -276,6 +276,9 @@ class Db {
 	/**
 	* Runs FOUND_ROWS() and returns result
 	*
+	* @deprecated: doesn't support PostgreSQL and uses MySql's deprecate FOUND_ROWS() function
+	* (see https://dev.mysql.com/doc/refman/8.0/en/information-functions.html#function_found-rows)
+	* 
 	* @return int: Number of found rows
 	*/
 	public function foundRows() {
@@ -285,9 +288,6 @@ class Db {
 			break;
 		case Db::TYPE_MSSQL:
 			$q = 'SELECT @@ROWCOUNT AS '.$this->quoteObj('fr');
-			break;
-		case Db::TYPE_PGSQL:
-			$q = 'SELECT count(*) OVER() AS '.$this->quoteObj('fr');
 			break;
 		default:
 			throw new NotImplementedException("Not Implemented DBMS {$this->_type}");
