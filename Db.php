@@ -378,10 +378,12 @@ class Db {
 	 * Quotes a schema object (table, column, ...)
 	 *
 	 * @param $name string: The unquoted object name
+	 * @param $ignoreDot boolean: if true, the entire $name is enclosed in quotes,
+	 * otherwise is split at the dot character and quoted separately
 	 * @return string: The quoted object name
 	 */
-	public function quoteObj($name) {
-		return self::quoteObjFor($name, $this->_type);
+	public function quoteObj($name, $ignoreDot=false) {
+		return self::quoteObjFor($name, $this->_type, $ignoreDot);
 	}
 
 	/**
@@ -389,21 +391,34 @@ class Db {
 	 *
 	 * @param $name string: The unquoted object name
 	 * @param $type string: The DBMS type (ansi, mysql, mssql, pgsql)
+	 * @param $ignoreDot boolean: if true, the entire $name is enclosed in quotes,
+	 * otherwise is split at the dot character and quoted separately
 	 * @return string: The quoted object name
 	 */
-	public static function quoteObjFor($name, $type) {
-		switch( $type ) {
-		case self::TYPE_MYSQL:
-			$name = str_replace('`', '``', $name);
-			return "`$name`";
-		case self::TYPE_MSSQL:
-			return "[$name]";
-		case self::TYPE_PGSQL:
-		case 'ansi':
-			return "\"$name\"";
-		default:
-			throw new NotImplementedException("Type \"$type\" not implemented");
+	public static function quoteObjFor($name, $type, $ignoreDot=false) {
+		$split = [];
+		if ($ignoreDot) {
+			array_push($split, $name);
+		} else {
+			$split = explode('.', $name);
 		}
+		foreach ($split as &$part) {
+			switch( $type ) {
+			case self::TYPE_MYSQL:
+				$part = "`".str_replace('`', '``', $part)."`";
+				break;
+			case self::TYPE_MSSQL:
+				$part = "[$part]";
+				break;
+			case self::TYPE_PGSQL:
+			case 'ansi':
+				$part = "\"$part\"";
+				break;
+			default:
+				throw new NotImplementedException("Type \"$type\" not implemented");
+			}
+		}
+		return implode('.', $split);
 	}
 
 	/**
