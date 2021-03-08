@@ -379,7 +379,8 @@ class Db {
 	 *
 	 * @param $name string: The unquoted object name
 	 * @param $ignoreDot boolean: if true, the entire $name is enclosed in quotes,
-	 * otherwise is split at the dot character and quoted separately
+	 *                            otherwise is split at the dot character and quoted
+	 *                            separately
 	 * @return string: The quoted object name
 	 */
 	public function quoteObj($name, $ignoreDot=false) {
@@ -392,16 +393,13 @@ class Db {
 	 * @param $name string: The unquoted object name
 	 * @param $type string: The DBMS type (ansi, mysql, mssql, pgsql)
 	 * @param $ignoreDot boolean: if true, the entire $name is enclosed in quotes,
-	 * otherwise is split at the dot character and quoted separately
+	 *                            otherwise is split at the dot character
+	 *                            and quoted separately (default)
 	 * @return string: The quoted object name
 	 */
 	public static function quoteObjFor($name, $type, $ignoreDot=false) {
-		$split = [];
-		if ($ignoreDot) {
-			array_push($split, $name);
-		} else {
-			$split = explode('.', $name);
-		}
+		$split = $ignoreDot ? [ $name ] : explode('.', $name);
+
 		foreach ($split as &$part) {
 			switch( $type ) {
 			case self::TYPE_MYSQL:
@@ -418,6 +416,8 @@ class Db {
 				throw new NotImplementedException("Type \"$type\" not implemented");
 			}
 		}
+		unset($part);
+
 		return implode('.', $split);
 	}
 
