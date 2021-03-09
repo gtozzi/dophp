@@ -133,31 +133,41 @@ class DoPhp {
 	*                                 Default: 86400
 	*                 )
 	*                 'dophp' => array( // Internal DoPhp configurations
-	*                     'url'  => relative path for accessing DoPhp folder from webserver.
-	*                               Default: try to guess it
-	*                     'path' => relative or absolute DoPhp root path
-	*                               Default: automatically detect it
+	*                                   // can also be specified as arguments for
+	*                                   // backward compatibility
+	*                     'url'    => relative path for accessing DoPhp folder from webserver.
+	*                                 Default: try to guess it
+	*                     'path'   => relative or absolute DoPhp root path
+	*                                 Default: automatically detect it
+	*                     'db'     => name of the class to use for the database connection
+	*                                 Default: 'dophp\\Db'
+	*                     'auth'   => name of the class to use for user authentication
+	*                                 Default: null
+	*                     'lang'   => name of the class to use for multilanguage handling
+	*                                 Default: 'dophp\\Lang'
+	*                     'log'    => name of the class to use for logging
+	*                                 Default: null
+	*                     'sess'   => ff true, starts the session and uses it
+	*                                 Default: true
+	*                     'def'    => default page name, used when received missing or unvalid page
+	*                                 Default: 'home'
+	*                     'key'    => the key containing the page name
+	*                                 Default: self::BASE_KEY
+	*                     'strict' => if true, return a 500 status on ANY error
+	*                                 Default: false
 	*                 )
 	*                 'debug' => enables debug info, should be false in production servers
 	*                 'strict' => triggers an error on any notice
 	*             ),
 	*
-	*             'db' =>   name of the class to use for the database connection
-	*                       Default: 'dophp\\Db'
-	*             'auth' => name of the class to use for user authentication
-	*                       Default: null
-	*             'lang' => name of the class to use for multilanguage handling
-	*                       Default: 'dophp\\Lang'
-	*             'log'  => name of the class to use for logging
-	*                       Default: null
-	*             'sess' => ff true, starts the session and uses it
-	*                       Default: true
-	*             'def' =>  default page name, used when received missing or unvalid page
-	*                       Default: 'home'
-	*             'key' =>  the key containing the page name
-	*                       Default: self::BASE_KEY
-	*             'strict' => if true, return a 500 status on ANY error
-	*                         Default: false
+	*             'db' =>   overrides ['conf']['db'] if given
+	*             'auth' => overrides ['conf']['auth'] if given
+	*             'lang' => overrides ['conf']['lang'] if given
+	*             'log'  => overrides ['conf']['log'] if given
+	*             'sess' => overrides ['conf']['sess'] if given
+	*             'def' =>  overrides ['conf']['def'] if given
+	*             'key' =>  overrides ['conf']['key'] if given
+	*             'strict' => overrides ['conf']['strict'] if given
 	*/
 	public function __construct(...$input) {
 		// Uses ...$input for rough backward-compatibility, so it can trigger an
@@ -171,15 +181,26 @@ class DoPhp {
 		self::$__instance = $this;
 		$this->__start = $start;
 
-		// Build arguments and assign them to local variables for convenience
+		// Sanity checks over arguments list
 		if( count($input) != 1 )
 			throw new \InvalidArgumentException('only a single array argument should be passed');
 		$args = $input[0];
 		if( ! is_array($args) )
 			throw new \InvalidArgumentException('args must be an array');
+
+		// Check for invalid arguments
 		foreach( $args as $k => $v )
 			if( ! array_key_exists($k, self::DEFAULT_ARGS) )
 				throw new \InvalidArgumentException("unknown argument \"$k\"");
+
+		// Copy default args from ['conf']['dophp'] into root when given
+		if( isset($args['conf']['dophp']) )
+			foreach( $args['conf']['dophp'] as $k => $v )
+				if( in_array($k, self::DEFAULT_ARGS) && ! array_key_exists($k, $args) )
+					$args[$k] = $args['conf']['dophp'][$k];
+
+		// Extract dophp arguments and assign them to local variables for convenience
+		// using default values when missing
 		foreach( self::DEFAULT_ARGS as $k => $v )
 			$$k = array_key_exists($k, $args) ? $args[$k] : $v;
 
