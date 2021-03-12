@@ -53,6 +53,8 @@ class DoPhp {
 		'key'    => self::BASE_KEY,
 		'strict' => false,
 	];
+	/** Const unsed to force arguments to be loaded from config instead */
+	const SEE_CONFIG = -1;
 
 	/** Stores the current instance */
 	private static $__instance = null;
@@ -133,40 +135,34 @@ class DoPhp {
 	*                                 Default: 86400
 	*                 )
 	*                 'dophp' => array( // Internal DoPhp configurations
-	*                                   // can also be specified as arguments for
-	*                                   // backward compatibility
+	*                                   // can also be delegated from root arguments (see below)
 	*                     'url'    => relative path for accessing DoPhp folder from webserver.
 	*                                 Default: try to guess it
 	*                     'path'   => relative or absolute DoPhp root path
 	*                                 Default: automatically detect it
-	*                     'db'     => name of the class to use for the database connection
-	*                                 Default: 'dophp\\Db'
-	*                     'auth'   => name of the class to use for user authentication
-	*                                 Default: null
-	*                     'lang'   => name of the class to use for multilanguage handling
-	*                                 Default: 'dophp\\Lang'
-	*                     'log'    => name of the class to use for logging
-	*                                 Default: null
-	*                     'sess'   => ff true, starts the session and uses it
-	*                                 Default: true
-	*                     'def'    => default page name, used when received missing or unvalid page
-	*                                 Default: 'home'
-	*                     'key'    => the key containing the page name
-	*                                 Default: self::BASE_KEY
-	*                     'strict' => if true, return a 500 status on ANY error
-	*                                 Default: false
 	*                 )
 	*                 'debug' => enables debug info, should be false in production servers
 	*                 'strict' => triggers an error on any notice
 	*             ),
 	*
-	*             'db' =>   overrides ['conf']['db'] if given
-	*             'auth' => overrides ['conf']['auth'] if given
-	*             'lang' => overrides ['conf']['lang'] if given
-	*             'log'  => overrides ['conf']['log'] if given
-	*             'sess' => overrides ['conf']['sess'] if given
-	*             'def' =>  overrides ['conf']['def'] if given
-	*             'key' =>  overrides ['conf']['key'] if given
+	*             // For any of the following arguments, self::SEE_CONFIG can be
+	*             // specified to have the param loaded from ['conf']['dophp'] array instead
+	*             'db'     => name of the class to use for the database connection
+	*                         Default: 'dophp\\Db'
+	*             'auth'   => name of the class to use for user authentication
+	*                         Default: null
+	*             'lang'   => name of the class to use for multilanguage handling
+	*                         Default: 'dophp\\Lang'
+	*             'log'    => name of the class to use for logging
+	*                         Default: null
+	*             'sess'   => ff true, starts the session and uses it
+	*                         Default: true
+	*             'def'    => default page name, used when received missing or unvalid page
+	*                         Default: 'home'
+	*             'key'    => the key containing the page name
+	*                         Default: self::BASE_KEY
+	*             'strict' => if true, return a 500 status on ANY error
+	*                         Default: false
 	*             'strict' => overrides ['conf']['strict'] if given
 	*/
 	public function __construct(...$input) {
@@ -193,16 +189,31 @@ class DoPhp {
 			if( ! array_key_exists($k, self::DEFAULT_ARGS) )
 				throw new \InvalidArgumentException("unknown argument \"$k\"");
 
-		// Copy default args from ['conf']['dophp'] into root when given
+		// Checks for arguments overridability from config
 		if( isset($args['conf']['dophp']) )
 			foreach( $args['conf']['dophp'] as $k => $v )
-				if( in_array($k, self::DEFAULT_ARGS) && ! array_key_exists($k, $args) )
-					$args[$k] = $args['conf']['dophp'][$k];
+				if( array_key_exists($k, self::DEFAULT_ARGS) )
+					if( ! isset($args[$k]) || $args[$k] !== self::SEE_CONFIG )
+						throw new \InvalidArgumentException("trying to override non overridable argument \"$k\"");
 
 		// Extract dophp arguments and assign them to local variables for convenience
-		// using default values when missing
-		foreach( self::DEFAULT_ARGS as $k => $v )
-			$$k = array_key_exists($k, $args) ? $args[$k] : $v;
+		// using default values when missing or processing config delegation
+		foreach( self::DEFAULT_ARGS as $k => $v ) {
+			if( array_key_exists($k, $args) ) {
+				$value = $args[$k];
+
+				if( $value === self::SEE_CONFIG ) {
+					// Argument must be overridden in config
+					if( ! isset($args['conf']['dophp']) || ! array_key_exists($k, $args['conf']['dophp']) )
+						throw new \InvalidArgumentException("argument \"$k\" must be overridden in config");
+
+					$value = $args['conf']['dophp'][$k];
+				}
+			} else
+				$value = $v;
+
+			$$k = $value;
+		}
 
 		// Start the session
 		if( isset($conf['session']['name']) )
