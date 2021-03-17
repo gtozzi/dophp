@@ -189,13 +189,6 @@ class DoPhp {
 			if( ! array_key_exists($k, self::DEFAULT_ARGS) )
 				throw new \InvalidArgumentException("unknown argument \"$k\"");
 
-		// Checks for arguments overridability from config
-		if( isset($args['conf']['dophp']) )
-			foreach( $args['conf']['dophp'] as $k => $v )
-				if( array_key_exists($k, self::DEFAULT_ARGS) )
-					if( ! isset($args[$k]) || $args[$k] !== self::SEE_CONFIG )
-						throw new \InvalidArgumentException("trying to override non overridable argument \"$k\"");
-
 		// Extract dophp arguments and assign them to local variables for convenience
 		// using default values when missing or processing config delegation
 		foreach( self::DEFAULT_ARGS as $k => $v ) {
