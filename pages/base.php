@@ -190,13 +190,17 @@ abstract class PageBase {
 	/**
 	* Utility function: checks that a valid user is logged in.
 	*
+	* @param $redirect bool: When given, specify redirect preference for
+	*                        DoPhp to handle this exception
 	* @throws InvalidCredentials
 	*/
-	protected function _requireLogin() {
+	protected function _requireLogin(bool $redirect=null) {
 		if( $this->_user->getUid() )
 			return;
 
-		throw new InvalidCredentials(_('Invalid credentials'));
+		$e = new InvalidCredentials(_('Invalid credentials'));
+		$e->redirect = $redirect;
+		throw $e;
 	}
 
 	/**

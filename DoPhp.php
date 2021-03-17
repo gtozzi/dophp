@@ -465,7 +465,7 @@ class DoPhp {
 
 			list($out, $headers) = $this->__runPage($pobj);
 		} catch( \dophp\PageDenied $e ) {
-			if( $def ) {
+			if( $def && $e->redirect !== false ) {
 				if( $def == $page ) {
 					// Prevent loop redirection
 					header("HTTP/1.1 500 Internal Server Error");
