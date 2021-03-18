@@ -754,8 +754,6 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 	}
 
 	public function getData( array $pars=[], bool $save=true, bool $useSaved=false ): array {
-		$trx = $this->_db->beginTransaction(true);
-
 		// Retrieve data
 		$data = $this->getRawData($pars, $save, $useSaved);
 
@@ -782,15 +780,15 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 			$data[] = $totrow;
 		}
 
-		$found = $this->_db->foundRows();
-
-		if( $trx )
-			$this->_db->commit();
+		// Add found rows if available
+		if( $this->_calcFound )
+			$found = $this->_db->foundRows();
+		$count = $this->_count();
 
 		$ret = [
 			'draw' => $pars['draw'] ?? 0,
-			'recordsTotal' => $this->_count(),
-			'recordsFiltered' => $found,
+			'recordsTotal' => $count,
+			'recordsFiltered' => $this->_calcFound ? $found : $count,
 			'data' => $this->_encodeData($data),
 		];
 
@@ -1446,6 +1444,15 @@ class DataTable extends BaseDataTable {
 	/** Fixed group by, if any, without "GROUP BY" keyword */
 	protected $_groupBy = null;
 
+	/** Should calculate found rows when filtering results? May disable this for performance */
+	protected $_calcFound = true;
+
+	/** Fast count query, used for performance on huge tables, must return a 'cnt' column */
+	protected $_countQuery = null;
+
+	/** Params array for fast count query */
+	protected $_countQueryParams = [];
+
 	/**
 	 * Constructs the table object
 	 *
@@ -1519,7 +1526,7 @@ class DataTable extends BaseDataTable {
 
 	protected function _getRawDataInternal( DataTableDataFilter $filter=null, DatatableDataOrder $order=null, DatatableDataLimit $limit=null ): array {
 		// Base query
-		list($q, $where, $p, $groupBy) = $this->_buildBaseQuery();
+		list($q, $where, $p, $groupBy) = $this->_buildBaseQuery(false, $this->_calcFound);
 		$having = [];
 
 		// Calculate filter having clause
@@ -1601,15 +1608,18 @@ class DataTable extends BaseDataTable {
 	 * Counts unfiltered results, uses memcache if possible
 	 */
 	protected function _count(): int {
-		list($query, $where, $params, $groupBy) = $this->_buildBaseQuery(true);
-		if( $where )
-			$query .= "\nWHERE " . implode(' AND ', $where);
-		if( $groupBy )
-			$query .= "\nGROUP BY $groupBy";
+		if( $this->_countQuery ) {
+			$query = $this->_countQuery;
+			$params = $this->_countQueryParams;
+		} else {
+			list($query, $where, $params, $groupBy) = $this->_buildBaseQuery(true, false);
+			if( $where )
+				$query .= "\nWHERE " . implode(' AND ', $where);
+			if( $groupBy )
+				$query .= "\nGROUP BY $groupBy";
 
-		$query = "SELECT COUNT(*) AS cnt FROM ( $query ) AS q";
-
-		$trans = $this->_db->beginTransaction(true);
+			$query = "SELECT COUNT(*) AS cnt FROM ( $query ) AS q";
+		}
 
 		// Try to use the cache
 		if( $this->_enableCountCache ) {
@@ -1627,9 +1637,6 @@ class DataTable extends BaseDataTable {
 
 		// No hit in cache, run the query
 		$cnt = (int)$this->_db->run($query, $params)->fetch()['cnt'];
-
-		if( $trans )
-			$this->_db->commit();
 
 		// Try to save the new value in cache
 		if( $this->_enableCountCache && $cache )
@@ -1726,16 +1733,11 @@ class StaticCachedQueryDataTable extends BaseDataTable {
 				return $this->__content;
 		}
 
-		$trans = $this->_db->beginTransaction(true);
-
 		// TODO: access filter
 		list($data, $types) = $this->_runQuery();
 
 		// No hit in cache, run the query
 		$count = count($data);
-
-		if( $trans )
-			$this->_db->commit();
 
 		$this->__content = [
 			'data' => $data,
