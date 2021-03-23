@@ -348,10 +348,21 @@ class Db {
 	* Returns last insert ID
 	*
 	* @see \PDO::lastInsertId()
-	* @return string: The ID of the last inserted row
+	* @return string: The ID of the last inserted row or null if not available
 	*/
 	public function lastInsertId() {
-		$lid = $this->_pdo->lastInsertId();
+		try {
+			$lid = $this->_pdo->lastInsertId();
+		} catch( \PDOException $e ) {
+			// PgSQL Throws a specific error when trying to query lastInsertId()
+			// after a non-identity insert
+			// 55000. SQLSTATE[55000]: Object not in prerequisite state: 7 ERROR:  lastval is not yet defined in this session
+			if( $e->getCode() == 55000 )
+				return null;
+
+			throw $e;
+		}
+
 		if( is_int($lid) )
 			return $lid;
 		if( is_numeric($lid) )
