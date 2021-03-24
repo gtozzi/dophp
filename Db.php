@@ -224,7 +224,7 @@ class Db {
 		// running the query. Using a small local cache to speed up multiple
 		// inserts in a row, may be disabled in very special circumstances where
 		// the table is altered in between
-		if( $this->_type == self::TYPE_PGSQL && ! array_key_exists($table, $this->__pkCache) ) {
+		if( $this->_type == self::TYPE_PGSQL && ( $noPkCache || ! array_key_exists($table, $this->__pkCache) ) ) {
 			$q = '
 				SELECT a.attname AS col
 				FROM pg_index AS i
