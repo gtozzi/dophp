@@ -51,6 +51,9 @@ class Db {
 	/** Wiritten in debug mode, do not use for different purposes */
 	public $lastParams = null;
 
+	/** PK column names cache for insert() */
+	private $__pkCache = [];
+
 	/**
 	* Starts a PDO connection to DB
 	*
@@ -210,18 +213,51 @@ class Db {
 	* Runs an INSERT statement from an associative array and returns ID of the
 	* last auto_increment value
 	*
+	* @param $noPkCache bool: disables local PK cache for PgSQL
 	* @see self::buildInsUpdQuery
 	*/
-	public function insert($table, $params) {
-		list($q,$p) = $this->buildInsUpdQuery('ins', $table, $params);
+	public function insert($table, $params, $noPkCache=false) {
+		// PgSQL's PDO::lastInsertId() fails badly when trying to call it after
+		// a non-generated insert. Also, looks like there is no PgSQL equivalent
+		// for SCOPE_IDENTITY() or LAST_INSERT_ID(). Looks like i need to work
+		// around this problem and inspect the table's PK structure before
+		// running the query. Using a small local cache to speed up multiple
+		// inserts in a row, may be disabled in very special circumstances where
+		// the table is altered in between
+		if( $this->_type == self::TYPE_PGSQL && ! array_key_exists($table, $this->__pkCache) ) {
+			$q = '
+				SELECT a.attname AS col
+				FROM pg_index AS i
+				JOIN pg_attribute AS a
+					ON i.indrelid = a.attrelid
+					AND a.attnum = any( i.indkey )
+				WHERE i.indrelid = ' . $this->quote($table) . '::regclass
+					AND i.indisprimary
+			';
+			$this->__pkCache[$table] = [];
+			foreach( $this->run($q)->fetchAll() as $r )
+				$this->__pkCache[$table][] = $r['col'];
+		}
+		$rcols = $this->_type == self::TYPE_PGSQL ? $this->__pkCache[$table] : null;
+		list($q,$p) = $this->buildInsUpdQuery('ins', $table, $params, null, $rcols);
 
 		// Retrieve the ID by running a scope_identity query
 		if( ! $this->_hasLid )
 			$q .= '; SELECT SCOPE_IDENTITY() AS ' . $this->quoteObj('id');
 
-		$st = $this->run($q, $p);
+		$st = $this->xrun($q, $p);
 
-		if( $this->_hasLid )
+		if( $this->_type == self::TYPE_PGSQL ) {
+			if( $rcols ) {
+				$r = $st->fetch();
+
+				if( count($rcols) == 1 )
+					return $r[$rcols[0]];
+
+				return $r;
+			} else
+				return null;
+		} elseif( $this->_hasLid )
 			return $this->lastInsertId();
 		else {
 			$r = $st->fetch();
@@ -351,17 +387,7 @@ class Db {
 	* @return string: The ID of the last inserted row or null if not available
 	*/
 	public function lastInsertId() {
-		try {
-			$lid = $this->_pdo->lastInsertId();
-		} catch( \PDOException $e ) {
-			// PgSQL Throws a specific error when trying to query lastInsertId()
-			// after a non-identity insert
-			// 55000. SQLSTATE[55000]: Object not in prerequisite state: 7 ERROR:  lastval is not yet defined in this session
-			if( $e->getCode() == 55000 )
-				return null;
-
-			throw $e;
-		}
+		$lid = $this->_pdo->lastInsertId();
 
 		if( is_int($lid) )
 			return $lid;
@@ -456,10 +482,12 @@ class Db {
 	* @param $table string: The name of the table
 	* @param $ccols array: When type is 'insupd' and DBMS is PostgreSQL,
 	*                      this is the list of constraint columns. Ignored otherwise
+	* @param $rcols array: When DBMS is PostgreSQL, this is the list of columns
+	*                      in the RETURNING clause of the query
 	* @see self::buildParams
 	* @return array [query string, params]
 	*/
-	public function buildInsUpdQuery($type, $table, $params, $ccols=null) {
+	public function buildInsUpdQuery($type, $table, $params, $ccols=null, $rcols=null) {
 		switch( $type ) {
 		case 'insupd':
 			if( $this->_type == self::TYPE_PGSQL && ! $ccols )
@@ -503,6 +531,11 @@ class Db {
 		} else {
 			list($sql, $p) = self::buildParams($params, ', ', $this->_type);
 			$q .= " SET $sql";
+		}
+
+		if( $rcols ) {
+			$q .= " RETURNING ";
+			$q .= implode(', ', array_map(function($c){ return $this->quoteObj($c); }, $rcols));
 		}
 
 		return array($q, $p);
