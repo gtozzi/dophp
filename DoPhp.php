@@ -372,8 +372,9 @@ class DoPhp {
 		}
 
 		// Logs the request
+		$logid = null;
 		if( $this->__log )
-			$this->__log->logPageRequest($pagefound, $page, $path);
+			$logid = $this->__log->logPageRequest($pagefound, $page, $path);
 
 		// List of allowed methods, used later in CORS preflight and OPTIONS
 		// TODO: Do not hardcode it, handle it nicely
@@ -451,7 +452,7 @@ class DoPhp {
 					throw new \RuntimeException("Page class \"$findName\" not found in file \"$inc_file\"");
 				else
 					throw new \RuntimeException('Page class not found');
-			$pobj = new $classname($this->__conf, $this->__db, $this->__auth, $page, $path );
+			$pobj = new $classname($this->__conf, $this->__db, $this->__auth, $page, $path, $logid );
 
 			// Inject the debug object
 			$pobj->debug = $this->__debug;

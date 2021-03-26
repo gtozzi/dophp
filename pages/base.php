@@ -27,8 +27,9 @@ interface PageInterface {
 	* @param $user   object: Current user object instance
 	* @param $name   string: Name of this page
 	* @param $path   string: The relative path inside this page
+	* @param $logid  mixed: The log id, usually null or int
 	*/
-	public function __construct(& $config, $db, $user, $name, $path);
+	public function __construct(& $config, $db, $user, $name, $path, $logid);
 
 	/**
 	* Method called prior of page execution to determine if the page can be
@@ -103,6 +104,8 @@ abstract class PageBase {
 	protected $_name;
 	/** Relative path inside this page */
 	protected $_path;
+	/** Logged request id, may be null */
+	protected $_logid;
 	/** Headers to be output */
 	protected $_headers = array();
 	/**
@@ -136,12 +139,13 @@ abstract class PageBase {
 	*
 	* @see PageInterface::__construct
 	*/
-	public function __construct(& $config, $db, $user, $name, $path) {
+	public function __construct(& $config, $db, $user, $name, $path, $logid) {
 		$this->_config = $config;
 		$this->_db = $db;
 		$this->_user = $user;
 		$this->_name = $name;
 		$this->_path = $path;
+		$this->_logid = $logid;
 
 		$this->_alerts = \DoPhp::getAlerts();
 		foreach( $this->_alerts as $alert )
