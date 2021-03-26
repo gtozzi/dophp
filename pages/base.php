@@ -29,7 +29,7 @@ interface PageInterface {
 	* @param $path   string: The relative path inside this page
 	* @param $logid  mixed: The log id, usually null or int
 	*/
-	public function __construct(& $config, $db, $user, $name, $path, $logid);
+	public function __construct(& $config, $db, $user, $name, $path, $logid=null);
 
 	/**
 	* Method called prior of page execution to determine if the page can be
@@ -139,7 +139,7 @@ abstract class PageBase {
 	*
 	* @see PageInterface::__construct
 	*/
-	public function __construct(& $config, $db, $user, $name, $path, $logid) {
+	public function __construct(& $config, $db, $user, $name, $path, $logid=null) {
 		$this->_config = $config;
 		$this->_db = $db;
 		$this->_user = $user;
