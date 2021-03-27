@@ -258,8 +258,10 @@ class DropdownButtonChild extends \dophp\widgets\BaseWidget {
 class SaveButton extends Button {
 	const DEFAULT_ID = 'save';
 
-	public function __construct(string $id=self::DEFAULT_ID, string $label='Salva',
+	public function __construct(string $id=self::DEFAULT_ID, string $label=null,
 			string $icon='fa-floppy-o', array $options=['type'=>'submit']) {
+		if( $label === null )
+			$label = _('Save');
 		parent::__construct($id, $label, $icon, $options);
 	}
 }
@@ -270,8 +272,10 @@ class SaveButton extends Button {
 class CancelButton extends Button {
 	const DEFAULT_ID = 'cancel';
 
-	public function __construct(string $id=self::DEFAULT_ID, string $label='Annulla',
+	public function __construct(string $id=self::DEFAULT_ID, string $label=null,
 			string $icon='fa-undo', array $options=[]) {
+		if( $label === null )
+			$label = _('Cancel');
 		parent::__construct($id, $label, $icon, $options);
 	}
 }
@@ -282,8 +286,10 @@ class CancelButton extends Button {
 class DeleteButton extends Button {
 	const DEFAULT_ID = 'delete';
 
-	public function __construct(string $id=self::DEFAULT_ID, string $label='Elimina',
+	public function __construct(string $id=self::DEFAULT_ID, string $label=null,
 			string $icon='fa-trash', array $options=[]) {
+		if( $label === null )
+			$label = _('Delete');
 
 		if( ! isset($options['class']) )
 			$options['class'] = 'btn-danger';

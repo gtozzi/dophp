@@ -316,7 +316,7 @@
 		table.on( 'draw', function(){
 			$(".dtbl-buttons-container").html(
 				'<a id="data-table-export-url" class="dtbl-buttons-itm">'
-				+ '<span class="fa fa-file-excel-o"></span> Esporta</a>');
+				+ '<span class="fa fa-file-excel-o"></span> ' + {{_('Export')|json_encode}} + '</a>');
 
 			updateDataTableUrls();
 		} );
