@@ -240,7 +240,7 @@ class DoPhp {
 		if( ! array_key_exists('dophp', $this->__conf) )
 			$this->__conf['dophp'] = array();
 		if( ! array_key_exists('url', $this->__conf['dophp']) )
-			$this->__conf['dophp']['url'] = preg_replace('/^'.preg_quote($_SERVER['DOCUMENT_ROOT'],'/').'/', '', __DIR__, 1);
+			$this->__conf['dophp']['url'] = $this->__guessMyBaseUrl();
 		if( ! array_key_exists('path', $this->__conf['dophp']) )
 			$this->__conf['dophp']['path'] = __DIR__;
 
@@ -511,6 +511,16 @@ class DoPhp {
 		foreach( $headers as $k=>$v )
 			header("$k: $v");
 		echo $out;
+	}
+
+	/**
+	 * Try guessing my own url
+	 */
+	private function __guessMyBaseUrl() {
+		$maindir = dirname(get_included_files()[0]);
+		$mydir = __DIR__;
+		$myreldir = preg_replace('/^'.preg_quote($maindir,'/').'/', '', $mydir, 1);
+		return dirname($_SERVER['PHP_SELF']) . '/' . $myreldir;
 	}
 
 	/**
