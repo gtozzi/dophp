@@ -386,6 +386,11 @@ abstract class FormPage extends \dophp\PageSmarty {
 	/** Disables delete */
 	protected $_disableDelete = false;
 
+	/** When true, will include readonly fields in insert data */
+	protected $_insertRo = false;
+	/** When true, will include readonly fields in edit data */
+	protected $_editRo = false;
+
 	/**
 	 * When true, always adds the save button
 	 * When false, never adds it
@@ -784,7 +789,7 @@ abstract class FormPage extends \dophp\PageSmarty {
 	protected function _buildInsert(bool $posted) {
 		// User submitted valid data
 		if( $posted && $this->_form->isValid() ) {
-			$id = $this->_insDbData($this->_form->getInternalValues());
+			$id = $this->_insDbData($this->_form->getInternalValues(! $this->_insertRo));
 
 			// Redirect to edit
 			$this->_redirectAfterInsert($id);
@@ -822,7 +827,7 @@ abstract class FormPage extends \dophp\PageSmarty {
 	protected function _buildEdit($id, bool $posted) {
 		// User submitted valid data
 		if( $posted && $this->_form->isValid() ) {
-			$newid = $this->_updDbData($id, $this->_form->getInternalValues());
+			$newid = $this->_updDbData($id, $this->_form->getInternalValues(! $this->_editRo));
 
 			// Page needs to be reloaded since data has changed
 			$this->_redirectAfterEdit($newid ?? $id);

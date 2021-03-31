@@ -117,14 +117,15 @@ class Form extends BaseWidget {
 	}
 
 	/**
-	 * Returns form's internal values (excluding readonly fields)
+	 * Returns form's internal values
 	 *
+	 * @param $excludeRo bool: If true, will exclude readonly fields
 	 * @return array: Associative array name => value of form's internal values
 	 */
-	public function getInternalValues(): array {
+	public function getInternalValues(bool $excludeRo = false): array {
 		$ret = [];
 		foreach( $this->_fields as $name => $field )
-			if( ! $field->isReadOnly() )
+			if( ! $excludeRo || ! $field->isReadOnly() )
 				$ret[$name] = $field->getInternalValue();
 		return $ret;
 	}
