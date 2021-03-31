@@ -566,7 +566,10 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 	 * Returns default JS options
 	 */
 	protected function _getHtmlInitOptions(): array {
-		return [
+		$lang = \DoPhp::lang();
+		$langc = $lang->getCountryCode($lang->getCurrentLanguage());
+
+		$options = [
 			'processing' => true,
 			'serverSide' => true,
 			//scrollCollapse: true,
@@ -583,7 +586,6 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 			'autoWidth'   => true,
 
 			'language' => [
-				'url' => "{$this->_config['dophp']['url']}/webcontent/DataTables/Italian.json",
 			],
 
 			'ordering' => true,
@@ -591,6 +593,11 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 
 			'autoWidth' => true,
 		];
+
+		if( $langc == 'it' )
+			$options['language']['url'] = "{$this->_config['dophp']['url']}/webcontent/DataTables/Italian.json";
+
+		return $options;
 	}
 
 	public function getHTMLStructure(): string {

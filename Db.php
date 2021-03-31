@@ -509,8 +509,12 @@ class Db {
 
 		if( $ins ) {
 			list($cols, $p) = self::processParams($params, $this->_type);
-			$q .= '(' . implode(',', array_keys($cols)) . ')';
-			$q .= ' VALUES (' . implode(',', array_values($cols)) . ')';
+			if( ! count($cols) )
+				$q .= ' DEFAULT VALUES ';
+			else {
+				$q .= '(' . implode(',', array_keys($cols)) . ')';
+				$q .= ' VALUES (' . implode(',', array_values($cols)) . ')';
+			}
 
 			if( $type == 'insupd' ) {
 				$updates = array();

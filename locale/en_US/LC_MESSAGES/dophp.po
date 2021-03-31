@@ -1,269 +1,240 @@
 # SOME DESCRIPTIVE TITLE.
 # Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
 # This file is distributed under the same license as the PACKAGE package.
-# Gabriele Tozzi <gabriele@tozzi.eu>, 2014, 2018.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
 msgid ""
 msgstr ""
-"Project-Id-Version: DoPhp\n"
+"Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2021-03-27 23:33+0100\n"
-"PO-Revision-Date: 2021-03-27 23:33+0100\n"
-"Last-Translator: Gabriele Tozzi <gabriele@tozzi.eu>\n"
-"Language-Team: Gabriele Tozzi <tozzi@despammed.com>\n"
-"Language: it\n"
+"POT-Creation-Date: 2021-03-27 23:18+0100\n"
+"PO-Revision-Date: 2021-03-27 23:24+0100\n"
+"Language: en_US\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"Last-Translator: \n"
+"Language-Team: \n"
 "X-Generator: Poedit 2.3\n"
-"X-Poedit-SourceCharset: UTF-8\n"
-"X-Poedit-Basepath: ../../..\n"
 
 #: Alert.php:97
 msgid "Access denied"
-msgstr "Accesso negato"
+msgstr ""
 
 #: Buttons.php:264
 msgid "Save"
-msgstr "Salva"
+msgstr ""
 
 #: Buttons.php:278
 msgid "Cancel"
-msgstr "Annulla"
+msgstr ""
 
 #: Buttons.php:292 pages/crud.php:109 pages/crud.php:217
 msgid "Delete"
-msgstr "Elimina"
+msgstr ""
 
 #: DoPhp.php:887
 msgid "Internal Server Error, please contact support or try again later"
 msgstr ""
-"Errore interno del server, per favore contatta il supporto o riprova più "
-"tardi"
 
 #: Model.php:583
 msgid "item is in use"
-msgstr "l'elemento è in uso"
+msgstr ""
 
 #: Utils.php:221
 msgid "Yes"
-msgstr "Sì"
+msgstr ""
 
 #: Utils.php:221
 msgid "No"
-msgstr "No"
+msgstr ""
 
 #: Validator.php:195
 msgid "Field must be one of"
-msgstr "Il campo deve essere uno tra"
+msgstr ""
 
 #: Validator.php:229 Validator.php:534 Validator.php:584
 msgid "Field can't be empty"
-msgstr "Il campo non può essere vuoto"
+msgstr ""
 
 #: Validator.php:265
 msgid "Unvalid eMail"
-msgstr "eMail non valida"
+msgstr ""
 
 #: Validator.php:271
 msgid "Unvalid absolute URL"
-msgstr "URL assoluto non valido"
+msgstr ""
 
 #: Validator.php:277
 msgid "Text must be at least {number} characters long"
-msgstr "Il testo deve essere lungo almeno {number} caratteri"
+msgstr ""
 
 #: Validator.php:279
 msgid "Text must be no longer than {number} characters"
-msgstr "Il testo non deve essere più lungo di {number} caratteri"
+msgstr ""
 
 #: Validator.php:310
 msgid "Number must be at least {number}"
-msgstr "Il numero deve essere almeno {number}"
+msgstr ""
 
 #: Validator.php:315
 msgid "Number must not be bigger than {number}"
-msgstr "Il numero non deve essere più grande di {number}"
+msgstr ""
 
 #: Validator.php:325
 msgid "Number must be a multiple of {number}"
-msgstr "Il numero deve essere un multiplo di {number}"
+msgstr ""
 
 #: Validator.php:425
 msgid "Date must be {date} or after"
-msgstr "La data deve essere {date} o successiva"
+msgstr ""
 
 #: Validator.php:430
 msgid "Date must be {date} or before"
-msgstr "La data deve essere {date} o precedente"
+msgstr ""
 
 #: Validator.php:536
 msgid "Invalid file size"
-msgstr "Dimensione file non valida"
+msgstr ""
 
 #: Validator.php:538
 msgid "Could not read local copy of file"
-msgstr "Impossibile leggere la copia locale del file"
+msgstr ""
 
 #: Validator.php:540
 msgid "File size mismatch"
-msgstr "Dimensione file non corrispondente"
+msgstr ""
 
 #: Validator.php:545
 msgid "Error"
-msgstr "Errore"
+msgstr ""
 
 #: Validator.php:554
 msgid "Unsupported file type"
-msgstr "Tipo file non supportato"
+msgstr ""
 
 #: Validator.php:587
 msgid "Must be an array"
-msgstr "Deve essere un array"
+msgstr ""
 
 #: pages/backend.php:44
 msgid "element(s)"
-msgstr "elemento/i"
+msgstr ""
 
 #: pages/backend.php:227
 msgid "List"
-msgstr "Elenco"
+msgstr ""
 
 #: pages/backend.php:422
 msgid "Saving"
-msgstr "Salvataggio"
+msgstr ""
 
 #: pages/backend.php:425
 msgid "Canceling"
-msgstr "Annullamento"
+msgstr ""
 
 #: pages/backend.php:751
 msgid "Missing required permissions"
-msgstr "Autorizzazioni non sufficienti"
+msgstr ""
 
 #: pages/backend.php:761
 msgid "(f)new"
-msgstr "nuova"
+msgstr "new"
 
 #: pages/backend.php:761
 msgid "(m)new"
-msgstr "nuovo"
+msgstr "new"
 
 #: pages/backend.php:762 pages/crud.php:78 pages/crud.php:142
 #: pages/crud.php:163
 msgid "Insert"
-msgstr "Inserisci"
+msgstr ""
 
 #: pages/backend.php:771 pages/crud.php:77 pages/crud.php:108
 #: pages/crud.php:195
 msgid "Edit"
-msgstr "Modifica"
+msgstr ""
 
 #: pages/backend.php:874
 msgid "Delete succesful"
-msgstr "Cancellazione avvenuta"
+msgstr ""
 
 #: pages/base.php:205
 msgid "Invalid credentials"
-msgstr "Credenziali non valide"
+msgstr ""
 
 #: pages/crud.php:107
 msgid "Show"
-msgstr "Mostra"
+msgstr ""
 
 #: pages/crud.php:109
 msgid "Are you sure?"
-msgstr "Sei sicuro?"
+msgstr ""
 
 #: pages/crud.php:121
 msgid "No data available in table"
-msgstr "Nessun dato presente nella tabella"
+msgstr ""
 
 #: pages/crud.php:122
 msgid "Showing _START_ to _END_ of _TOTAL_ entries"
-msgstr "Vista da _START_ a _END_ di _TOTAL_ elementi"
+msgstr ""
 
 #: pages/crud.php:123
 msgid "Showing 0 to 0 of 0 entries"
-msgstr "Vista da 0 a 0 di 0 elementi"
+msgstr ""
 
 #: pages/crud.php:124
 msgid "(filtered from _MAX_ total entries)"
-msgstr "strCantDelete"
+msgstr ""
 
 #: pages/crud.php:127
 msgid "Show _MENU_ elements"
-msgstr "Visualizza _MENU_ elementi"
+msgstr ""
 
 #: pages/crud.php:128
 msgid "Loading..."
-msgstr "Caricamento..."
+msgstr ""
 
 #: pages/crud.php:129
 msgid "Processing..."
-msgstr "Elaborazione..."
+msgstr ""
 
 #: pages/crud.php:130
 msgid "Search"
-msgstr "Cerca"
+msgstr ""
 
 #: pages/crud.php:131
 msgid "Search returned zero records"
-msgstr "La ricerca non ha portato alcun risultato"
+msgstr ""
 
 #: pages/crud.php:133
 msgid "First"
-msgstr "Primo"
+msgstr ""
 
 #: pages/crud.php:134
 msgid "Previous"
-msgstr "Precedente"
+msgstr ""
 
 #: pages/crud.php:135
 msgid "Next"
-msgstr "Successivo"
+msgstr ""
 
 #: pages/crud.php:136
 msgid "Last"
-msgstr "Ultimo"
+msgstr ""
 
 #: pages/crud.php:139
 msgid "sort the column in ascending order"
-msgstr "ordina la colonna in ordine crescente"
+msgstr ""
 
 #: pages/crud.php:140
 msgid "sort the column in descending order"
-msgstr "ordina la colonna in ordine decrescente"
+msgstr ""
 
 #: pages/crud.php:215
 msgid "Can't delete"
-msgstr "Non posso cancellare"
+msgstr ""
 
 #: /tmp/dophp_tpl_strings.php:2
 msgid "Logout"
-msgstr "Esci"
-
-#: /tmp/dophp_tpl_strings.php:3
-msgid "Export"
-msgstr "Esporta"
-
-#~ msgid "Unvalid file size"
-#~ msgstr "Dimensione file non valida"
-
-#~ msgid "Number is too small"
-#~ msgstr "Il numero è troppo piccolo"
-
-#~ msgid "Number is too big"
-#~ msgstr "Il numero è troppo grande"
-
-#~ msgid "Text is too short"
-#~ msgstr "Il testo è troppo breve"
-
-#~ msgid "Text is too long"
-#~ msgstr "Il testo è troppo lungo"
-
-#~ msgid "Value is too low"
-#~ msgstr "Valore troppo basso"
-
-#~ msgid "Value is too big"
-#~ msgstr "Valore troppo alto"
+msgstr ""

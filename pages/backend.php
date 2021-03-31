@@ -768,7 +768,7 @@ abstract class FormPage extends \dophp\PageSmarty {
 	 * @param $id mixed: The current edit ID
 	 */
 	protected function _setDefaultEditPageTitle($id) {
-		$title = 'Modifica ' . ucwords($this->_what);
+		$title = _('Edit') . ' ' . ucwords($this->_what);
 		$sd = $this->_getShortDescr($id);
 		if( $sd !== null )
 			$title .= " “{$sd}„";
