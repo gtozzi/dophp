@@ -105,6 +105,7 @@ class Db {
 	public function __sleep() {
 		$vars = get_object_vars($this);
 		unset($vars['_pdo']);
+		unset($vars['__pkCache']);
 		return array_keys($vars);
 	}
 
@@ -116,6 +117,7 @@ class Db {
 		if( ! $curDb )
 			return;
 		$this->_pdo = $curDb->_pdo;
+		$this->__pkCache = [];
 	}
 
 	/**
