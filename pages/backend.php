@@ -562,10 +562,11 @@ abstract class FormPage extends \dophp\PageSmarty {
 					}
 			}
 
-			// Update the form
-			if( ! isset($data[self::POST_DATA_KEY]) )
-				throw new \RuntimeException('Missing data key');
-			$this->_form->setDisplayValues($data[self::POST_DATA_KEY]);
+			// Update the form if data key is provided
+			if( isset($data[self::POST_DATA_KEY]) )
+				$this->_form->setDisplayValues($data[self::POST_DATA_KEY]);
+			else
+				error_log('Warning: missing data key');
 
 			if ($_SERVER['REQUEST_METHOD'] == 'PATCH' ) {
 				$this->_headers['Content-Type'] = 'application/json';
