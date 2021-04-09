@@ -72,6 +72,8 @@ formUtil.FormControlHandler = class {
 		// ag
 		let __kupValidatorTout=null;
 		el.on('keyup', function(ev){
+			that.onFormDirty();
+
 			if(__kupValidatorTout){
 				clearTimeout(__kupValidatorTout);
 			}
@@ -122,6 +124,20 @@ formUtil.FormControlHandler = class {
 			return;
 
 		this.validate();
+	}
+
+	/**
+	 * Called when the form becomes "dirty" (the user changed a field)
+	 */
+	onFormDirty() {
+		let doe = $(".disabled-on-edit");
+		// Disable "disabledonedit" buttons
+		doe.attr("disabled", true);
+		// Enable tooltip (see https://getbootstrap.com/docs/4.0/components/tooltips/)
+		doe.data("toggle", "tooltip");
+		doe.data("delay", 0);
+		doe.attr("title", "È necessario salvare la form");
+		doe.tooltip();
 	}
 
 	/**

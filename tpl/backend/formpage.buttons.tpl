@@ -9,6 +9,7 @@
 			btnc-{{$btn->phpclass()}}
 			{{if isset($size) && $size}}btn-{{$size}}{{/if}}
 			{{if $btn->isDropdown()}}dropdown-toggle{{/if}}
+			{{if $btn->isDisabledOnEdit()}}disabled-on-edit{{/if}}
 		{{/mstrip}}"
 		id="{{$btn->getId()|htmlentities}}"
 		{{if ! $btn->enabled}}disabled{{/if}}
