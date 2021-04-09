@@ -112,7 +112,7 @@ abstract class Button extends \dophp\widgets\BaseWidget {
 
 	const DEFAULT_TYPE = 'button';
 	const DEFAULT_CLASS = 'btn-secondary';
-	const DEFAULT_DISABLED_ON_EDIT = true;
+	const DEFAULT_DISABLED_ON_FORM_DIRTY = true;
 	/** True if this is a dropdown button */
 	const DROPDOWN = false;
 
@@ -125,7 +125,7 @@ abstract class Button extends \dophp\widgets\BaseWidget {
 	public $enabled = false;
 	public $hidden = false;
 
-	private $__disabledOnEdit;
+	private $__disabledOnFormDirty;
 
 	/**
 	 * Constructs the button
@@ -137,7 +137,7 @@ abstract class Button extends \dophp\widgets\BaseWidget {
 	 *        - type: string button type, default 'button'
 	 *        - class: string button class, default 'btn-secondary'
 	 *        - confirm: A string to ask confirmation before proceeding
-	 *        - disabledOnEdit: boolean defining if the button is disabled
+	 *        - disabledOnFormDirty: boolean defining if the button is disabled
 	 *          when on a modified context (i.e. an unsaved form)
 	 */
 	public function __construct(string $id, string $label, string $icon, array $options=[]) {
@@ -153,7 +153,7 @@ abstract class Button extends \dophp\widgets\BaseWidget {
 		$this->icon = $icon;
 		$this->type = $options['type'] ?? self::DEFAULT_TYPE;
 		$this->class = $options['class'] ?? self::DEFAULT_CLASS;
-		$this->__disabledOnEdit = $options['disabledOnEdit'] ?? self::DEFAULT_DISABLED_ON_EDIT;
+		$this->__disabledOnFormDirty = $options['disabledOnFormDirty'] ?? self::DEFAULT_DISABLED_ON_FORM_DIRTY;
 	}
 
 	public function enable() {
@@ -180,8 +180,8 @@ abstract class Button extends \dophp\widgets\BaseWidget {
 	/**
 	 * Returns true if this button should be disabled in an editing context (i.e. edited and non-saved form)
 	 */
-	public function isDisabledOnEdit(): bool {
-		return $this->__disabledOnEdit;
+	public function isDisabledOnFormDirty(): bool {
+		return $this->__disabledOnFormDirty;
 	}
 
 	/**
@@ -266,13 +266,13 @@ class DropdownButtonChild extends \dophp\widgets\BaseWidget {
 
 /**
  * The crud operations button, always active if form is unsaved.
- * For this type of button, the option "disabledOnEdit" is ignored.
+ * For this type of button, the option "disabledOnFormDirty" is ignored.
  */
 class CrudButton extends Button {
 	/**
 	 * Crud buttons are never disabled on edit
 	 */
-	public function isDisabledOnEdit(): bool {
+	public function isDisabledOnFormDirty(): bool {
 		return false;
 	}
 }

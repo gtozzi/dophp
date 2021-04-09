@@ -130,8 +130,8 @@ formUtil.FormControlHandler = class {
 	 * Called when the form becomes "dirty" (the user changed a field)
 	 */
 	onFormDirty() {
-		let doe = $(".disabled-on-edit");
-		// Disable "disabledonedit" buttons
+		let doe = $(".disabled-on-form-dirty");
+		// Disable buttons
 		doe.attr("disabled", true);
 		// Enable tooltip (see https://getbootstrap.com/docs/4.0/components/tooltips/)
 		doe.data("toggle", "tooltip");
