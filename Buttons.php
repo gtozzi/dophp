@@ -112,7 +112,6 @@ abstract class Button extends \dophp\widgets\BaseWidget {
 
 	const DEFAULT_TYPE = 'button';
 	const DEFAULT_CLASS = 'btn-secondary';
-	const DEFAULT_DISABLED_ON_FORM_DIRTY = true;
 	/** True if this is a dropdown button */
 	const DROPDOWN = false;
 
@@ -124,8 +123,11 @@ abstract class Button extends \dophp\widgets\BaseWidget {
 	public $label;
 	public $enabled = false;
 	public $hidden = false;
-
-	private $__disabledOnFormDirty;
+	/**
+	 * true if this button should be disabled in an editing context
+	 * (i.e. edited and non-saved form)
+	 */
+	public $disabledOnFormDirty = true;
 
 	/**
 	 * Constructs the button
@@ -153,7 +155,8 @@ abstract class Button extends \dophp\widgets\BaseWidget {
 		$this->icon = $icon;
 		$this->type = $options['type'] ?? self::DEFAULT_TYPE;
 		$this->class = $options['class'] ?? self::DEFAULT_CLASS;
-		$this->__disabledOnFormDirty = $options['disabledOnFormDirty'] ?? self::DEFAULT_DISABLED_ON_FORM_DIRTY;
+		if( array_key_exists('disabledOnFormDirty', $options) )
+			$this->disabledOnFormDirty = $options['disabledOnFormDirty'];
 	}
 
 	public function enable() {
@@ -175,13 +178,6 @@ abstract class Button extends \dophp\widgets\BaseWidget {
 	 */
 	public function isDropdown(): bool {
 		return static::DROPDOWN;
-	}
-
-	/**
-	 * Returns true if this button should be disabled in an editing context (i.e. edited and non-saved form)
-	 */
-	public function isDisabledOnFormDirty(): bool {
-		return $this->__disabledOnFormDirty;
 	}
 
 	/**
@@ -264,24 +260,14 @@ class DropdownButtonChild extends \dophp\widgets\BaseWidget {
 
 }
 
-/**
- * The crud operations button, always active if form is unsaved.
- * For this type of button, the option "disabledOnFormDirty" is ignored.
- */
-class CrudButton extends Button {
-	/**
-	 * Crud buttons are never disabled on edit
-	 */
-	public function isDisabledOnFormDirty(): bool {
-		return false;
-	}
-}
 
 /**
  * The sandard submit button
  */
-class SaveButton extends CrudButton {
+class SaveButton extends Button {
 	const DEFAULT_ID = 'save';
+
+	public $disabledOnFormDirty = false;
 
 	public function __construct(string $id=self::DEFAULT_ID, string $label=null,
 			string $icon='fa-floppy-o', array $options=['type'=>'submit']) {
@@ -294,8 +280,10 @@ class SaveButton extends CrudButton {
 /**
  * The standard form reset button
  */
-class CancelButton extends CrudButton {
+class CancelButton extends Button {
 	const DEFAULT_ID = 'cancel';
+
+	public $disabledOnFormDirty = false;
 
 	public function __construct(string $id=self::DEFAULT_ID, string $label=null,
 			string $icon='fa-undo', array $options=[]) {
@@ -308,7 +296,7 @@ class CancelButton extends CrudButton {
 /**
  * The standard record delete button
  */
-class DeleteButton extends CrudButton {
+class DeleteButton extends Button {
 	const DEFAULT_ID = 'delete';
 
 	public function __construct(string $id=self::DEFAULT_ID, string $label=null,
