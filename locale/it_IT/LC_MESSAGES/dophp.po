@@ -6,8 +6,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: DoPhp\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2021-03-27 23:33+0100\n"
-"PO-Revision-Date: 2021-03-27 23:33+0100\n"
+"POT-Creation-Date: 2021-04-12 15:34+0200\n"
+"PO-Revision-Date: 2021-04-12 15:35+0200\n"
 "Last-Translator: Gabriele Tozzi <gabriele@tozzi.eu>\n"
 "Language-Team: Gabriele Tozzi <tozzi@despammed.com>\n"
 "Language: it\n"
@@ -22,24 +22,6 @@ msgstr ""
 #: Alert.php:97
 msgid "Access denied"
 msgstr "Accesso negato"
-
-#: Buttons.php:264
-msgid "Save"
-msgstr "Salva"
-
-#: Buttons.php:278
-msgid "Cancel"
-msgstr "Annulla"
-
-#: Buttons.php:292 pages/crud.php:109 pages/crud.php:217
-msgid "Delete"
-msgstr "Elimina"
-
-#: DoPhp.php:887
-msgid "Internal Server Error, please contact support or try again later"
-msgstr ""
-"Errore interno del server, per favore contatta il supporto o riprova più "
-"tardi"
 
 #: Model.php:583
 msgid "item is in use"
@@ -121,51 +103,33 @@ msgstr "Tipo file non supportato"
 msgid "Must be an array"
 msgstr "Deve essere un array"
 
-#: pages/backend.php:44
-msgid "element(s)"
-msgstr "elemento/i"
+#: DoPhp.php:897
+msgid "Internal Server Error, please contact support or try again later"
+msgstr ""
+"Errore interno del server, per favore contatta il supporto o riprova più "
+"tardi"
 
-#: pages/backend.php:227
-msgid "List"
-msgstr "Elenco"
+#: Buttons.php:275
+msgid "Save"
+msgstr "Salva"
 
-#: pages/backend.php:422
-msgid "Saving"
-msgstr "Salvataggio"
+#: Buttons.php:291
+msgid "Cancel"
+msgstr "Annulla"
 
-#: pages/backend.php:425
-msgid "Canceling"
-msgstr "Annullamento"
+#: Buttons.php:305 pages/crud.php:109 pages/crud.php:217
+msgid "Delete"
+msgstr "Elimina"
 
-#: pages/backend.php:751
-msgid "Missing required permissions"
-msgstr "Autorizzazioni non sufficienti"
-
-#: pages/backend.php:761
-msgid "(f)new"
-msgstr "nuova"
-
-#: pages/backend.php:761
-msgid "(m)new"
-msgstr "nuovo"
-
-#: pages/backend.php:762 pages/crud.php:78 pages/crud.php:142
-#: pages/crud.php:163
-msgid "Insert"
-msgstr "Inserisci"
-
-#: pages/backend.php:771 pages/crud.php:77 pages/crud.php:108
-#: pages/crud.php:195
+#: pages/crud.php:77 pages/crud.php:108 pages/crud.php:195
+#: pages/backend.php:798
 msgid "Edit"
 msgstr "Modifica"
 
-#: pages/backend.php:874
-msgid "Delete succesful"
-msgstr "Cancellazione avvenuta"
-
-#: pages/base.php:205
-msgid "Invalid credentials"
-msgstr "Credenziali non valide"
+#: pages/crud.php:78 pages/crud.php:142 pages/crud.php:163
+#: pages/backend.php:789
+msgid "Insert"
+msgstr "Inserisci"
 
 #: pages/crud.php:107
 msgid "Show"
@@ -239,13 +203,53 @@ msgstr "ordina la colonna in ordine decrescente"
 msgid "Can't delete"
 msgstr "Non posso cancellare"
 
+#: pages/base.php:205
+msgid "Invalid credentials"
+msgstr "Credenziali non valide"
+
+#: pages/backend.php:44
+msgid "element(s)"
+msgstr "elemento/i"
+
+#: pages/backend.php:227
+msgid "List"
+msgstr "Elenco"
+
+#: pages/backend.php:427
+msgid "Saving"
+msgstr "Salvataggio"
+
+#: pages/backend.php:430
+msgid "Canceling"
+msgstr "Annullamento"
+
+#: pages/backend.php:778
+msgid "Missing required permissions"
+msgstr "Autorizzazioni non sufficienti"
+
+#: pages/backend.php:788
+msgid "(f)new"
+msgstr "nuova"
+
+#: pages/backend.php:788
+msgid "(m)new"
+msgstr "nuovo"
+
+#: pages/backend.php:901
+msgid "Delete succesful"
+msgstr "Cancellazione avvenuta"
+
 #: /tmp/dophp_tpl_strings.php:2
-msgid "Logout"
-msgstr "Esci"
+msgid "Please save or cancel the form before proceeding"
+msgstr "Salva o annulla le modifiche prima di procedere"
 
 #: /tmp/dophp_tpl_strings.php:3
 msgid "Export"
 msgstr "Esporta"
+
+#: /tmp/dophp_tpl_strings.php:4
+msgid "Logout"
+msgstr "Esci"
 
 #~ msgid "Unvalid file size"
 #~ msgstr "Dimensione file non valida"
