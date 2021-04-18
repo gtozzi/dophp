@@ -263,7 +263,7 @@ abstract class TablePage extends \dophp\HybridRpcMethod {
  *
  * How does it work:
  * - When a GET request is sent, the page instantiates a new Form on
- *   $this->_form and it is store din session
+ *   $this->_form and it is stored in session
  * - When a POST request is sent, the new form is updated and validated
  */
 abstract class FormPage extends \dophp\PageSmarty {
@@ -385,6 +385,11 @@ abstract class FormPage extends \dophp\PageSmarty {
 	protected $_disableEdit = false;
 	/** Disables delete */
 	protected $_disableDelete = false;
+
+	/** When true, will include readonly fields in insert data */
+	protected $_insertRo = false;
+	/** When true, will include readonly fields in edit data */
+	protected $_editRo = false;
 
 	/**
 	 * When true, always adds the save button
@@ -531,11 +536,18 @@ abstract class FormPage extends \dophp\PageSmarty {
 		case 'PATCH':
 			// POST sends full form data, while PATCH updates just some fields
 			// for validation
+			$data = \dophp\Utils::getPostData();
+
+			// Check the form-id
+			if( ! isset($data[self::POST_FORM_KEY]) ) {
+				// Form key is not set, may be a different kind of post,
+				// like an inside DataTable request
+				break;
+			}
 
 			// Get the form from SESSION
-			$this->_loadFormFromSession();
+			$this->_loadFormFromSession($data[self::POST_FORM_KEY]);
 
-			$data = \dophp\Utils::getPostData();
 			// Process $_FILES info
 			// This should be unused since file upload is now handled asyncronously
 			if( isset($_FILES) && isset($_FILES[self::POST_DATA_KEY]) ) {
@@ -550,19 +562,11 @@ abstract class FormPage extends \dophp\PageSmarty {
 					}
 			}
 
-			// Check the form-id
-			if( ! isset($data[self::POST_FORM_KEY]) ) {
-				// Form key is not set, may be a different kind of post,
-				// like an inside DataTable request
-				break;
-			}
-			if( $data[self::POST_FORM_KEY] != $this->_form->getId() )
-				throw new \RuntimeException('Form ID mismatch; expected ' . $this->_form->getId() . ', got ' . $data[self::POST_FORM_KEY]);
-
-			// Update the form
-			if( ! isset($data[self::POST_DATA_KEY]) )
-				throw new \RuntimeException('Missing data key');
-			$this->_form->setDisplayValues($data[self::POST_DATA_KEY]);
+			// Update the form if data key is provided
+			if( isset($data[self::POST_DATA_KEY]) )
+				$this->_form->setDisplayValues($data[self::POST_DATA_KEY]);
+			else
+				error_log('Warning: missing data key');
 
 			if ($_SERVER['REQUEST_METHOD'] == 'PATCH' ) {
 				$this->_headers['Content-Type'] = 'application/json';
@@ -575,7 +579,10 @@ abstract class FormPage extends \dophp\PageSmarty {
 		case 'GET':
 			if( isset($_GET['ajaxField']) ) {
 				// Requested an AJAX integration
-				$this->_loadFormFromSession();
+				$formId = $_GET['ajaxForm'] ?? null;
+				if( ! $formId )
+					throw new \dophp\PageError('Missing ajaxForm');
+				$this->_loadFormFromSession($formId);
 
 				//TODO: This is a bit hacky, better use namespace or something
 				//      more generic
@@ -603,7 +610,7 @@ abstract class FormPage extends \dophp\PageSmarty {
 				$this->_initForm($id);
 				if( ! $this->hasPerm(self::PERM_EDIT) )
 					$this->_form->setReadOnly(true);
-				$_SESSION[$this->_sesskey][self::SESS_FORM] = $this->_form;
+				$this->_saveFormToSession();
 
 				$data = null;
 				$errors = null;
@@ -672,14 +679,34 @@ abstract class FormPage extends \dophp\PageSmarty {
 	/**
 	 * Loads the form from session and assign it to $this->_form
 	 *
+	 * @param $formId string: The form widget's unique ID
 	 * @throws Exception
 	 */
-	protected function _loadFormFromSession() {
-		if( ! isset($_SESSION[$this->_sesskey][self::SESS_FORM]) )
-			throw new \RuntimeException('Form not found');
-		$this->_form = $_SESSION[$this->_sesskey][self::SESS_FORM];
+	protected function _loadFormFromSession(string $formId) {
+		if( ! isset($_SESSION[$this->_sesskey]) || ! is_array($_SESSION[$this->_sesskey]) )
+			throw new \dophp\PageGone('Form not found');
+		if( ! isset($_SESSION[$this->_sesskey][self::SESS_FORM]) || ! is_array($_SESSION[$this->_sesskey][self::SESS_FORM]) )
+			throw new \dophp\PageGone('Form not found');
+		if( ! isset($_SESSION[$this->_sesskey][self::SESS_FORM][$formId]) )
+			throw new \dophp\PageGone('Form not found');
+
+		$this->_form = $_SESSION[$this->_sesskey][self::SESS_FORM][$formId];
 		if( ! ($this->_form instanceof \dophp\widgets\Form) )
 			throw new \RuntimeException('Invalid form class');
+	}
+
+	/**
+	 * Stores $this->_form into session
+	 */
+	protected function _saveFormToSession() {
+		if( ! ($this->_form instanceof \dophp\widgets\Form) )
+			throw new \LogicException('Invalid form class');
+
+		if( ! isset($_SESSION[$this->_sesskey]) || ! is_array($_SESSION[$this->_sesskey]) )
+			$_SESSION[$this->_sesskey] = [];
+		if( ! isset($_SESSION[$this->_sesskey][self::SESS_FORM]) || ! is_array($_SESSION[$this->_sesskey][self::SESS_FORM]) )
+			$_SESSION[$this->_sesskey][self::SESS_FORM] = [];
+		$_SESSION[$this->_sesskey][self::SESS_FORM][$this->_form->getId()] = $this->_form;
 	}
 
 	/**
@@ -784,7 +811,7 @@ abstract class FormPage extends \dophp\PageSmarty {
 	protected function _buildInsert(bool $posted) {
 		// User submitted valid data
 		if( $posted && $this->_form->isValid() ) {
-			$id = $this->_insDbData($this->_form->getInternalValues());
+			$id = $this->_insDbData($this->_form->getInternalValues(! $this->_insertRo));
 
 			// Redirect to edit
 			$this->_redirectAfterInsert($id);
@@ -822,7 +849,7 @@ abstract class FormPage extends \dophp\PageSmarty {
 	protected function _buildEdit($id, bool $posted) {
 		// User submitted valid data
 		if( $posted && $this->_form->isValid() ) {
-			$newid = $this->_updDbData($id, $this->_form->getInternalValues());
+			$newid = $this->_updDbData($id, $this->_form->getInternalValues(! $this->_editRo));
 
 			// Page needs to be reloaded since data has changed
 			$this->_redirectAfterEdit($newid ?? $id);

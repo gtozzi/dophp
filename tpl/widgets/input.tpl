@@ -437,6 +437,9 @@
 									data: function (params) {
 										params.ajaxParams = $(agLastAddedSelect).data('ajaxParams');
 										params.ajaxField = {{$field->getName()|json_encode}};
+										{{if $field->getForm()}}
+											params.ajaxForm = {{$field->getForm()->getId()|json_encode}};
+										{{/if}}
 										return params;
 									},
 								},
