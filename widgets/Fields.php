@@ -730,6 +730,8 @@ class SelectField extends InputField {
 	protected $_wideOptions = null;
 	/** If true, will add an empty option */
 	protected $_addNullOpt = true;
+	/** Description for null option */
+	protected $_nullOptDescr = '';
 	/**
 	 * If true, will add an option for the currently selected element if not available
 	 * @see self::_wideOptions
@@ -776,7 +778,7 @@ class SelectField extends InputField {
 			throw new \LogicException('Options not defined');
 
 		if( $this->_addNullOpt )
-			yield new SelectOption('', false, '');
+			yield new SelectOption('', false, $this->_nullOptDescr);
 
 		// Returns raw options from builtin array
 		if( is_array($this->_options) ) {
