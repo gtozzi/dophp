@@ -792,11 +792,16 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 			$found = $this->_db->foundRows();
 		$count = $this->_count();
 
+		// Final processing
+		$data = $this->_encodeData($data);
+		$data = $this->_processLinks($data);
+
+		// Process links
 		$ret = [
 			'draw' => $pars['draw'] ?? 0,
 			'recordsTotal' => $count,
 			'recordsFiltered' => $this->_calcFound ? $found : $count,
-			'data' => $this->_encodeData($data),
+			'data' => $data,
 		];
 
 		return $ret;
@@ -835,6 +840,38 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 			}
 		unset($col);
 		unset($val);
+		return $data;
+	}
+
+	/**
+	 * Process links into data
+	 */
+	protected function _processLinks( $data ) {
+		foreach( $this->_cols as $k => $descr ) {
+			if( ! $descr->link )
+				continue;
+
+			foreach( $data as &$row ) {
+				if( is_callable($descr->link) ) {
+					$value = $row[$k] instanceof DataTableCell ? $row[$k]->value : $row[$k];
+					$href = $descr->link($value, $row);
+				} else {
+					$href = $descr->link;
+					foreach( $this->_cols as $kk => $dd ) {
+						$vv = $row[$kk] instanceof DataTableCell ? $row[$kk]->value : $row[$kk];
+						$href = str_replace('{'.$kk.'}', $vv, $href);
+					}
+				}
+
+				if( $href ) {
+					if( $row[$k] instanceof DataTableCell )
+						$row[$k]->href = $href;
+					else
+						$row[$k] = new DataTableCell($row[$k], null, null, $href);
+				}
+			}
+			unset($row);
+		}
 		return $data;
 	}
 
@@ -1073,6 +1110,8 @@ class DataTableColumn extends DataTableBaseColumn {
 	public $pk = false;
 	/** Whether to allow filtering on this column */
 	public $filter = true;
+	/** Column link template or callback */
+	public $link = null;
 
 	/**
 	 * Creates the column definition
@@ -1092,6 +1131,9 @@ class DataTableColumn extends DataTableBaseColumn {
 	 *             - pk:    Tells if this column is part of the PK,
 	 *                      default: false
 	 *             - filter: enable/disable filtering on this column
+	 *             - link:  An url to add as href, may be a string
+	 *                      ("{columname}" occurrencies will be replaced) or a
+	 *                      callback($value, $row)
 	 */
 	public function __construct(string $id, array $opt) {
 		parent::__construct($id);
@@ -1109,6 +1151,8 @@ class DataTableColumn extends DataTableBaseColumn {
 			$this->filter = (bool)$opt['filter'];
 		if( isset($opt['tooltip']) && $opt['tooltip'] )
 			$this->tooltip = $opt['tooltip'];
+		if( isset($opt['link']) && $opt['link'] )
+			$this->link = $opt['link'];
 	}
 
 }
