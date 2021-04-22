@@ -125,7 +125,7 @@ formUtil.FormControlHandler = class {
 	}
 
 	/**
-	 * Contact the server to updates the field's validation classes
+	 * Contact the server to update the field's validation classes
 	 */
 	validate() {
 		const V_NOTNEEDED = -1;
@@ -163,8 +163,8 @@ formUtil.FormControlHandler = class {
 			contentType: 'application/json',
 
 		}).done(function( msg ) {
-			console.log('Validation data received', msg);
-			let mydata = msg[that.el.attr('id')];
+			console.log('Validation data received', msg, that);
+			let mydata = msg[that.el.data('name')];
 
 			let col = $('#' + that.el.attr('id') + '_col');
 			let fb  = $('#' + that.el.attr('id') + '_feedback');

@@ -94,6 +94,24 @@ interface Field extends FormWidget {
 
 	/** Returns display options for the field */
 	public function getDisplayOptions(): array;
+
+	/**
+	 * Returns an array representing the current field status
+	 *
+	 * @see self::restore()
+	 * @return array Internal format, intended to be used with self::restore() only
+	 */
+	public function dump(): array;
+
+	/**
+	 * Restores a previously dumped field status
+	 *
+	 * This is meant to be fault-tolerant since Form may have been slightly modified
+	 * between dump/restore (i.e. by software upgrades)
+	 *
+	 * @see self::dump()
+	 */
+	public function restore(array $dump);
 }
 
 
@@ -101,6 +119,9 @@ interface Field extends FormWidget {
  * Base class for a Field
  */
 abstract class BaseField extends BaseFormWidget implements Field {
+
+	/** List of properties to dump/restore */
+	const DUMP_RESTORE_PROPS = [ '_id', '_iv', '_dv', '_vstatus', '_vfeedback' ];
 
 	/** The field's group */
 	protected $_group = null;
@@ -290,6 +311,26 @@ abstract class BaseField extends BaseFormWidget implements Field {
 	public function getDisplayOptions(): array {
 		return $this->_dopts;
 	}
+
+	/**
+	 * Returns array list of props to be dumped/restored
+	 */
+	protected function _getDumpRestoreProps(): array {
+		return static::DUMP_RESTORE_PROPS;
+	}
+
+	public function dump(): array {
+		$dump = [];
+		foreach( $this->_getDumpRestoreProps() as $prop )
+			$dump[$prop] = $this->$prop;
+		return $dump;
+	}
+
+	public function restore(array $dump) {
+		foreach( $this->_getDumpRestoreProps() as $prop )
+			if( array_key_exists($prop, $dump) )
+				$this->$prop = $dump[$prop];
+	}
 }
 
 
@@ -381,6 +422,12 @@ abstract class InputField extends BaseField {
 
 	public function setLinkUrl(string $url) {
 		$this->_linkurl = $url;
+	}
+
+	protected function _getDumpRestoreProps(): array {
+		$ret = parent::_getDumpRestoreProps();
+		$ret[] = '_linkurl';
+		return $ret;
 	}
 }
 

@@ -400,6 +400,9 @@ abstract class FormPage extends \dophp\PageSmarty {
 
 	/**
 	 * Inits $this->_form
+	 *
+	 * @warning The form gets inited only in some circustances. This may not get
+	 *          called at all or called multiple times during a page load.
 	 */
 	protected function _initForm($id) {
 		$this->_form = new \dophp\widgets\Form($this->_fields, [self::POST_DATA_KEY], null, $this->_fieldGroups);
@@ -415,6 +418,8 @@ abstract class FormPage extends \dophp\PageSmarty {
 
 	/**
 	 * Called as first init action, overridable in child
+	 *
+	 * Use this to init models
 	 */
 	protected function _initEarly($id) {
 	}
@@ -504,9 +509,6 @@ abstract class FormPage extends \dophp\PageSmarty {
 		}
 		$this->needPerm($perm);
 
-		// Inits models, if any
-		$this->_initModels($id);
-
 		// Add buttons
 		$this->_addButtons($id);
 		$this->_smarty->assignByRef('buttons', $this->_buttons);
@@ -546,7 +548,8 @@ abstract class FormPage extends \dophp\PageSmarty {
 			}
 
 			// Get the form from SESSION
-			$this->_loadFormFromSession($data[self::POST_FORM_KEY]);
+			$this->_initForm($id);
+			$this->_loadFormDataFromSession($data[self::POST_FORM_KEY]);
 
 			// Process $_FILES info
 			// This should be unused since file upload is now handled asyncronously
@@ -577,12 +580,14 @@ abstract class FormPage extends \dophp\PageSmarty {
 			// User requested to delete an element
 			break;
 		case 'GET':
+			$this->_initForm($id);
+
 			if( isset($_GET['ajaxField']) ) {
 				// Requested an AJAX integration
 				$formId = $_GET['ajaxForm'] ?? null;
 				if( ! $formId )
 					throw new \dophp\PageError('Missing ajaxForm');
-				$this->_loadFormFromSession($formId);
+				$this->_loadFormDataFromSession($formId);
 
 				//TODO: This is a bit hacky, better use namespace or something
 				//      more generic
@@ -607,10 +612,8 @@ abstract class FormPage extends \dophp\PageSmarty {
 				return json_encode($field->ajaxQuery($_GET));
 			} else {
 				// Instantiate a new form for the fields
-				$this->_initForm($id);
 				if( ! $this->hasPerm(self::PERM_EDIT) )
 					$this->_form->setReadOnly(true);
-				$this->_saveFormToSession();
 
 				$data = null;
 				$errors = null;
@@ -635,6 +638,7 @@ abstract class FormPage extends \dophp\PageSmarty {
 		case self::ACT_INS:
 			$this->_setDefaultInsertPageTitle();
 			$res = $this->_buildInsert($posted);
+			$this->_saveFormDataToSession();
 			break;
 		case self::ACT_EDIT:
 			if( $posted )
@@ -642,6 +646,7 @@ abstract class FormPage extends \dophp\PageSmarty {
 			$this->_setDefaultEditPageTitle($id);
 			$this->_formAction->args['id'] = $id;
 			$res = $this->_buildEdit($id, $posted);
+			$this->_saveFormDataToSession();
 			break;
 		case self::ACT_DEL:
 			$this->_headers['Content-Type'] = 'text/plain';
@@ -671,34 +676,29 @@ abstract class FormPage extends \dophp\PageSmarty {
 	}
 
 	/**
-	 * Initialize models, may be overridden in child
-	 */
-	protected function _initModels($id) {
-	}
-
-	/**
-	 * Loads the form from session and assign it to $this->_form
+	 * Loads the form data from session and pass it to $this->_form->restore()
 	 *
 	 * @param $formId string: The form widget's unique ID
-	 * @throws Exception
 	 */
-	protected function _loadFormFromSession(string $formId) {
+	protected function _loadFormDataFromSession(string $formId) {
 		if( ! isset($_SESSION[$this->_sesskey]) || ! is_array($_SESSION[$this->_sesskey]) )
-			throw new \dophp\PageGone('Form not found');
+			return;
 		if( ! isset($_SESSION[$this->_sesskey][self::SESS_FORM]) || ! is_array($_SESSION[$this->_sesskey][self::SESS_FORM]) )
-			throw new \dophp\PageGone('Form not found');
+			return;
 		if( ! isset($_SESSION[$this->_sesskey][self::SESS_FORM][$formId]) )
-			throw new \dophp\PageGone('Form not found');
+			return;
 
-		$this->_form = $_SESSION[$this->_sesskey][self::SESS_FORM][$formId];
-		if( ! ($this->_form instanceof \dophp\widgets\Form) )
-			throw new \RuntimeException('Invalid form class');
+		$data = $_SESSION[$this->_sesskey][self::SESS_FORM][$formId];
+		if( ! is_array($data) )
+			return;
+
+		$this->_form->restore($data);
 	}
 
 	/**
 	 * Stores $this->_form into session
 	 */
-	protected function _saveFormToSession() {
+	protected function _saveFormDataToSession() {
 		if( ! ($this->_form instanceof \dophp\widgets\Form) )
 			throw new \LogicException('Invalid form class');
 
@@ -706,7 +706,17 @@ abstract class FormPage extends \dophp\PageSmarty {
 			$_SESSION[$this->_sesskey] = [];
 		if( ! isset($_SESSION[$this->_sesskey][self::SESS_FORM]) || ! is_array($_SESSION[$this->_sesskey][self::SESS_FORM]) )
 			$_SESSION[$this->_sesskey][self::SESS_FORM] = [];
-		$_SESSION[$this->_sesskey][self::SESS_FORM][$this->_form->getId()] = $this->_form;
+		$_SESSION[$this->_sesskey][self::SESS_FORM][$this->_form->getId()] = $this->_form->dump();
+	}
+
+	/**
+	 * Clears current form's data from session
+	 */
+	protected function _delFormDataFromSession() {
+		if( ! ($this->_form instanceof \dophp\widgets\Form) )
+			throw new \LogicException('Invalid form class');
+
+		unset($_SESSION[$this->_sesskey][self::SESS_FORM][$this->_form->getId()]);
 	}
 
 	/**
@@ -813,6 +823,9 @@ abstract class FormPage extends \dophp\PageSmarty {
 		if( $posted && $this->_form->isValid() ) {
 			$id = $this->_insDbData($this->_form->getInternalValues(! $this->_insertRo));
 
+			// Clean session: no longer needed
+			$this->_delFormDataFromSession();
+
 			// Redirect to edit
 			$this->_redirectAfterInsert($id);
 		} elseif( ! $posted ) {
@@ -850,6 +863,9 @@ abstract class FormPage extends \dophp\PageSmarty {
 		// User submitted valid data
 		if( $posted && $this->_form->isValid() ) {
 			$newid = $this->_updDbData($id, $this->_form->getInternalValues(! $this->_editRo));
+
+			// Clean session: no longer needed
+			$this->_delFormDataFromSession();
 
 			// Page needs to be reloaded since data has changed
 			$this->_redirectAfterEdit($newid ?? $id);
@@ -1005,8 +1021,8 @@ abstract class FormPage extends \dophp\PageSmarty {
 	 */
 	public function getFormValidationData(): array {
 		$ret = [];
-		foreach( $this->_form->fields() as $f )
-			$ret[$f->getId()] = [
+		foreach( $this->_form->fields() as $k => $f )
+			$ret[$k] = [
 				'status' => $f->getVStatus(),
 				'feedback' => $f->getVFeedback(),
 			];
