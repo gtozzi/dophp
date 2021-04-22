@@ -304,6 +304,8 @@ abstract class FormPage extends \dophp\PageSmarty {
 	const SESS_REV = -1;
 	/** Session form key name */
 	const SESS_FORM = 'form';
+	/** Default session form expire time, in seconds (0/null = never) (lazy expire) */
+	const SESS_FORM_EXPIRE = 60 * 60 * 24;
 
 	/** POST key for form id */
 	const POST_FORM_KEY = 'form';
@@ -683,16 +685,21 @@ abstract class FormPage extends \dophp\PageSmarty {
 	protected function _loadFormDataFromSession(string $formId) {
 		if( ! isset($_SESSION[$this->_sesskey]) || ! is_array($_SESSION[$this->_sesskey]) )
 			return;
-		if( ! isset($_SESSION[$this->_sesskey][self::SESS_FORM]) || ! is_array($_SESSION[$this->_sesskey][self::SESS_FORM]) )
+		if( ! isset($_SESSION[$this->_sesskey][static::SESS_FORM]) || ! is_array($_SESSION[$this->_sesskey][static::SESS_FORM]) )
 			return;
-		if( ! isset($_SESSION[$this->_sesskey][self::SESS_FORM][$formId]) )
-			return;
-
-		$data = $_SESSION[$this->_sesskey][self::SESS_FORM][$formId];
-		if( ! is_array($data) )
+		if( ! isset($_SESSION[$this->_sesskey][static::SESS_FORM][$formId]) )
 			return;
 
-		$this->_form->restore($data);
+		$sess = $_SESSION[$this->_sesskey][static::SESS_FORM][$formId];
+		if( ! is_array($sess) )
+			return;
+
+		// Lazy expire: if for some reason data is still present, still use it
+		// (does not check for expire here)
+		if( ! isset($sess['data']) || ! is_array($sess['data']) )
+			return;
+
+		$this->_form->restore($sess['data']);
 	}
 
 	/**
@@ -704,9 +711,16 @@ abstract class FormPage extends \dophp\PageSmarty {
 
 		if( ! isset($_SESSION[$this->_sesskey]) || ! is_array($_SESSION[$this->_sesskey]) )
 			$_SESSION[$this->_sesskey] = [];
-		if( ! isset($_SESSION[$this->_sesskey][self::SESS_FORM]) || ! is_array($_SESSION[$this->_sesskey][self::SESS_FORM]) )
-			$_SESSION[$this->_sesskey][self::SESS_FORM] = [];
-		$_SESSION[$this->_sesskey][self::SESS_FORM][$this->_form->getId()] = $this->_form->dump();
+		if( ! isset($_SESSION[$this->_sesskey][static::SESS_FORM]) || ! is_array($_SESSION[$this->_sesskey][static::SESS_FORM]) )
+			$_SESSION[$this->_sesskey][static::SESS_FORM] = [];
+		$_SESSION[$this->_sesskey][static::SESS_FORM][$this->_form->getId()] = [
+			'data' => $this->_form->dump(),
+			'expire' => static::SESS_FORM_EXPIRE ? time() + static::SESS_FORM_EXPIRE : null,
+		];
+
+		// Since session will be serialized by PHP, this looks like a good moment
+		// to perform gc at almost-zero cost
+		$this->_garbageCollectSessionFormData();
 	}
 
 	/**
@@ -716,7 +730,29 @@ abstract class FormPage extends \dophp\PageSmarty {
 		if( ! ($this->_form instanceof \dophp\widgets\Form) )
 			throw new \LogicException('Invalid form class');
 
-		unset($_SESSION[$this->_sesskey][self::SESS_FORM][$this->_form->getId()]);
+		unset($_SESSION[$this->_sesskey][static::SESS_FORM][$this->_form->getId()]);
+	}
+
+	/**
+	 * Removes expired session form data
+	 */
+	protected function _garbageCollectSessionFormData() {
+		if( ! isset($_SESSION[$this->_sesskey]) || ! is_array($_SESSION[$this->_sesskey]) )
+			return;
+		if( ! isset($_SESSION[$this->_sesskey][static::SESS_FORM]) || ! is_array($_SESSION[$this->_sesskey][static::SESS_FORM]) )
+			return;
+
+		$now = time();
+
+		foreach( $_SESSION[$this->_sesskey][static::SESS_FORM] as $formId => $sess ) {
+			if( ! is_array($sess) || ! isset($sess['expire']) )
+				continue;
+
+			if( ! $sess['expire'] || $sess['expire'] > $now )
+				continue;
+
+			unset($_SESSION[$this->_sesskey][static::SESS_FORM][$formId]);
+		}
 	}
 
 	/**
