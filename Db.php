@@ -22,7 +22,7 @@ class Db {
 	/** PostgreSQL Server DB TYPE */
 	const TYPE_PGSQL = 'pgsql';
 
-	/** Debug object (or true for backward compatibility) */
+	/** Debug object (if enabled) */
 	public $debug = false;
 
 	/**
@@ -46,9 +46,9 @@ class Db {
 	/** Tells lastInsertId() PDO's driver support */
 	protected $_hasLid = true;
 
-	/** Wiritten in debug mode, do not use for different purposes */
+	/** Wiritten for debug only, do not use for different purposes */
 	public $lastQuery = null;
-	/** Wiritten in debug mode, do not use for different purposes */
+	/** Wiritten for debug only, do not use for different purposes */
 	public $lastParams = null;
 
 	/** PK column names cache for insert() */
@@ -173,10 +173,8 @@ class Db {
 		if( $dbgquery )
 			$dbgquery->built($query, $params);
 
-		if( $this->debug ) {
-			$this->lastQuery = $query;
-			$this->lastParams = $params;
-		}
+		$this->lastQuery = $query;
+		$this->lastParams = $params;
 
 		$st = $this->_pdo->prepare($query);
 
