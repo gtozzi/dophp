@@ -295,7 +295,9 @@ class DoPhp {
 		}
 
 		// Creates the debug object
-		if( $this->__cache )
+		if( ! $this->__conf['debug'] )
+			dophp\debug\NullDebug::init();
+		elseif( $this->__cache )
 			dophp\debug\MemcacheDebug::init($this->__cache);
 		else
 			dophp\debug\SessionDebug::init();

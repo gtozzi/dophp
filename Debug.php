@@ -202,8 +202,10 @@ class MemcacheDebug extends Debug {
 
 	public function getRequests() {
 		$lid = $this->_cache->get(self::CACHE_KEY_IDX);
-		if( $lid === false )
+		if( $lid === false ) {
+			yield from [];
 			return;
+		}
 
 		for( $id=$lid; $id>=0; $id-- ) {
 			$k = self::CACHE_PREFIX . $id;
@@ -218,6 +220,35 @@ class MemcacheDebug extends Debug {
 		if( $lid === false )
 			return 0;
 		return $lid + 1;
+	}
+
+}
+
+
+/**
+ * Fake debug container, just drops the data
+ */
+class NullDebug extends Debug {
+
+	public static function init() {
+		parent::_init(new self());
+	}
+
+	public function add(Request $request) {
+	}
+
+	public function update($id, Request $request) {
+	}
+
+	public function del($id) {
+	}
+
+	public function getRequests() {
+		yield from [];
+	}
+
+	public function countRequests() {
+		return 0;
 	}
 
 }
