@@ -640,7 +640,8 @@ abstract class FormPage extends \dophp\PageSmarty {
 		case self::ACT_INS:
 			$this->_setDefaultInsertPageTitle();
 			$res = $this->_buildInsert($posted);
-			$this->_saveFormDataToSession();
+			if( $this->_form )
+				$this->_saveFormDataToSession();
 			break;
 		case self::ACT_EDIT:
 			if( $posted )
@@ -648,7 +649,8 @@ abstract class FormPage extends \dophp\PageSmarty {
 			$this->_setDefaultEditPageTitle($id);
 			$this->_formAction->args['id'] = $id;
 			$res = $this->_buildEdit($id, $posted);
-			$this->_saveFormDataToSession();
+			if( $this->_form )
+				$this->_saveFormDataToSession();
 			break;
 		case self::ACT_DEL:
 			$this->_headers['Content-Type'] = 'text/plain';
