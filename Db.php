@@ -67,9 +67,6 @@ class Db {
 		$this->_pdo = new \PDO($dsn, $user, $pass);
 		$this->_pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
 		$this->_pdo->setAttribute(\PDO::ATTR_DEFAULT_FETCH_MODE, \PDO::FETCH_ASSOC);
-		// When set, will cause MySQL to return INTEGER ans PHP int, but will
-		// cause some concurrency problems
-		//$this->_pdo->setAttribute(\PDO::ATTR_EMULATE_PREPARES, false);
 		$driver = $this->_pdo->getAttribute(\PDO::ATTR_DRIVER_NAME);
 		switch( $driver ) {
 		case 'mysql':
@@ -176,7 +173,8 @@ class Db {
 		$this->lastQuery = $query;
 		$this->lastParams = $params;
 
-		$st = $this->_pdo->prepare($query);
+		// Using emulated prepares for historic reasons and coherency between DBMSes
+		$st = $this->_pdo->prepare($query, [ \PDO::ATTR_EMULATE_PREPARES => true ]);
 
 		if( $dbgquery )
 			$dbgquery->prepared();
@@ -1263,6 +1261,7 @@ class Table {
 						"kcu2".ORDINAL_POSITION
 				';
 			}
+
 			foreach( $this->_db->run($q, $tp)->fetchAll() as $c ) {
 				if( isset($this->_refs['COLUMN_NAME']) )
 					throw new \LogicException("More than one reference detected for column {$c['COLUMN_NAME']}");
