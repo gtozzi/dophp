@@ -30,9 +30,9 @@ interface DataTableInterface {
 	 * @param $save: if true, save search filter and order
 	 * @param $useSaved: boolean, if true, will use saved params as defaults
 	 * @see https://datatables.net/manual/server-side
-	 * @return DataTableData containing query result object and total/found row counts
+	 * @return \dophp\Result Query result object
 	 */
-	public function getRawData( $pars=[], $save=false, $useSaved=false ): DataTableData;
+	public function getRawData( $pars=[], $save=false, $useSaved=false ): array;
 
 	/**
 	 * Parses the request data and returns result
@@ -675,11 +675,11 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 	 * @param $filter DataTableSearchFilter
 	 * @param $order DatatableDataOrder
 	 * @param $limit DatatableDataLimit
-	 * @return DataTableData
+	 * @return \dophp\Result
 	 */
-	abstract protected function _getRawDataInternal( DataTableDataFilter $filter=null, DatatableDataOrder $order=null, DatatableDataLimit $limit=null ): DataTableData;
+	abstract protected function _getRawDataInternal( DataTableDataFilter $filter=null, DatatableDataOrder $order=null, DatatableDataLimit $limit=null ): array;
 
-	public function getRawData( $pars=[], $save=false, $useSaved=false ): DataTableData {
+	public function getRawData( $pars=[], $save=false, $useSaved=false ): array {
 		// Parses the super filter
 		foreach( $this->_sfilter as $field )
 			if( isset($pars['filter'][$field->getName()]) )
@@ -757,8 +757,7 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 		$trx = $this->_db->beginTransaction(true);
 
 		// Retrieve data
-		$dtd = $this->getRawData($pars, $save, $useSaved);
-		$data = $dtd->data;
+		$data = $this->getRawData($pars, $save, $useSaved);
 
 		if( $this->addTotals )
 			$totals = new DataTableTotalsUtil($this->_cols);
@@ -783,13 +782,15 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 			$data[] = $totrow;
 		}
 
+		$found = $this->_db->foundRows();
+
 		if( $trx )
 			$this->_db->commit();
 
 		$ret = [
 			'draw' => $pars['draw'] ?? 0,
-			'recordsTotal' => $dtd->recordsTotal ? $dtd->recordsTotal : $this->_count(),
-			'recordsFiltered' => $dtd->recordsFiltered,
+			'recordsTotal' => $this->_count(),
+			'recordsFiltered' => $found,
 			'data' => $this->_encodeData($data),
 		];
 
@@ -846,7 +847,7 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 
 		$data = [];
 		$colCount = null;
-		foreach($this->getRawData($pars, false, true)->data as $datarow ) {
+		foreach($this->getRawData($pars, false, true) as $datarow ) {
 			$row = [];
 
 			if( $colCount === null )
@@ -1516,18 +1517,7 @@ class DataTable extends BaseDataTable {
 		return [ $q, $where, $pars, $this->_groupBy ];
 	}
 
-	protected function _getRawDataInternal( DataTableDataFilter $filter=null, DatatableDataOrder $order=null, DatatableDataLimit $limit=null ): DataTableData {
-		$dtd = new DataTableData();
-
-		if( $this->_db->type() === $this->_db::TYPE_PGSQL ) {
-			// Add column to use Pgsql's over() function
-			$this->_cols['cnt'] = new DataTableColumn('cnt', [
-				'visible' => false,
-				'qname' => 'count (*) over()',
-				'type' => 'integer'
-			]);
-		}
-
+	protected function _getRawDataInternal( DataTableDataFilter $filter=null, DatatableDataOrder $order=null, DatatableDataLimit $limit=null ): array {
 		// Base query
 		list($q, $where, $p, $groupBy) = $this->_buildBaseQuery();
 		$having = [];
@@ -1570,22 +1560,7 @@ class DataTable extends BaseDataTable {
 				$q .= "\nLIMIT " . ( $limit->getStart() ) . ',' . $limit->getLength();
 		}
 
-		$dtd->data = $this->_db->xrun($q, $p, $this->_getColumnExplicitTypes())->fetchAll();
-		$dtd->recordsTotal = $this->_count();
-
-		if( $this->_db->type() === $this->_db::TYPE_PGSQL ) {
-			if (sizeof($dtd->data) > 0 && $dtd->data[0]['cnt']) {
-				// Postgresql "count(*) over()" result is present
-				$dtd->recordsFiltered = $dtd->data[0]['cnt'];
-			} else {
-				$dtd->recordsFiltered = 0;
-			}
-		} else {
-				// Non-postgre db: use deprecated foundRows for now
-				$dtd->recordsFiltered = $this->_db->foundRows();
-		}
-
-		return $dtd;
+		return $this->_db->xrun($q, $p, $this->_getColumnExplicitTypes())->fetchAll();
 	}
 
 	/**
@@ -1774,11 +1749,9 @@ class StaticCachedQueryDataTable extends BaseDataTable {
 		return $this->__content;
 	}
 
-	protected function _getRawDataInternal( DataTableDataFilter $filter=null, DatatableDataOrder $order=null, DatatableDataLimit $limit=null ): DataTableData {
+	protected function _getRawDataInternal( DataTableDataFilter $filter=null, DatatableDataOrder $order=null, DatatableDataLimit $limit=null ): array {
 		//TODO: support filter, order, limit
-		$dtd = new DataTableData();
-		$dtd->data = $this->_retrieveContent()['data'];
-		return $dtd;
+		return $this->_retrieveContent()['data'];
 	}
 
 	/**
@@ -1811,27 +1784,5 @@ class StaticCachedQueryDataTable extends BaseDataTable {
 
 		return $opt;
 	}
-
-}
-
-/**
- * A data result object to be used with DataTable.
- *
- * Contains:
- * $date: array [ 'data': the query result, 'colTypes': column types data ]
- * $recordsFiltered: total count of found rows (the number of rows that would be returned
- * if no LIMIT/OFFSET was set). May be null.
- * $recordsTotal: count of all existing rows in table
- */
-class DataTableData {
-
-	// array [ 'data': the query result, 'colTypes': column types data ]
-	public $data = [];
-
-	// count of filtered rows
-	public $recordsFiltered = null;
-
-	// count of all the existing rows
-	public $recordsTotal = null;
 
 }
