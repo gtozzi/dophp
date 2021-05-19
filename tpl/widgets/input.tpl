@@ -378,39 +378,46 @@
 										//TODO
 									}
 
-
 									setTimeout(function(){
-
-										// enable save button after file upload
-										$(currForm)
-											.find(".save-button")
-											.prop("disabled",false);
-										//$(".progress-ETA").html("Terminato");
-
-										// hide the progress bar and ETA text
-										$(".progress-ETA").css("display","none");
-										$(".ag-progress-line_{{$id}}").css("display","none");
-
-										// show feedback response row
+									// show feedback response row
 										var res=data["files"]["file_{{$id}}"];
 										if(typeof(res["success"])!="undefined"){
 											if(res["success"]==true){
 												$(".ag-upl-feedback.itm_{{$id}}.ag-upl-success").css("display","block");
 											}
 											else if(res["success"]==false){
-												$(".ag-upl-feedback.itm_{{$id}}.ag-upl-error").css("display","block");
-												if(typeof(res["message"])!="undefined"){
-													$(".ag-upl-feedback.itm_{{$id}}.ag-upl-error .ag-upl-feedback-txt").text(res["message"]);
-												}
+												showAjaxError(res["message"]);
 											}
 										}
-
-
 									},700);
+								},
+								error: function(jqXHR, textStatus, errorThrown){
+									setTimeout(function(){
+										let httpCode = jqXHR.status;
+										showAjaxError('Codice di errore HTTP ' + httpCode);
+									},700);
+								},
+								complete: function(jqXHR, textStatus){
+									// enable save button after file upload
+									$(currForm)
+										.find(".save-button")
+										.prop("disabled",false);
+
+									// hide the progress bar and ETA text
+									$(".progress-ETA").css("display","none");
+									$(".ag-progress-line_{{$id}}").css("display","none");
 								}
 							});
 
 						});
+
+						let showAjaxError = function(errorMessage) {
+							$(".ag-upl-feedback.itm_{{$id}}.ag-upl-error").css("display","block");
+							if(errorMessage){
+								$(".ag-upl-feedback.itm_{{$id}}.ag-upl-error .ag-upl-feedback-txt").text(errorMessage);
+							}
+						}
+
 						//$("#ag-fileupl-s-act-{{$id}}").click(function(){
 						//});
 					</script>
