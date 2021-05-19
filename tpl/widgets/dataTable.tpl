@@ -189,6 +189,13 @@
 				data:        prapareServerData,
 			},
 
+			"initComplete": function(settings, json) {
+				// Save the fixed elements vertical size used to compute table height on window resize
+				window.vSizeElementsOutsideTableHeight = $('body').outerHeight(true) - $('.dataTables_scrollBody').outerHeight(true);
+				// Set datatable size to cover all free space
+				window.resizeDatatable();
+			},
+
 			{{foreach $initOpts as $k => $v}}
 				{{$k|json_encode}}: {{$v|json_encode}},
 			{{/foreach}}
@@ -607,6 +614,20 @@
 		});
 
 		// ./ADDED WP ELEMENTS
+
+		/*
+		* Datatable size management based on window size (as described in
+		* https://stackoverflow.com/questions/7678345/datatables-change-height-of-table-not-working)
+		*/
+		window.resizeDatatable = function() {
+			console.log("Called resizeDatatable");
+			$('.dataTables_scrollBody').css('height', ($(window).height() - window.vSizeElementsOutsideTableHeight));
+		}
+
+		// Called every time the window is resized
+		$(window).on("resize", function() {
+			window.resizeDatatable();
+		});
 
 	});
 
