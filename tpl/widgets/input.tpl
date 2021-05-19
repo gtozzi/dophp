@@ -364,10 +364,6 @@
 									return currHXR;
 								},
 								success: function(data){
-
-
-
-
 									console.log('File upload success', data);
 									let myfile = data.files['file_'+{{$id|json_encode}}];
 
