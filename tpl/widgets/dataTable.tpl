@@ -189,6 +189,13 @@
 				data:        prapareServerData,
 			},
 
+			"initComplete": function(settings, json) {
+				// Save the fixed elements vertical size used to compute table height on window resize
+				window.vSizeElementsOutsideTableHeight = $('body').outerHeight(true) - $('.dataTables_scrollBody').outerHeight(true);
+				// Set datatable size to cover all free space
+				window.resizeDatatable();
+			},
+
 			{{foreach $initOpts as $k => $v}}
 				{{$k|json_encode}}: {{$v|json_encode}},
 			{{/foreach}}
@@ -316,7 +323,7 @@
 		table.on( 'draw', function(){
 			$(".dtbl-buttons-container").html(
 				'<a id="data-table-export-url" class="dtbl-buttons-itm">'
-				+ '<span class="fa fa-file-excel-o"></span> Esporta</a>');
+				+ '<span class="fa fa-file-excel-o"></span> ' + {{_('Export')|json_encode}} + '</a>');
 
 			updateDataTableUrls();
 		} );
@@ -607,6 +614,20 @@
 		});
 
 		// ./ADDED WP ELEMENTS
+
+		/*
+		* Datatable size management based on window size (as described in
+		* https://stackoverflow.com/questions/7678345/datatables-change-height-of-table-not-working)
+		*/
+		window.resizeDatatable = function() {
+			console.log("Called resizeDatatable");
+			$('.dataTables_scrollBody').css('height', ($(window).height() - window.vSizeElementsOutsideTableHeight));
+		}
+
+		// Called every time the window is resized
+		$(window).on("resize", function() {
+			window.resizeDatatable();
+		});
 
 	});
 
@@ -1024,10 +1045,10 @@
 	<div class="wp-date-filter-head">
 		Filtra data
 		<div class="wp-close">
-			<img src="med/img/dfilter/dfilter_close.png" alt="" />
+			<img src="{{$config['dophp']['url']}}/med/img/dfilter/dfilter_close.png" alt="" />
 		</div>
 		<div class="wp-minimize">
-			<img src="med/img/dfilter/dfilter_minimize.png" alt="" />
+			<img src="{{$config['dophp']['url']}}/med/img/dfilter/dfilter_minimize.png" alt="" />
 		</div>
 	</div>
 	<div class="wp-date-filter-body">

@@ -566,7 +566,10 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 	 * Returns default JS options
 	 */
 	protected function _getHtmlInitOptions(): array {
-		return [
+		$lang = \DoPhp::lang();
+		$langc = $lang->getCountryCode($lang->getCurrentLanguage());
+
+		$options = [
 			'processing' => true,
 			'serverSide' => true,
 			//scrollCollapse: true,
@@ -583,7 +586,6 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 			'autoWidth'   => true,
 
 			'language' => [
-				'url' => "{$this->_config['dophp']['url']}/webcontent/DataTables/Italian.json",
 			],
 
 			'ordering' => true,
@@ -591,6 +593,11 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 
 			'autoWidth' => true,
 		];
+
+		if( $langc == 'it' )
+			$options['language']['url'] = "{$this->_config['dophp']['url']}/webcontent/DataTables/Italian.json";
+
+		return $options;
 	}
 
 	public function getHTMLStructure(): string {
@@ -754,8 +761,6 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 	}
 
 	public function getData( array $pars=[], bool $save=true, bool $useSaved=false ): array {
-		$trx = $this->_db->beginTransaction(true);
-
 		// Retrieve data
 		$data = $this->getRawData($pars, $save, $useSaved);
 
@@ -782,16 +787,21 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 			$data[] = $totrow;
 		}
 
-		$found = $this->_db->foundRows();
+		// Add found rows if available
+		if( $this->_calcFound )
+			$found = $this->_db->foundRows();
+		$count = $this->_count();
 
-		if( $trx )
-			$this->_db->commit();
+		// Final processing
+		$data = $this->_encodeData($data);
+		$data = $this->_processLinks($data);
 
+		// Process links
 		$ret = [
 			'draw' => $pars['draw'] ?? 0,
-			'recordsTotal' => $this->_count(),
-			'recordsFiltered' => $found,
-			'data' => $this->_encodeData($data),
+			'recordsTotal' => $count,
+			'recordsFiltered' => $this->_calcFound ? $found : $count,
+			'data' => $data,
 		];
 
 		return $ret;
@@ -830,6 +840,38 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 			}
 		unset($col);
 		unset($val);
+		return $data;
+	}
+
+	/**
+	 * Process links into data
+	 */
+	protected function _processLinks( $data ) {
+		foreach( $this->_cols as $k => $descr ) {
+			if( ! $descr->link )
+				continue;
+
+			foreach( $data as &$row ) {
+				if( is_callable($descr->link) ) {
+					$value = $row[$k] instanceof DataTableCell ? $row[$k]->value : $row[$k];
+					$href = $descr->link($value, $row);
+				} else {
+					$href = $descr->link;
+					foreach( $this->_cols as $kk => $dd ) {
+						$vv = $row[$kk] instanceof DataTableCell ? $row[$kk]->value : $row[$kk];
+						$href = str_replace('{'.$kk.'}', $vv, $href);
+					}
+				}
+
+				if( $href ) {
+					if( $row[$k] instanceof DataTableCell )
+						$row[$k]->href = $href;
+					else
+						$row[$k] = new DataTableCell($row[$k], null, null, $href);
+				}
+			}
+			unset($row);
+		}
 		return $data;
 	}
 
@@ -1068,6 +1110,8 @@ class DataTableColumn extends DataTableBaseColumn {
 	public $pk = false;
 	/** Whether to allow filtering on this column */
 	public $filter = true;
+	/** Column link template or callback */
+	public $link = null;
 
 	/**
 	 * Creates the column definition
@@ -1087,6 +1131,9 @@ class DataTableColumn extends DataTableBaseColumn {
 	 *             - pk:    Tells if this column is part of the PK,
 	 *                      default: false
 	 *             - filter: enable/disable filtering on this column
+	 *             - link:  An url to add as href, may be a string
+	 *                      ("{columname}" occurrencies will be replaced) or a
+	 *                      callback($value, $row)
 	 */
 	public function __construct(string $id, array $opt) {
 		parent::__construct($id);
@@ -1104,6 +1151,8 @@ class DataTableColumn extends DataTableBaseColumn {
 			$this->filter = (bool)$opt['filter'];
 		if( isset($opt['tooltip']) && $opt['tooltip'] )
 			$this->tooltip = $opt['tooltip'];
+		if( isset($opt['link']) && $opt['link'] )
+			$this->link = $opt['link'];
 	}
 
 }
@@ -1446,6 +1495,15 @@ class DataTable extends BaseDataTable {
 	/** Fixed group by, if any, without "GROUP BY" keyword */
 	protected $_groupBy = null;
 
+	/** Should calculate found rows when filtering results? May disable this for performance */
+	protected $_calcFound = true;
+
+	/** Fast count query, used for performance on huge tables, must return a 'cnt' column */
+	protected $_countQuery = null;
+
+	/** Params array for fast count query */
+	protected $_countQueryParams = [];
+
 	/**
 	 * Constructs the table object
 	 *
@@ -1519,7 +1577,7 @@ class DataTable extends BaseDataTable {
 
 	protected function _getRawDataInternal( DataTableDataFilter $filter=null, DatatableDataOrder $order=null, DatatableDataLimit $limit=null ): array {
 		// Base query
-		list($q, $where, $p, $groupBy) = $this->_buildBaseQuery();
+		list($q, $where, $p, $groupBy) = $this->_buildBaseQuery(false, $this->_calcFound);
 		$having = [];
 
 		// Calculate filter having clause
@@ -1601,15 +1659,18 @@ class DataTable extends BaseDataTable {
 	 * Counts unfiltered results, uses memcache if possible
 	 */
 	protected function _count(): int {
-		list($query, $where, $params, $groupBy) = $this->_buildBaseQuery(true);
-		if( $where )
-			$query .= "\nWHERE " . implode(' AND ', $where);
-		if( $groupBy )
-			$query .= "\nGROUP BY $groupBy";
+		if( $this->_countQuery ) {
+			$query = $this->_countQuery;
+			$params = $this->_countQueryParams;
+		} else {
+			list($query, $where, $params, $groupBy) = $this->_buildBaseQuery(true, false);
+			if( $where )
+				$query .= "\nWHERE " . implode(' AND ', $where);
+			if( $groupBy )
+				$query .= "\nGROUP BY $groupBy";
 
-		$query = "SELECT COUNT(*) AS cnt FROM ( $query ) AS q";
-
-		$trans = $this->_db->beginTransaction(true);
+			$query = "SELECT COUNT(*) AS cnt FROM ( $query ) AS q";
+		}
 
 		// Try to use the cache
 		if( $this->_enableCountCache ) {
@@ -1627,9 +1688,6 @@ class DataTable extends BaseDataTable {
 
 		// No hit in cache, run the query
 		$cnt = (int)$this->_db->run($query, $params)->fetch()['cnt'];
-
-		if( $trans )
-			$this->_db->commit();
 
 		// Try to save the new value in cache
 		if( $this->_enableCountCache && $cache )
@@ -1726,16 +1784,11 @@ class StaticCachedQueryDataTable extends BaseDataTable {
 				return $this->__content;
 		}
 
-		$trans = $this->_db->beginTransaction(true);
-
 		// TODO: access filter
 		list($data, $types) = $this->_runQuery();
 
 		// No hit in cache, run the query
 		$count = count($data);
-
-		if( $trans )
-			$this->_db->commit();
 
 		$this->__content = [
 			'data' => $data,

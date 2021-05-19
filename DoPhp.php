@@ -53,6 +53,8 @@ class DoPhp {
 		'key'    => self::BASE_KEY,
 		'strict' => false,
 	];
+	/** Const unsed to force arguments to be loaded from config instead */
+	const SEE_CONFIG = -1;
 
 	/** Stores the current instance */
 	private static $__instance = null;
@@ -133,31 +135,35 @@ class DoPhp {
 	*                                 Default: 86400
 	*                 )
 	*                 'dophp' => array( // Internal DoPhp configurations
-	*                     'url'  => relative path for accessing DoPhp folder from webserver.
-	*                               Default: try to guess it
-	*                     'path' => relative or absolute DoPhp root path
-	*                               Default: automatically detect it
+	*                                   // can also be delegated from root arguments (see below)
+	*                     'url'    => relative path for accessing DoPhp folder from webserver.
+	*                                 Default: try to guess it
+	*                     'path'   => relative or absolute DoPhp root path
+	*                                 Default: automatically detect it
 	*                 )
 	*                 'debug' => enables debug info, should be false in production servers
 	*                 'strict' => triggers an error on any notice
 	*             ),
 	*
-	*             'db' =>   name of the class to use for the database connection
-	*                       Default: 'dophp\\Db'
-	*             'auth' => name of the class to use for user authentication
-	*                       Default: null
-	*             'lang' => name of the class to use for multilanguage handling
-	*                       Default: 'dophp\\Lang'
-	*             'log'  => name of the class to use for logging
-	*                       Default: null
-	*             'sess' => ff true, starts the session and uses it
-	*                       Default: true
-	*             'def' =>  default page name, used when received missing or unvalid page
-	*                       Default: 'home'
-	*             'key' =>  the key containing the page name
-	*                       Default: self::BASE_KEY
+	*             // For any of the following arguments, self::SEE_CONFIG can be
+	*             // specified to have the param loaded from ['conf']['dophp'] array instead
+	*             'db'     => name of the class to use for the database connection
+	*                         Default: 'dophp\\Db'
+	*             'auth'   => name of the class to use for user authentication
+	*                         Default: null
+	*             'lang'   => name of the class to use for multilanguage handling
+	*                         Default: 'dophp\\Lang'
+	*             'log'    => name of the class to use for logging
+	*                         Default: null
+	*             'sess'   => ff true, starts the session and uses it
+	*                         Default: true
+	*             'def'    => default page name, used when received missing or unvalid page
+	*                         Default: 'home'
+	*             'key'    => the key containing the page name
+	*                         Default: self::BASE_KEY
 	*             'strict' => if true, return a 500 status on ANY error
 	*                         Default: false
+	*             'strict' => overrides ['conf']['strict'] if given
 	*/
 	public function __construct(...$input) {
 		// Uses ...$input for rough backward-compatibility, so it can trigger an
@@ -171,17 +177,36 @@ class DoPhp {
 		self::$__instance = $this;
 		$this->__start = $start;
 
-		// Build arguments and assign them to local variables for convenience
+		// Sanity checks over arguments list
 		if( count($input) != 1 )
 			throw new \InvalidArgumentException('only a single array argument should be passed');
 		$args = $input[0];
 		if( ! is_array($args) )
 			throw new \InvalidArgumentException('args must be an array');
+
+		// Check for invalid arguments
 		foreach( $args as $k => $v )
 			if( ! array_key_exists($k, self::DEFAULT_ARGS) )
 				throw new \InvalidArgumentException("unknown argument \"$k\"");
-		foreach( self::DEFAULT_ARGS as $k => $v )
-			$$k = array_key_exists($k, $args) ? $args[$k] : $v;
+
+		// Extract dophp arguments and assign them to local variables for convenience
+		// using default values when missing or processing config delegation
+		foreach( self::DEFAULT_ARGS as $k => $v ) {
+			if( array_key_exists($k, $args) ) {
+				$value = $args[$k];
+
+				if( $value === self::SEE_CONFIG ) {
+					// Argument must be overridden in config
+					if( ! isset($args['conf']['dophp']) || ! array_key_exists($k, $args['conf']['dophp']) )
+						throw new \InvalidArgumentException("argument \"$k\" must be overridden in config");
+
+					$value = $args['conf']['dophp'][$k];
+				}
+			} else
+				$value = $v;
+
+			$$k = $value;
+		}
 
 		// Start the session
 		if( isset($conf['session']['name']) )
@@ -215,7 +240,7 @@ class DoPhp {
 		if( ! array_key_exists('dophp', $this->__conf) )
 			$this->__conf['dophp'] = array();
 		if( ! array_key_exists('url', $this->__conf['dophp']) )
-			$this->__conf['dophp']['url'] = preg_replace('/^'.preg_quote($_SERVER['DOCUMENT_ROOT'],'/').'/', '', __DIR__, 1);
+			$this->__conf['dophp']['url'] = $this->__guessMyBaseUrl();
 		if( ! array_key_exists('path', $this->__conf['dophp']) )
 			$this->__conf['dophp']['path'] = __DIR__;
 
@@ -270,7 +295,9 @@ class DoPhp {
 		}
 
 		// Creates the debug object
-		if( $this->__cache )
+		if( ! $this->__conf['debug'] )
+			dophp\debug\NullDebug::init();
+		elseif( $this->__cache )
 			dophp\debug\MemcacheDebug::init($this->__cache);
 		else
 			dophp\debug\SessionDebug::init();
@@ -347,8 +374,9 @@ class DoPhp {
 		}
 
 		// Logs the request
+		$logid = null;
 		if( $this->__log )
-			$this->__log->logPageRequest($pagefound, $page, $path);
+			$logid = $this->__log->logPageRequest($pagefound, $page, $path);
 
 		// List of allowed methods, used later in CORS preflight and OPTIONS
 		// TODO: Do not hardcode it, handle it nicely
@@ -426,14 +454,14 @@ class DoPhp {
 					throw new \RuntimeException("Page class \"$findName\" not found in file \"$inc_file\"");
 				else
 					throw new \RuntimeException('Page class not found');
-			$pobj = new $classname($this->__conf, $this->__db, $this->__auth, $page, $path );
+			$pobj = new $classname($this->__conf, $this->__db, $this->__auth, $page, $path, $logid );
 
 			// Inject the debug object
 			$pobj->debug = $this->__debug;
 
 			list($out, $headers) = $this->__runPage($pobj);
 		} catch( \dophp\PageDenied $e ) {
-			if( $def ) {
+			if( $def && $e->redirect !== false ) {
 				if( $def == $page ) {
 					// Prevent loop redirection
 					header("HTTP/1.1 500 Internal Server Error");
@@ -485,6 +513,16 @@ class DoPhp {
 		foreach( $headers as $k=>$v )
 			header("$k: $v");
 		echo $out;
+	}
+
+	/**
+	 * Try guessing my own url
+	 */
+	private function __guessMyBaseUrl() {
+		$maindir = dirname(get_included_files()[0]);
+		$mydir = __DIR__;
+		$myreldir = preg_replace('/^'.preg_quote($maindir,'/').'/', '', $mydir, 1);
+		return dirname($_SERVER['PHP_SELF']) . '/' . $myreldir;
 	}
 
 	/**

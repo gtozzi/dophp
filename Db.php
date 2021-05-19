@@ -22,7 +22,7 @@ class Db {
 	/** PostgreSQL Server DB TYPE */
 	const TYPE_PGSQL = 'pgsql';
 
-	/** Debug object (or true for backward compatibility) */
+	/** Debug object (if enabled) */
 	public $debug = false;
 
 	/**
@@ -46,10 +46,13 @@ class Db {
 	/** Tells lastInsertId() PDO's driver support */
 	protected $_hasLid = true;
 
-	/** Wiritten in debug mode, do not use for different purposes */
+	/** Wiritten for debug only, do not use for different purposes */
 	public $lastQuery = null;
-	/** Wiritten in debug mode, do not use for different purposes */
+	/** Wiritten for debug only, do not use for different purposes */
 	public $lastParams = null;
+
+	/** PK column names cache for insert() */
+	private $__pkCache = [];
 
 	/**
 	* Starts a PDO connection to DB
@@ -64,9 +67,6 @@ class Db {
 		$this->_pdo = new \PDO($dsn, $user, $pass);
 		$this->_pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
 		$this->_pdo->setAttribute(\PDO::ATTR_DEFAULT_FETCH_MODE, \PDO::FETCH_ASSOC);
-		// When set, will cause MySQL to return INTEGER ans PHP int, but will
-		// cause some concurrency problems
-		//$this->_pdo->setAttribute(\PDO::ATTR_EMULATE_PREPARES, false);
 		$driver = $this->_pdo->getAttribute(\PDO::ATTR_DRIVER_NAME);
 		switch( $driver ) {
 		case 'mysql':
@@ -102,6 +102,7 @@ class Db {
 	public function __sleep() {
 		$vars = get_object_vars($this);
 		unset($vars['_pdo']);
+		unset($vars['__pkCache']);
 		return array_keys($vars);
 	}
 
@@ -113,6 +114,7 @@ class Db {
 		if( ! $curDb )
 			return;
 		$this->_pdo = $curDb->_pdo;
+		$this->__pkCache = [];
 	}
 
 	/**
@@ -168,12 +170,11 @@ class Db {
 		if( $dbgquery )
 			$dbgquery->built($query, $params);
 
-		if( $this->debug ) {
-			$this->lastQuery = $query;
-			$this->lastParams = $params;
-		}
+		$this->lastQuery = $query;
+		$this->lastParams = $params;
 
-		$st = $this->_pdo->prepare($query);
+		// Using emulated prepares for historic reasons and coherency between DBMSes
+		$st = $this->_pdo->prepare($query, [ \PDO::ATTR_EMULATE_PREPARES => true ]);
 
 		if( $dbgquery )
 			$dbgquery->prepared();
@@ -210,18 +211,51 @@ class Db {
 	* Runs an INSERT statement from an associative array and returns ID of the
 	* last auto_increment value
 	*
+	* @param $noPkCache bool: disables local PK cache for PgSQL
 	* @see self::buildInsUpdQuery
 	*/
-	public function insert($table, $params) {
-		list($q,$p) = $this->buildInsUpdQuery('ins', $table, $params);
+	public function insert($table, $params, $noPkCache=false) {
+		// PgSQL's PDO::lastInsertId() fails badly when trying to call it after
+		// a non-generated insert. Also, looks like there is no PgSQL equivalent
+		// for SCOPE_IDENTITY() or LAST_INSERT_ID(). Looks like i need to work
+		// around this problem and inspect the table's PK structure before
+		// running the query. Using a small local cache to speed up multiple
+		// inserts in a row, may be disabled in very special circumstances where
+		// the table is altered in between
+		if( $this->_type == self::TYPE_PGSQL && ( $noPkCache || ! array_key_exists($table, $this->__pkCache) ) ) {
+			$q = '
+				SELECT a.attname AS col
+				FROM pg_index AS i
+				JOIN pg_attribute AS a
+					ON i.indrelid = a.attrelid
+					AND a.attnum = any( i.indkey )
+				WHERE i.indrelid = ' . $this->quote($table) . '::regclass
+					AND i.indisprimary
+			';
+			$this->__pkCache[$table] = [];
+			foreach( $this->run($q)->fetchAll() as $r )
+				$this->__pkCache[$table][] = $r['col'];
+		}
+		$rcols = $this->_type == self::TYPE_PGSQL ? $this->__pkCache[$table] : null;
+		list($q,$p) = $this->buildInsUpdQuery('ins', $table, $params, null, $rcols);
 
 		// Retrieve the ID by running a scope_identity query
 		if( ! $this->_hasLid )
 			$q .= '; SELECT SCOPE_IDENTITY() AS ' . $this->quoteObj('id');
 
-		$st = $this->run($q, $p);
+		$st = $this->xrun($q, $p);
 
-		if( $this->_hasLid )
+		if( $this->_type == self::TYPE_PGSQL ) {
+			if( $rcols ) {
+				$r = $st->fetch();
+
+				if( count($rcols) == 1 )
+					return $r[$rcols[0]];
+
+				return $r;
+			} else
+				return null;
+		} elseif( $this->_hasLid )
 			return $this->lastInsertId();
 		else {
 			$r = $st->fetch();
@@ -348,10 +382,11 @@ class Db {
 	* Returns last insert ID
 	*
 	* @see \PDO::lastInsertId()
-	* @return string: The ID of the last inserted row
+	* @return string: The ID of the last inserted row or null if not available
 	*/
 	public function lastInsertId() {
 		$lid = $this->_pdo->lastInsertId();
+
 		if( is_int($lid) )
 			return $lid;
 		if( is_numeric($lid) )
@@ -378,10 +413,13 @@ class Db {
 	 * Quotes a schema object (table, column, ...)
 	 *
 	 * @param $name string: The unquoted object name
+	 * @param $ignoreDot boolean: if true, the entire $name is enclosed in quotes,
+	 *                            otherwise is split at the dot character and quoted
+	 *                            separately
 	 * @return string: The quoted object name
 	 */
-	public function quoteObj($name) {
-		return self::quoteObjFor($name, $this->_type);
+	public function quoteObj($name, $ignoreDot=false) {
+		return self::quoteObjFor($name, $this->_type, $ignoreDot);
 	}
 
 	/**
@@ -389,21 +427,33 @@ class Db {
 	 *
 	 * @param $name string: The unquoted object name
 	 * @param $type string: The DBMS type (ansi, mysql, mssql, pgsql)
+	 * @param $ignoreDot boolean: if true, the entire $name is enclosed in quotes,
+	 *                            otherwise is split at the dot character
+	 *                            and quoted separately (default)
 	 * @return string: The quoted object name
 	 */
-	public static function quoteObjFor($name, $type) {
-		switch( $type ) {
-		case self::TYPE_MYSQL:
-			$name = str_replace('`', '``', $name);
-			return "`$name`";
-		case self::TYPE_MSSQL:
-			return "[$name]";
-		case self::TYPE_PGSQL:
-		case 'ansi':
-			return "\"$name\"";
-		default:
-			throw new NotImplementedException("Type \"$type\" not implemented");
+	public static function quoteObjFor($name, $type, $ignoreDot=false) {
+		$split = $ignoreDot ? [ $name ] : explode('.', $name);
+
+		foreach ($split as &$part) {
+			switch( $type ) {
+			case self::TYPE_MYSQL:
+				$part = "`".str_replace('`', '``', $part)."`";
+				break;
+			case self::TYPE_MSSQL:
+				$part = "[$part]";
+				break;
+			case self::TYPE_PGSQL:
+			case 'ansi':
+				$part = "\"$part\"";
+				break;
+			default:
+				throw new NotImplementedException("Type \"$type\" not implemented");
+			}
 		}
+		unset($part);
+
+		return implode('.', $split);
 	}
 
 	/**
@@ -430,10 +480,12 @@ class Db {
 	* @param $table string: The name of the table
 	* @param $ccols array: When type is 'insupd' and DBMS is PostgreSQL,
 	*                      this is the list of constraint columns. Ignored otherwise
+	* @param $rcols array: When DBMS is PostgreSQL, this is the list of columns
+	*                      in the RETURNING clause of the query
 	* @see self::buildParams
 	* @return array [query string, params]
 	*/
-	public function buildInsUpdQuery($type, $table, $params, $ccols=null) {
+	public function buildInsUpdQuery($type, $table, $params, $ccols=null, $rcols=null) {
 		switch( $type ) {
 		case 'insupd':
 			if( $this->_type == self::TYPE_PGSQL && ! $ccols )
@@ -455,8 +507,12 @@ class Db {
 
 		if( $ins ) {
 			list($cols, $p) = self::processParams($params, $this->_type);
-			$q .= '(' . implode(',', array_keys($cols)) . ')';
-			$q .= ' VALUES (' . implode(',', array_values($cols)) . ')';
+			if( ! count($cols) )
+				$q .= ' DEFAULT VALUES ';
+			else {
+				$q .= '(' . implode(',', array_keys($cols)) . ')';
+				$q .= ' VALUES (' . implode(',', array_values($cols)) . ')';
+			}
 
 			if( $type == 'insupd' ) {
 				$updates = array();
@@ -477,6 +533,11 @@ class Db {
 		} else {
 			list($sql, $p) = self::buildParams($params, ', ', $this->_type);
 			$q .= " SET $sql";
+		}
+
+		if( $rcols ) {
+			$q .= " RETURNING ";
+			$q .= implode(', ', array_map(function($c){ return $this->quoteObj($c); }, $rcols));
 		}
 
 		return array($q, $p);
@@ -1200,6 +1261,7 @@ class Table {
 						"kcu2".ORDINAL_POSITION
 				';
 			}
+
 			foreach( $this->_db->run($q, $tp)->fetchAll() as $c ) {
 				if( isset($this->_refs['COLUMN_NAME']) )
 					throw new \LogicException("More than one reference detected for column {$c['COLUMN_NAME']}");

@@ -31,6 +31,7 @@ interface Logger {
 	 * @param $found  bool: Whether the page include file has been found
 	 * @param $name   string: Name of the page
 	 * @param $path   string: The relative path inside this page
+	 * @return Should return log entry id
 	 */
 	public function logPageRequest(bool $found, string $name, string $path=null);
 }

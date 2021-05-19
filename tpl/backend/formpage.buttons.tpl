@@ -9,6 +9,8 @@
 			btnc-{{$btn->phpclass()}}
 			{{if isset($size) && $size}}btn-{{$size}}{{/if}}
 			{{if $btn->isDropdown()}}dropdown-toggle{{/if}}
+			{{if $btn->disabledOnFormDirty}}disabled-on-form-dirty{{/if}}
+			{{if $btn->enabled && $btn->disabledOnFormDirty}}enabled-on-form-clean{{/if}}
 		{{/mstrip}}"
 		id="{{$btn->getId()|htmlentities}}"
 		{{if ! $btn->enabled}}disabled{{/if}}

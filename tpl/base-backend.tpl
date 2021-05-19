@@ -92,6 +92,9 @@
 		<link rel="stylesheet" type="text/css" href="{{$config['dophp']['url']}}/webcontent/css/mgmt-glyph.css"/>
 	{{/block}}
 
+	<!-- Dophp default styles and scripts -->
+	<link rel="stylesheet" href="{{$config['dophp']['url']}}/med/css/base.css">
+
 	{{block name='head'}}{{/block}}
 </head>
 {{$testServer=isset($config['testserver']) && $config['testserver']}}

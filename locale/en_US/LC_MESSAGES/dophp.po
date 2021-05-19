@@ -1,0 +1,240 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: \n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2021-03-27 23:18+0100\n"
+"PO-Revision-Date: 2021-03-27 23:24+0100\n"
+"Language: en_US\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"X-Generator: Poedit 2.3\n"
+
+#: Alert.php:97
+msgid "Access denied"
+msgstr ""
+
+#: Buttons.php:264
+msgid "Save"
+msgstr ""
+
+#: Buttons.php:278
+msgid "Cancel"
+msgstr ""
+
+#: Buttons.php:292 pages/crud.php:109 pages/crud.php:217
+msgid "Delete"
+msgstr ""
+
+#: DoPhp.php:887
+msgid "Internal Server Error, please contact support or try again later"
+msgstr ""
+
+#: Model.php:583
+msgid "item is in use"
+msgstr ""
+
+#: Utils.php:221
+msgid "Yes"
+msgstr ""
+
+#: Utils.php:221
+msgid "No"
+msgstr ""
+
+#: Validator.php:195
+msgid "Field must be one of"
+msgstr ""
+
+#: Validator.php:229 Validator.php:534 Validator.php:584
+msgid "Field can't be empty"
+msgstr ""
+
+#: Validator.php:265
+msgid "Unvalid eMail"
+msgstr ""
+
+#: Validator.php:271
+msgid "Unvalid absolute URL"
+msgstr ""
+
+#: Validator.php:277
+msgid "Text must be at least {number} characters long"
+msgstr ""
+
+#: Validator.php:279
+msgid "Text must be no longer than {number} characters"
+msgstr ""
+
+#: Validator.php:310
+msgid "Number must be at least {number}"
+msgstr ""
+
+#: Validator.php:315
+msgid "Number must not be bigger than {number}"
+msgstr ""
+
+#: Validator.php:325
+msgid "Number must be a multiple of {number}"
+msgstr ""
+
+#: Validator.php:425
+msgid "Date must be {date} or after"
+msgstr ""
+
+#: Validator.php:430
+msgid "Date must be {date} or before"
+msgstr ""
+
+#: Validator.php:536
+msgid "Invalid file size"
+msgstr ""
+
+#: Validator.php:538
+msgid "Could not read local copy of file"
+msgstr ""
+
+#: Validator.php:540
+msgid "File size mismatch"
+msgstr ""
+
+#: Validator.php:545
+msgid "Error"
+msgstr ""
+
+#: Validator.php:554
+msgid "Unsupported file type"
+msgstr ""
+
+#: Validator.php:587
+msgid "Must be an array"
+msgstr ""
+
+#: pages/backend.php:44
+msgid "element(s)"
+msgstr ""
+
+#: pages/backend.php:227
+msgid "List"
+msgstr ""
+
+#: pages/backend.php:422
+msgid "Saving"
+msgstr ""
+
+#: pages/backend.php:425
+msgid "Canceling"
+msgstr ""
+
+#: pages/backend.php:751
+msgid "Missing required permissions"
+msgstr ""
+
+#: pages/backend.php:761
+msgid "(f)new"
+msgstr "new"
+
+#: pages/backend.php:761
+msgid "(m)new"
+msgstr "new"
+
+#: pages/backend.php:762 pages/crud.php:78 pages/crud.php:142
+#: pages/crud.php:163
+msgid "Insert"
+msgstr ""
+
+#: pages/backend.php:771 pages/crud.php:77 pages/crud.php:108
+#: pages/crud.php:195
+msgid "Edit"
+msgstr ""
+
+#: pages/backend.php:874
+msgid "Delete succesful"
+msgstr ""
+
+#: pages/base.php:205
+msgid "Invalid credentials"
+msgstr ""
+
+#: pages/crud.php:107
+msgid "Show"
+msgstr ""
+
+#: pages/crud.php:109
+msgid "Are you sure?"
+msgstr ""
+
+#: pages/crud.php:121
+msgid "No data available in table"
+msgstr ""
+
+#: pages/crud.php:122
+msgid "Showing _START_ to _END_ of _TOTAL_ entries"
+msgstr ""
+
+#: pages/crud.php:123
+msgid "Showing 0 to 0 of 0 entries"
+msgstr ""
+
+#: pages/crud.php:124
+msgid "(filtered from _MAX_ total entries)"
+msgstr ""
+
+#: pages/crud.php:127
+msgid "Show _MENU_ elements"
+msgstr ""
+
+#: pages/crud.php:128
+msgid "Loading..."
+msgstr ""
+
+#: pages/crud.php:129
+msgid "Processing..."
+msgstr ""
+
+#: pages/crud.php:130
+msgid "Search"
+msgstr ""
+
+#: pages/crud.php:131
+msgid "Search returned zero records"
+msgstr ""
+
+#: pages/crud.php:133
+msgid "First"
+msgstr ""
+
+#: pages/crud.php:134
+msgid "Previous"
+msgstr ""
+
+#: pages/crud.php:135
+msgid "Next"
+msgstr ""
+
+#: pages/crud.php:136
+msgid "Last"
+msgstr ""
+
+#: pages/crud.php:139
+msgid "sort the column in ascending order"
+msgstr ""
+
+#: pages/crud.php:140
+msgid "sort the column in descending order"
+msgstr ""
+
+#: pages/crud.php:215
+msgid "Can't delete"
+msgstr ""
+
+#: /tmp/dophp_tpl_strings.php:2
+msgid "Logout"
+msgstr ""

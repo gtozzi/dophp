@@ -19,6 +19,13 @@ require_once(__DIR__ . '/../Page.php');
 */
 class PageError extends \Exception {
 
+	/**
+	 * May be set to ask DoPhp to do (not) perform an interactive redirect
+	 * when catching this exception (i.e. do not redirect on login for InvalidCredentials.)
+	 * Values: true = please redirect, false = please do not redirect, null = default
+	 */
+	public $redirect = null;
+
 	protected $_debugData = null;
 
 	/**

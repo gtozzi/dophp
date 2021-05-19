@@ -145,16 +145,30 @@
 
 				// Update save button's class
 				if( formModified.size ) {
-					// form has been modified
+					// form has been modified - form is dirty
 					$(".save-button").removeClass('btn-secondary');
 					$(".save-button").addClass('btn-primary');
 					$(".cancel-button").removeClass('btn-secondary');
 					$(".cancel-button").addClass('btn-warning');
+
+					// Disable buttons
+					let doe = $("button.disabled-on-form-dirty");
+					doe.attr("disabled", true);
+					// Enable tooltip (see https://getbootstrap.com/docs/4.0/components/tooltips/)
+					doe.data("toggle", "tooltip");
+					doe.data("delay", 0);
+					doe.attr("title", {{_('Please save or cancel the form before proceeding')|json_encode}});
+					doe.tooltip();
 				} else {
 					$(".save-button").removeClass('btn-primary');
 					$(".save-button").addClass('btn-secondary');
 					$(".cancel-button").removeClass('btn-warning');
 					$(".cancel-button").addClass('btn-secondary');
+
+					// Re-enable buttons
+					let doe = $("button.enabled-on-form-clean");
+					doe.attr("disabled", false);
+					doe.tooltip('dispose');
 				}
 			}
 

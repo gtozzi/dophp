@@ -367,10 +367,6 @@
 									return currHXR;
 								},
 								success: function(data){
-
-
-
-
 									console.log('File upload success', data);
 									$("#abortAjax_{{$id}}").hide();
 									let myfile = data.files['file_'+{{$id|json_encode}}];
@@ -382,9 +378,7 @@
 										//TODO
 									}
 
-
 									setTimeout(function(){
-
 										// enable save button after file upload
 										$(currForm)
 											.find(".save-button")
@@ -403,19 +397,31 @@
 												$(".ag-upl-feedback.itm_{{$id}}.ag-upl-success").css("display","block");
 											}
 											else if(res["success"]==false){
-												$(".ag-upl-feedback.itm_{{$id}}.ag-upl-error").css("display","block");
-												if(typeof(res["message"])!="undefined"){
-													$(".ag-upl-feedback.itm_{{$id}}.ag-upl-error .ag-upl-feedback-txt").text(res["message"]);
-												}
+												showAjaxError(res["message"]);
 											}
 										}
-
-
 									},700);
+								},
+								error: function(jqXHR, textStatus, errorThrown){
+									setTimeout(function(){
+										let httpCode = jqXHR.status;
+										showAjaxError('Codice di errore HTTP ' + httpCode);
+									},700);
+								},
+								complete: function(jqXHR, textStatus){
+									// enable save button after file upload
+									$(currForm)
+										.find(".save-button")
+										.prop("disabled",false);
+
+									// hide the progress bar and ETA text
+									$(".progress-ETA").css("display","none");
+									$(".ag-progress-line_{{$id}}").css("display","none");
 								}
 							});
 
 						});
+<<<<<<< HEAD
 						$( document ).ready(function() {
 							$("#abortAjax_{{$id}}").hide();
 							$("#abortAjax_{{$id}}").click(function() {
@@ -430,6 +436,16 @@
 								$("#abortAjax_{{$id}}").hide();
 							});
 						});
+=======
+
+						let showAjaxError = function(errorMessage) {
+							$(".ag-upl-feedback.itm_{{$id}}.ag-upl-error").css("display","block");
+							if(errorMessage){
+								$(".ag-upl-feedback.itm_{{$id}}.ag-upl-error .ag-upl-feedback-txt").text(errorMessage);
+							}
+						}
+
+>>>>>>> master
 						//$("#ag-fileupl-s-act-{{$id}}").click(function(){
 						//});
 					</script>
@@ -461,6 +477,9 @@
 									data: function (params) {
 										params.ajaxParams = $(agLastAddedSelect).data('ajaxParams');
 										params.ajaxField = {{$field->getName()|json_encode}};
+										{{if $field->getForm()}}
+											params.ajaxForm = {{$field->getForm()->getId()|json_encode}};
+										{{/if}}
 										return params;
 									},
 								},

@@ -117,14 +117,15 @@ class Form extends BaseWidget {
 	}
 
 	/**
-	 * Returns form's internal values (excluding readonly fields)
+	 * Returns form's internal values
 	 *
+	 * @param $excludeRo bool: If true, will exclude readonly fields
 	 * @return array: Associative array name => value of form's internal values
 	 */
-	public function getInternalValues(): array {
+	public function getInternalValues(bool $excludeRo = false): array {
 		$ret = [];
 		foreach( $this->_fields as $name => $field )
-			if( ! $field->isReadOnly() )
+			if( ! $excludeRo || ! $field->isReadOnly() )
 				$ret[$name] = $field->getInternalValue();
 		return $ret;
 	}
@@ -323,4 +324,37 @@ class Form extends BaseWidget {
 		return $this->_action;
 	}
 
+	/**
+	 * Returns an array representing the current form status
+	 *
+	 * @see self::restore()
+	 * @return array Internal format, intended to be used with self::restore() only
+	 */
+	public function dump(): array {
+		$ret = [
+			'_id' => $this->_id,
+			'fields' => [],
+		];
+		foreach( $this->_fields as $name => $field )
+			$ret['fields'][$name] = $field->dump();
+		return $ret;
+	}
+
+	/**
+	 * Restores a previously dumped form status
+	 *
+	 * This is meant to be fault-tolerant (i.e. ignoring extra fields) since Form
+	 * may have been slightly modified between dump/restore (i.e. by software upgrades)
+	 *
+	 * @see self::dump()
+	 */
+	public function restore(array $dump) {
+		if( isset($dump['_id']) )
+			$this->_id = $dump['_id'];
+
+		if( isset($dump['fields']) && is_array($dump['fields']) )
+			foreach( $this->_fields as $name => $field )
+				if( array_key_exists($name, $dump) )
+					$field->restore($dump[$name]);
+	}
 }

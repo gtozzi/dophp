@@ -123,6 +123,11 @@ abstract class Button extends \dophp\widgets\BaseWidget {
 	public $label;
 	public $enabled = false;
 	public $hidden = false;
+	/**
+	 * true if this button should be disabled in an editing context
+	 * (i.e. edited and non-saved form)
+	 */
+	public $disabledOnFormDirty = true;
 
 	/**
 	 * Constructs the button
@@ -134,6 +139,8 @@ abstract class Button extends \dophp\widgets\BaseWidget {
 	 *        - type: string button type, default 'button'
 	 *        - class: string button class, default 'btn-secondary'
 	 *        - confirm: A string to ask confirmation before proceeding
+	 *        - disabledOnFormDirty: boolean defining if the button is disabled
+	 *          when on a modified context (i.e. an unsaved form)
 	 */
 	public function __construct(string $id, string $label, string $icon, array $options=[]) {
 		if( isset($options['class']) && ! is_string($options['class']) )
@@ -148,6 +155,8 @@ abstract class Button extends \dophp\widgets\BaseWidget {
 		$this->icon = $icon;
 		$this->type = $options['type'] ?? self::DEFAULT_TYPE;
 		$this->class = $options['class'] ?? self::DEFAULT_CLASS;
+		if( array_key_exists('disabledOnFormDirty', $options) )
+			$this->disabledOnFormDirty = $options['disabledOnFormDirty'];
 	}
 
 	public function enable() {
@@ -258,8 +267,12 @@ class DropdownButtonChild extends \dophp\widgets\BaseWidget {
 class SaveButton extends Button {
 	const DEFAULT_ID = 'save';
 
-	public function __construct(string $id=self::DEFAULT_ID, string $label='Salva',
+	public $disabledOnFormDirty = false;
+
+	public function __construct(string $id=self::DEFAULT_ID, string $label=null,
 			string $icon='fa-floppy-o', array $options=['type'=>'submit']) {
+		if( $label === null )
+			$label = _('Save');
 		parent::__construct($id, $label, $icon, $options);
 	}
 }
@@ -270,8 +283,12 @@ class SaveButton extends Button {
 class CancelButton extends Button {
 	const DEFAULT_ID = 'cancel';
 
-	public function __construct(string $id=self::DEFAULT_ID, string $label='Annulla',
+	public $disabledOnFormDirty = false;
+
+	public function __construct(string $id=self::DEFAULT_ID, string $label=null,
 			string $icon='fa-undo', array $options=[]) {
+		if( $label === null )
+			$label = _('Cancel');
 		parent::__construct($id, $label, $icon, $options);
 	}
 }
@@ -282,8 +299,10 @@ class CancelButton extends Button {
 class DeleteButton extends Button {
 	const DEFAULT_ID = 'delete';
 
-	public function __construct(string $id=self::DEFAULT_ID, string $label='Elimina',
+	public function __construct(string $id=self::DEFAULT_ID, string $label=null,
 			string $icon='fa-trash', array $options=[]) {
+		if( $label === null )
+			$label = _('Delete');
 
 		if( ! isset($options['class']) )
 			$options['class'] = 'btn-danger';

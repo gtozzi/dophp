@@ -160,10 +160,13 @@ abstract class AuthBase implements AuthInterface {
 		if( ! $this->_sess )
 			return null;
 
-		if( ! isset($_SESSION[self::SESS_VAR][self::SESS_VUSER]) )
+		if( ! isset($_SESSION[self::SESS_VAR]) || ! is_array($_SESSION[self::SESS_VAR]) )
 			return null;
 
-		if( ! isset($_SESSION[self::SESS_VAR][self::SESS_VPASS]) )
+		if( ! isset($_SESSION[self::SESS_VAR][self::SESS_VUSER]) || ! $_SESSION[self::SESS_VAR][self::SESS_VUSER] )
+			return null;
+
+		if( ! array_key_exists(self::SESS_VPASS, $_SESSION[self::SESS_VAR]) )
 			return null;
 
 		return [
@@ -252,7 +255,7 @@ abstract class AuthBasic extends AuthBase {
 		$this->_beforeLogin();
 
 		list( $uid, $token ) = $this->__checkedLogin($username, $password, self::SOURCE_HAND);
-		if( $uid && $token )
+		if( $uid )
 			$this->saveSession($username, $token);
 		else
 			$this->clearSession();
@@ -271,7 +274,7 @@ abstract class AuthBasic extends AuthBase {
 		list( $user, $pwd, $source ) = $detected;
 		list( $uid, $token ) = $this->__checkedLogin($user, $pwd, $source);
 
-		if( $uid && $token )
+		if( $uid )
 			$this->saveSession($user, $token);
 		else
 			$this->clearSession();
@@ -337,8 +340,8 @@ abstract class AuthBasic extends AuthBase {
 	* @param $pwd string: The password or the token, depends on $source
 	* @param $source string: The source for the credendials (headers|user|session|hand),
 	*                        SOURCE_* consts
-	* @return array [ The user's ID, session token or null ] on success, null on failure
-	*               When session token is given, will be saved in session and passwd
+	* @return array The [ user's ID, session token ] array on success, null on failure
+	*               Session token will be saved in session and passed
 	*               back as $pwd argument on subsequent login calls
 	*/
 	abstract protected function _login($user, $pwd, $source);

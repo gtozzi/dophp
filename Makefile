@@ -12,3 +12,7 @@ lang: locale
 langbuild: locale
 	msgfmt --statistics -c locale/it_IT/LC_MESSAGES/dophp.po \
 	-o locale/it_IT/LC_MESSAGES/dophp.mo
+	msgfmt --statistics -c locale/en_US/LC_MESSAGES/dophp.po \
+	-o locale/en_US/LC_MESSAGES/dophp.mo
+	msgfmt --statistics -c locale/en_GB/LC_MESSAGES/dophp.po \
+	-o locale/en_GB/LC_MESSAGES/dophp.mo
