@@ -148,6 +148,9 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 	/** Should add a totals row? */
 	public $addTotals = false;
 
+	/** Should calculate found rows when filtering results? May disable this for performance */
+	protected $_calcFound = true;
+
 	/**
 	 * Provides the query for the cache freshness check default implementation
 	 * must be defined in child and return only a row and col
@@ -1495,9 +1498,6 @@ class DataTable extends BaseDataTable {
 	/** Fixed group by, if any, without "GROUP BY" keyword */
 	protected $_groupBy = null;
 
-	/** Should calculate found rows when filtering results? May disable this for performance */
-	protected $_calcFound = true;
-
 	/** Fast count query, used for performance on huge tables, must return a 'cnt' column */
 	protected $_countQuery = null;
 
@@ -1711,6 +1711,7 @@ class DataTable extends BaseDataTable {
 class StaticCachedQueryDataTable extends BaseDataTable {
 
 	public $addTotals = true;
+	protected $_calcFound = false;
 
 	/**
 	 * The full query. Returned cols must match col name
