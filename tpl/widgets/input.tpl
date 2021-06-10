@@ -253,9 +253,19 @@
 				{{elseif $type=='asyncFile'}}
 					</div><!-- Input group end -->
 					<script>
-						// File upload asincrono
+						// Async file upload
 						$('#{{$id}}_btn').click(function() {
 							$('#{{$id}}').click();
+						});
+						// Custom events for upload result
+						$('#{{$id}}').bind('upload-error', function(event, errorMessage) {
+							$(".ag-upl-feedback.itm_{{$id}}.ag-upl-error").css("display","block");
+							if(errorMessage){
+								$(".ag-upl-feedback.itm_{{$id}}.ag-upl-error .ag-upl-feedback-txt").text(errorMessage);
+							}
+						});
+						$('#{{$id}}').bind('upload-success', function(event) {
+							$(".ag-upl-feedback.itm_{{$id}}.ag-upl-success").css("display","block");
 						});
 						$('#{{$id}}').change(function() {
 
@@ -394,10 +404,10 @@
 										var res=data["files"]["file_{{$id}}"];
 										if(typeof(res["success"])!="undefined"){
 											if(res["success"]==true){
-												$(".ag-upl-feedback.itm_{{$id}}.ag-upl-success").css("display","block");
+												$('#{{$id}}').trigger('upload-success');
 											}
 											else if(res["success"]==false){
-												showAjaxError(res["message"]);
+												$('#{{$id}}').trigger('upload-error', [res["message"]]);
 											}
 										}
 									},700);
@@ -405,7 +415,7 @@
 								error: function(jqXHR, textStatus, errorThrown){
 									setTimeout(function(){
 										let httpCode = jqXHR.status;
-										showAjaxError('Codice di errore HTTP ' + httpCode);
+										$('#{{$id}}').trigger('upload-error', ['Codice di errore HTTP ' + httpCode]);
 									},700);
 								},
 								complete: function(jqXHR, textStatus){
@@ -435,16 +445,6 @@
 								$("#abortAjax_{{$id}}").hide();
 							});
 						});
-
-						let showAjaxError = function(errorMessage) {
-							$(".ag-upl-feedback.itm_{{$id}}.ag-upl-error").css("display","block");
-							if(errorMessage){
-								$(".ag-upl-feedback.itm_{{$id}}.ag-upl-error .ag-upl-feedback-txt").text(errorMessage);
-							}
-						}
-
-						//$("#ag-fileupl-s-act-{{$id}}").click(function(){
-						//});
 					</script>
 				{{elseif $type=='select'}}
 					<script>
