@@ -421,7 +421,6 @@
 							});
 
 						});
-<<<<<<< HEAD
 						$( document ).ready(function() {
 							$("#abortAjax_{{$id}}").hide();
 							$("#abortAjax_{{$id}}").click(function() {
@@ -436,7 +435,6 @@
 								$("#abortAjax_{{$id}}").hide();
 							});
 						});
-=======
 
 						let showAjaxError = function(errorMessage) {
 							$(".ag-upl-feedback.itm_{{$id}}.ag-upl-error").css("display","block");
@@ -445,7 +443,6 @@
 							}
 						}
 
->>>>>>> master
 						//$("#ag-fileupl-s-act-{{$id}}").click(function(){
 						//});
 					</script>
