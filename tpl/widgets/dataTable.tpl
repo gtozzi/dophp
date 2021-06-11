@@ -28,7 +28,7 @@
 			table.ajax.reload( function() {
 				console.log('table refreshed');
 				$('#{{$id}}_filmodal').modal('hide');
-			})
+			});
 		}
 	{{/if}}
 
@@ -37,13 +37,20 @@
 	 *
 	 * @see https://datatables.net/reference/option/ajax.data
 	 */
-	function prapareServerData(data, settings) {
+	function prepareServerData(data, settings) {
+		// Add the global superfilter info
 		data.filter = {};
 		{{if $sfilter}}
 			{{foreach $sfilter as $f}}
 				data.filter[{{$f->getName()|json_encode}}] = $('#'+{{$f->getId()|json_encode}}).prop('checked') ? '1' : '0';
 			{{/foreach}}
 		{{/if}}
+
+		// Add visibility info for each column
+		table.columns().every(function(index) {
+			data.columns[index].visible = table.column(index).visible();
+		});
+
 		return data;
 	}
 
@@ -186,7 +193,7 @@
 			ajax: {
 				url:         {{$ajaxURL|json_encode}},
 				type:        'POST',
-				data:        prapareServerData,
+				data:        prepareServerData,
 			},
 
 			"initComplete": function(settings, json) {
@@ -208,6 +215,7 @@
 				{
 					orderable: false,
 					data: '{{$btnKey}}',
+					name: '{{$btnKey}}',
 					render: function( data, type, row, meta ) {
 						if( ! type ) // Datatable requests unmodified data
 							return data;
@@ -246,6 +254,7 @@
 				{{foreach $cols as $c}}
 					{
 						data: '{{$c->id}}',
+						name: '{{$c->id}}',
 						className: 'data-table-col',
 						visible: {{$c->visible|json_encode}},
 						//width: "200px",
@@ -290,6 +299,7 @@
 
 			// Initial search values
 			searchCols: [
+				null, // Buttons column
 				{{foreach $cols as $c}}
 					{{if $c->search}}
 						{ search: {{$c->search|json_encode}}, regex: {{$c->regex|json_encode}}, },
@@ -779,20 +789,31 @@
 	 * Update the column visibility
 	 */
 	function updateColumns(formEl) {
+		let needsReload = false;
+
 		$(formEl).find('input').each(function(){
 			let input = $(this);
 			let coln = input.data('coln');
 			let visible = input.prop('checked');
-			let previous = table.column(coln+1).visible();
+			let previous = table.column(coln).visible();
 
 			if( previous == visible )
 				return;
 
 			console.log('Changing column visibility', coln, previous, visible);
-			table.column(coln+1).visible(visible);
+			table.column(coln).visible(visible);
+
+			// When re-adding a column, data needs to be refreshed
+			if( ! previous )
+				needsReload = true;
 		});
 
 		$(formEl).closest('div.modal').modal('hide');
+
+		if( needsReload )
+			table.ajax.reload( function() {
+				console.log('table refreshed');
+			});
 	}
 
 	function monthDiff(dateFrom, dateTo) {
@@ -1028,7 +1049,7 @@
 				<div class="modal-body">
 					{{foreach $cols as $c}}
 						<label class="custom-control custom-checkbox ag-checkbx-cust">
-							<input data-coln="{{$c@index}}" type="checkbox" class="align-middle custom-control-input" {{if $c->visible}}checked{{/if}}>
+							<input data-coln="{{$c@iteration}}" type="checkbox" class="align-middle custom-control-input" {{if $c->visible}}checked{{/if}}>
 							<span class="custom-control-indicator"></span>
 							<span class="custom-control-description">{{$c->descr|htmlentities}}</span>
 						</label>
@@ -1078,7 +1099,7 @@
 		</div>
 
 		<div class="wp-date-filter-form form-2">
-			<div class="wp-date-filt-mthCont wp-date-filt-univCont" data-coln="{{$c@index}}">
+			<div class="wp-date-filt-mthCont wp-date-filt-univCont" data-coln="{{$c@iteration}}">
 				{{foreach from=$monthYearList item=myl_list key=myl_year}}
 					<div class="wp-date-monthBlck-title">{{$myl_year}}</div>
 					{{foreach from=$myl_list item=month}}
@@ -1089,7 +1110,7 @@
 		</div>
 
 		<div class="wp-date-filter-form form-3">
-			<div class="wp-date-filt-yeaCont wp-date-filt-univCont" data-coln="{{$c@index}}">
+			<div class="wp-date-filt-yeaCont wp-date-filt-univCont" data-coln="{{$c@iteration}}">
 				{{foreach from=$yearList item=yl_list key=yl_year_range}}
 					<div class="wp-date-yearBlck-title">{{$yl_year_range}}</div>
 					{{foreach from=$yl_list item=year}}
@@ -1137,11 +1158,11 @@
 						<input
 							class="data-table-filter {{if $c->type == \dophp\Table::DATA_TYPE_DATE}}ag-dt-dtFilt{{/if}}"
 							type="text" placeholder="filtra - cerca" onkeyup="console.log(event);filterKeyUp(event);" onchange="filterChanged(this);"
-							data-timer="" data-coln="{{$c@index}}" data-type="{{$c->type|htmlentities}}"
+							data-timer="" data-coln="{{$c@iteration}}" data-type="{{$c->type|htmlentities}}"
 							{{if $c->type == \dophp\Table::DATA_TYPE_DATE}}
 								onfocus="filterShowDate(this);"
 								data-seltab=""
-								id="ag-dt-dtFilt-{{$c@index}}"
+								id="ag-dt-dtFilt-{{$c@iteration}}"
 							{{else}}
 								onfocus="wpHideDateWidget()"
 							{{/if}}

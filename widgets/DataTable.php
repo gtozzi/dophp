@@ -685,9 +685,10 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 	 * @param $filter DataTableSearchFilter
 	 * @param $order DatatableDataOrder
 	 * @param $limit DatatableDataLimit
+	 * @param $visibility DataTableDataVisibility
 	 * @return \dophp\Result
 	 */
-	abstract protected function _getRawDataInternal( DataTableDataFilter $filter=null, DatatableDataOrder $order=null, DatatableDataLimit $limit=null ): array;
+	abstract protected function _getRawDataInternal( DataTableDataFilter $filter=null, DatatableDataOrder $order=null, DatatableDataLimit $limit=null, DataTableDataVisibility $visibility=null ): array;
 
 	public function getRawData( $pars=[], $save=false, $useSaved=false ): array {
 		// Parses the super filter
@@ -695,16 +696,52 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 			if( isset($pars['filter'][$field->getName()]) )
 				$field->setInternalValue( (bool)$pars['filter'][$field->getName()] );
 
-		// Calculate filter clause
+		// Calculate visible columns
+		$visibility = [];
+		foreach( $this->_cols as $c ) {
+			$idx = $this->colIdToIdx($c->id);
+
+			// Adds visibility info for column (always make PK visible)
+			$visible = $pars['columns'][$idx]['visible'] ?? false;
+			if( $visible || $c->pk )
+				$visibility[] = $c->id;
+		}
+		// Process visibility dependencies (needs)
+		$vdepadded = true;
+		while( $vdepadded ) {
+			$vdepadded = false;
+
+			foreach( $visibility as $cid ) {
+				$col = $this->_cols[$cid];
+				if( ! $col->needs )
+					continue;
+
+				foreach( $col->needs as $nid ) {
+					if( ! array_key_exists($nid, $this->_cols) )
+						throw new \LogicException("Unknown needed col $nid");
+
+					if( ! in_array($nid, $visibility) ) {
+						$visibility[] = $nid;
+						$vdepadded = true;
+					}
+				}
+			}
+		}
+		$visibility = new DataTableDataVisibility($visibility);
+
+		// Calculate filter clause and visible columns
 		$filter = [];
 		$filterArgs = [];
 		$saveFilter = [];
-		$idx = -1;
 		foreach( $this->_cols as $c ) {
-			$idx++;
+			$idx = $this->colIdToIdx($c->id);
+
+			// Never filter by an invisible column
+			if( ! in_array($c->id, $visibility->getVisible()) )
+				continue;
 
 			// Use given search value but fall back to column's default
-			if( isset($pars['columns'][$idx]['search']) )
+			if( isset($pars['columns'][$idx]) && array_key_exists('search', $pars['columns'][$idx]) )
 				$search = isset($pars['columns'][$idx]['search']['value']) ? trim($pars['columns'][$idx]['search']['value']) : '';
 			elseif( $useSaved && isset($c->search) )
 				$search = $c->search;
@@ -722,8 +759,10 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 			} elseif($c->type == \dophp\Table::DATA_TYPE_DATE){
 				$dateFilter = new \dophp\DateFilter($search, self::DFILTER_DIVIDER);
 				list($sql, $params) = $dateFilter->getSqlSearchFilter($c->qname, ":f{$idx}_");
-				$filter[] = $sql;
-				$filterArgs = array_merge($filterArgs, $params);
+				if( $sql ) {
+					$filter[] = $sql;
+					$filterArgs = array_merge($filterArgs, $params);
+				}
 			} elseif($c->type == \dophp\Table::DATA_TYPE_BOOLEAN) {
 				$filter[] = ( $search ? '' : 'NOT ' ) . $c->qname;
 			} else {
@@ -748,10 +787,16 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 			$colId = $this->colIdxToId($orderc);
 			$ord = strtolower($order['dir'])==static::ORDER_DESC ? static::ORDER_DESC : static::ORDER_ASC;
 
-			$order = new DataTableDataOrder($colId, $ord);
-			// Saves the new order preference
-			if( $save )
-				$this->_saveOrder($colId, $ord);
+			// Never order by a non-visible column
+			if( ! in_array($colId, $visibility->getVisible()) )
+				$order = null;
+			else {
+				$order = new DataTableDataOrder($colId, $ord);
+
+				// Saves the new order preference
+				if( $save )
+					$this->_saveOrder($colId, $ord);
+			}
 		}
 
 		// Calculate limit, if given
@@ -760,7 +805,7 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 			$limit = new DatatableDataLimit($pars['length'], $pars['start']);
 		}
 
-		return $this->_getRawDataInternal($filter, $order, $limit);
+		return $this->_getRawDataInternal($filter, $order, $limit, $visibility);
 	}
 
 	public function getData( array $pars=[], bool $save=true, bool $useSaved=false ): array {
@@ -963,30 +1008,30 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 			'draw' => ['int', []],
 			'start' => ['int', ['min'=>0]],
 			'length' => ['int', ['min'=>-1]], // -1 = all
-			'order' => ['array', [
-				0 => [ [ 'array', [
+			'order' => ['array', [ 'rules' => [
+				0 => [ 'array', [ 'rules' => [
 					'column' => [ 'int', ['min'=>0, 'max'=>count($this->_cols)-1] ],
 					'dir' => ['string', [] ],
 				]]],
-			]],
-			'columns' => ['array', [] ],
-			'filter' => ['array', [] ],
+			]]],
+			'columns' => ['array', [ 'rules' => [] ] ],
+			'filter' => ['array', [ 'rules' => [] ] ],
 		];
 
-		$idx = -1;
 		foreach( $this->_cols as $c ) {
-			$idx++;
+			$idx = $this->colIdToIdx($c->id);
 
-			$params['columns'][1][$idx] = [ [ 'array', [
-				'search' => [ [ 'array', [
+			$params['columns'][1]['rules'][$idx] = [ 'array', [ 'rules' => [
+				'search' => [ 'array', [ 'rules' => [
 					'value' => [ 'string', [] ],
 					'regex' => [ 'bool', [] ],
 				]]],
+				'visible' => [ 'bool', [] ],
 			]]];
 		}
 
 		foreach( $this->_sfilter as $f )
-			$params['filter'][1][$f->getName()] = [ 'bool', ['required' => true] ];
+			$params['filter'][1]['rules'][$f->getName()] = [ 'bool', ['required' => true] ];
 
 		return $params;
 	}
@@ -1115,6 +1160,8 @@ class DataTableColumn extends DataTableBaseColumn {
 	public $filter = true;
 	/** Column link template or callback */
 	public $link = null;
+	/** Array of columns that this columns depends on and cannot be removed from the query */
+	public $needs = [];
 
 	/**
 	 * Creates the column definition
@@ -1137,6 +1184,7 @@ class DataTableColumn extends DataTableBaseColumn {
 	 *             - link:  An url to add as href, may be a string
 	 *                      ("{columname}" occurrencies will be replaced) or a
 	 *                      callback($value, $row)
+	 *             - needs: array of columns that cannot be removed from the query if this column is present
 	 */
 	public function __construct(string $id, array $opt) {
 		parent::__construct($id);
@@ -1156,6 +1204,11 @@ class DataTableColumn extends DataTableBaseColumn {
 			$this->tooltip = $opt['tooltip'];
 		if( isset($opt['link']) && $opt['link'] )
 			$this->link = $opt['link'];
+		if( isset($opt['needs']) && $opt['needs'] ) {
+			if( ! is_array($opt['needs']) )
+				throw new \LogicException('needs must be array');
+			$this->needs = $opt['needs'];
+		}
 	}
 
 }
@@ -1368,6 +1421,32 @@ class DataTableDataFilter {
 
 
 /**
+ * Info about column visibility
+ */
+class DataTableDataVisibility {
+
+	/** Array of visible column IDs */
+	protected $_visible;
+
+	/**
+	 * Construct the visibility info object
+	 *
+	 * @param $visible array: Array of visible column IDs
+	 */
+	public function __construct(array $visible) {
+		$this->_visible = $visible;
+	}
+
+	/**
+	 * Returns array of visible column IDs
+	 */
+	public function getVisible() {
+		return $this->_visible;
+	}
+}
+
+
+/**
  * The datatable order
  */
 class DatatableDataOrder {
@@ -1525,21 +1604,26 @@ class DataTable extends BaseDataTable {
 	 *
 	 * @param $cnt boolean: if true, build a query for the COUNT(*)
 	 * @param $calcFound boolean: if true, add SQL_CALC_FOUND_ROWS
+	 * @param $columns array: list of column ids to include, if given (null=all)
 	 * @todo Caching
 	 * @return [ $query, $where and array, $params array, $groupBy condition (may be null) ]
 	 */
-	protected function _buildBaseQuery($cnt=false, $calcFound=true) {
+	protected function _buildBaseQuery($cnt=false, $calcFound=true, $columns=null) {
 		if( $cnt || ! $calcFound || $this->_db->type() != $this->_db::TYPE_MYSQL )
 			$q = "SELECT\n";
 		else
 			$q = "SELECT SQL_CALC_FOUND_ROWS\n";
 
 		$cols = [];
-		foreach( $this->_cols as $c )
+		foreach( $this->_cols as $c ) {
+			if( $columns !== null && ! in_array($c->id, $columns) )
+				continue;
+
 			if( $c->qname )
 				$cols[] = "\t{$c->qname} AS " . $this->_db->quoteObj($c->id);
 			else
 				$cols[] = "\t" . $this->_db->quoteObj($c->id);
+		}
 		$q .= implode(",\n", $cols) . "\n";
 
 		$q .= "FROM {$this->_from}\n";
@@ -1575,9 +1659,9 @@ class DataTable extends BaseDataTable {
 		return [ $q, $where, $pars, $this->_groupBy ];
 	}
 
-	protected function _getRawDataInternal( DataTableDataFilter $filter=null, DatatableDataOrder $order=null, DatatableDataLimit $limit=null ): array {
+	protected function _getRawDataInternal( DataTableDataFilter $filter=null, DatatableDataOrder $order=null, DatatableDataLimit $limit=null, DataTableDataVisibility $visibility=null ): array {
 		// Base query
-		list($q, $where, $p, $groupBy) = $this->_buildBaseQuery(false, $this->_calcFound);
+		list($q, $where, $p, $groupBy) = $this->_buildBaseQuery(false, $this->_calcFound, $visibility ? $visibility->getVisible() : null);
 		$having = [];
 
 		// Calculate filter having clause
@@ -1803,8 +1887,8 @@ class StaticCachedQueryDataTable extends BaseDataTable {
 		return $this->__content;
 	}
 
-	protected function _getRawDataInternal( DataTableDataFilter $filter=null, DatatableDataOrder $order=null, DatatableDataLimit $limit=null ): array {
-		//TODO: support filter, order, limit
+	protected function _getRawDataInternal( DataTableDataFilter $filter=null, DatatableDataOrder $order=null, DatatableDataLimit $limit=null, DataTableDataVisibility $visibility=null ): array {
+		//TODO: support filter, order, limit, visibility
 		return $this->_retrieveContent()['data'];
 	}
 

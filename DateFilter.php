@@ -255,7 +255,7 @@ class DateFilter implements \JsonSerializable {
 	 * null if $date format is wrong or not supported
 	 *
 	 */
-	public static function formatDate(string $date, bool $isStart = true): \DateTime {
+	public static function formatDate(string $date, bool $isStart = true): ?\DateTime {
 
 		// Supported date formats
 		// 18, 2018, 1.18, 10.18, 1.2018, 10.2018
