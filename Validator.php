@@ -388,7 +388,10 @@ class bool_validator extends base_validator {
 	protected function do_clean($val, $opt) {
 		if( gettype($val) == 'boolean' )
 			return $val;
-		return (bool)trim($val);
+		$clean = strtolower(trim($val));
+		if( $clean === 'false' )
+			return false;
+		return (bool)$clean;
 	}
 
 }
