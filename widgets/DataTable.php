@@ -780,7 +780,7 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 		$order = null;
 		if( isset($pars['order']) && isset($pars['order'][0]) && $pars['order'][0] ) {
 			$order = $pars['order'][0];
-			$orderc = (int)$order['column']; // Indexes start at 1 because column 0 is the buttons column
+			$orderc = (int)$order['column']; // Valid indexes start at 1 because column 0 is the buttons column
 			if( $orderc < 1 )
 				$orderc = 1;
 
@@ -1010,7 +1010,7 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 			'length' => ['int', ['min'=>-1]], // -1 = all
 			'order' => ['array', [ 'rules' => [
 				0 => [ 'array', [ 'rules' => [
-					'column' => [ 'int', ['min'=>0, 'max'=>count($this->_cols)-1] ],
+					'column' => [ 'int', ['min'=>1, 'max'=>count($this->_cols)] ],
 					'dir' => ['string', [] ],
 				]]],
 			]]],
