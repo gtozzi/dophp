@@ -783,8 +783,12 @@
 			let input = $(this);
 			let coln = input.data('coln');
 			let visible = input.prop('checked');
+			let previous = table.column(coln+1).visible();
 
-			console.log('Setting column visibility', coln, visible);
+			if( previous == visible )
+				return;
+
+			console.log('Changing column visibility', coln, previous, visible);
 			table.column(coln+1).visible(visible);
 		});
 
