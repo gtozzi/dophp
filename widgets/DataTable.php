@@ -29,10 +29,11 @@ interface DataTableInterface {
 	 * @param $pars: array of parameters, associative
 	 * @param $save: if true, save search filter and order
 	 * @param $useSaved: boolean, if true, will use saved params as defaults
+	 * @param $allColumns: boolean, if true, always return all columns
 	 * @see https://datatables.net/manual/server-side
 	 * @return \dophp\Result Query result object
 	 */
-	public function getRawData( $pars=[], $save=false, $useSaved=false ): array;
+	public function getRawData( $pars=[], $save=false, $useSaved=false, $allColumns=false ): array;
 
 	/**
 	 * Parses the request data and returns result
@@ -690,44 +691,48 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 	 */
 	abstract protected function _getRawDataInternal( DataTableDataFilter $filter=null, DatatableDataOrder $order=null, DatatableDataLimit $limit=null, DataTableDataVisibility $visibility=null ): array;
 
-	public function getRawData( $pars=[], $save=false, $useSaved=false ): array {
+	public function getRawData( $pars=[], $save=false, $useSaved=false, $allColumns=false ): array {
 		// Parses the super filter
 		foreach( $this->_sfilter as $field )
 			if( isset($pars['filter'][$field->getName()]) )
 				$field->setInternalValue( (bool)$pars['filter'][$field->getName()] );
 
 		// Calculate visible columns
-		$visibility = [];
-		foreach( $this->_cols as $c ) {
-			$idx = $this->colIdToIdx($c->id);
+		if( $allColumns )
+			$visibility = null;
+		else {
+			$visibility = [];
+			foreach( $this->_cols as $c ) {
+				$idx = $this->colIdToIdx($c->id);
 
-			// Adds visibility info for column (always make PK visible)
-			$visible = $pars['columns'][$idx]['visible'] ?? false;
-			if( $visible || $c->pk )
-				$visibility[] = $c->id;
-		}
-		// Process visibility dependencies (needs)
-		$vdepadded = true;
-		while( $vdepadded ) {
-			$vdepadded = false;
+				// Adds visibility info for column (always make PK visible)
+				$visible = $pars['columns'][$idx]['visible'] ?? false;
+				if( $visible || $c->pk )
+					$visibility[] = $c->id;
+			}
+			// Process visibility dependencies (needs)
+			$vdepadded = true;
+			while( $vdepadded ) {
+				$vdepadded = false;
 
-			foreach( $visibility as $cid ) {
-				$col = $this->_cols[$cid];
-				if( ! $col->needs )
-					continue;
+				foreach( $visibility as $cid ) {
+					$col = $this->_cols[$cid];
+					if( ! $col->needs )
+						continue;
 
-				foreach( $col->needs as $nid ) {
-					if( ! array_key_exists($nid, $this->_cols) )
-						throw new \LogicException("Unknown needed col $nid");
+					foreach( $col->needs as $nid ) {
+						if( ! array_key_exists($nid, $this->_cols) )
+							throw new \LogicException("Unknown needed col $nid");
 
-					if( ! in_array($nid, $visibility) ) {
-						$visibility[] = $nid;
-						$vdepadded = true;
+						if( ! in_array($nid, $visibility) ) {
+							$visibility[] = $nid;
+							$vdepadded = true;
+						}
 					}
 				}
 			}
+			$visibility = new DataTableDataVisibility($visibility);
 		}
-		$visibility = new DataTableDataVisibility($visibility);
 
 		// Calculate filter clause and visible columns
 		$filter = [];
@@ -737,7 +742,7 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 			$idx = $this->colIdToIdx($c->id);
 
 			// Never filter by an invisible column
-			if( ! in_array($c->id, $visibility->getVisible()) )
+			if( $visibility && ! in_array($c->id, $visibility->getVisible()) )
 				continue;
 
 			// Use given search value but fall back to column's default
@@ -788,7 +793,7 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 			$ord = strtolower($order['dir'])==static::ORDER_DESC ? static::ORDER_DESC : static::ORDER_ASC;
 
 			// Never order by a non-visible column
-			if( ! in_array($colId, $visibility->getVisible()) )
+			if( $visibility && ! in_array($colId, $visibility->getVisible()) )
 				$order = null;
 			else {
 				$order = new DataTableDataOrder($colId, $ord);
@@ -937,7 +942,7 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 
 		$data = [];
 		$colCount = null;
-		foreach($this->getRawData($pars, false, true) as $datarow ) {
+		foreach($this->getRawData($pars, false, true, true) as $datarow ) {
 			$row = [];
 
 			if( $colCount === null )
