@@ -62,7 +62,14 @@ abstract class BaseFormWidget extends BaseWidget implements FormWidget {
 
 		$this->_name = $name;
 		$this->_namespace = $namespace;
-		$this->_label = $label ?? str_replace('_', ' ', ucfirst($name));
+		$this->_label = $label ?? self::makeLabelFromName($name);
+	}
+
+	/**
+	 * Given a widget name, autogenerates an user-friendy label
+	 */
+	public static function makeLabelFromName(string $name): string {
+		return str_replace('_', ' ', ucfirst($name));
 	}
 
 	public function getForm() : ?Form {
