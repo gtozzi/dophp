@@ -479,6 +479,7 @@ abstract class FormPage extends \dophp\PageSmarty {
 
 		$this->_initBackendComponent();
 		$this->_initEarly($id);
+		$this->_perm = $this->_getPermissions($id);
 		$this->_initMessages($id);
 		$this->_initFields($id);
 
@@ -489,7 +490,6 @@ abstract class FormPage extends \dophp\PageSmarty {
 			$action = self::ACT_INS;
 
 		// Check permissions
-		$this->_perm = $this->_getPermissions($id);
 		switch( $action ) {
 		case self::ACT_INS:
 			if( $this->_disableInsert )
