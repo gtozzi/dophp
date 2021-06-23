@@ -14,11 +14,13 @@
 			// Calculate the new text
 			let st = '';
 			{{foreach $sfilter as $f}}
-				if( $('#'+{{$f->getId()|json_encode}}).prop('checked') ) {
-					if( st.length )
-						st += ', ';
-					st += {{$f->getName()|json_encode}};
-				}
+				if( st.length )
+					st += ', ';
+				if( ! $('#'+{{$f->getId()|json_encode}}).prop('checked') )
+					st += '<del>';
+				st += {{$f->getName()|json_encode}};
+				if( ! $('#'+{{$f->getId()|json_encode}}).prop('checked') )
+					st += '</del>';
 			{{/foreach}}
 			if( ! st.length )
 				st = 'tutto';
@@ -924,7 +926,6 @@
 	}
 
 	function rpcDateFilter(filterValue) {
-
 		if(filterValue == '')
 			return;
 
@@ -999,12 +1000,15 @@
 			<span id="sfilter-text" class="fa fa-pencil">
 				{{$first=true}}
 				{{foreach $sfilter as $f}}{{strip}}
-					{{if ! $f->getInternalValue()}}
-						{{continue}}
-					{{/if}}
 					{{if ! $first}}, {{/if}}
+					{{if ! $f->getInternalValue()}}
+						<del>
+					{{/if}}
 					{{$f->getLabel()|strtolower|htmlentities}}
 					{{$first=false}}
+					{{if ! $f->getInternalValue()}}
+						</del>
+					{{/if}}
 				{{/strip}}{{/foreach}}
 			</span>
 		</a>
