@@ -1153,10 +1153,8 @@ class DataTableColumn extends DataTableBaseColumn {
 	public $descr;
 	/** The user-friendly extended explanation */
 	public $tooltip = null;
-	/** The name of the column or expression to select inside the query */
+	/** The name of the column inside the query */
 	public $qname;
-	/** The plain name of the column, to be specified when qname is an expression */
-	public $cname;
 	/** The column explicit data type, if given */
 	public $type = null;
 	/** The column explicit display format type, if given */
@@ -1181,8 +1179,6 @@ class DataTableColumn extends DataTableBaseColumn {
 	 *             - qname: Name to be used iside DB queries, by default use the
 	 *                      quoted version of the ID. If provided, shoudl contain
 	 *                      quotes
-	 *             - cname: The name of the plain column, used when qname is an expression.
-	 *                      If provided, should contain quotes
 	 *             - type:  Explicit data type, one of \dophp\Table::DATA_TYPE_*
 	 *                      constants. May be omitted.
 	 *             - format: Explicit display format, one of self::FORMAT_* consts
@@ -1199,8 +1195,6 @@ class DataTableColumn extends DataTableBaseColumn {
 		parent::__construct($id);
 		$this->descr = isset($opt['descr']) ? $opt['descr'] : str_replace('_',' ',ucfirst($this->id));
 		$this->qname = isset($opt['qname']) ? $opt['qname'] : \Dophp::db()->quoteObj($this->id);
-		if( isset($opt['cname']) && $opt['cname'] )
-			$this->cname = $opt['cname'];
 		if( isset($opt['type']) && $opt['type'] )
 			$this->type = $opt['type'];
 		if( isset($opt['format']) && $opt['format'] )
@@ -1630,13 +1624,9 @@ class DataTable extends BaseDataTable {
 			if( $columns !== null && ! in_array($c->id, $columns) )
 				continue;
 
-			if( $c->qname ) {
+			if( $c->qname )
 				$cols[] = "\t{$c->qname} AS " . $this->_db->quoteObj($c->id);
-				if( isset($c->cname) && $c->cname != $c->qname) {
-					// qname contains expression: add col name to select to avoid errors when filtering
-					$cols[] = "\t{$c->cname} AS " . $this->_db->quoteObj('f'.$c->id);
-				}
-			} else
+			else
 				$cols[] = "\t" . $this->_db->quoteObj($c->id);
 		}
 		$q .= implode(",\n", $cols) . "\n";
