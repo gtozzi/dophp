@@ -758,20 +758,21 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 
 			$saveFilter[$c->id] = $search;
 
-			// checks if filter is a date filter and calculate where clause
+			// checks if filter is a date filter and calculate where clause. Using alias to avoid errors.
+			$alias = $this->_db->quoteObj($c->id);
 			if($search == '-') {
-				$filter[] = "{$c->qname} IS NULL";
+				$filter[] = "{$alias} IS NULL";
 			} elseif($c->type == \dophp\Table::DATA_TYPE_DATE){
 				$dateFilter = new \dophp\DateFilter($search, self::DFILTER_DIVIDER);
-				list($sql, $params) = $dateFilter->getSqlSearchFilter($c->qname, ":f{$idx}_");
+				list($sql, $params) = $dateFilter->getSqlSearchFilter($alias, ":f{$idx}_");
 				if( $sql ) {
 					$filter[] = $sql;
 					$filterArgs = array_merge($filterArgs, $params);
 				}
 			} elseif($c->type == \dophp\Table::DATA_TYPE_BOOLEAN) {
-				$filter[] = ( $search ? '' : 'NOT ' ) . $c->qname;
+				$filter[] = ( $search ? '' : 'NOT ' ) . $alias;
 			} else {
-				$filter[] = "{$c->qname} LIKE :f$idx";
+				$filter[] = "{$alias} LIKE :f$idx";
 				$filterArgs[":f$idx"] = "%$search%";
 			}
 		}
