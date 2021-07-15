@@ -758,8 +758,8 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 
 			$saveFilter[$c->id] = $search;
 
-			// checks if filter is a date filter and calculate where clause. Using alias to avoid errors.
-			$alias = $this->_db->quoteObj($c->id);
+			// checks if filter is a date filter and calculate where clause. Using alias to avoid errors in MySql.
+			$alias = $this->_db->type() == $this->_db::TYPE_MYSQL ? $this->_db->quoteObj($c->id) : $c->qname;
 			if($search == '-') {
 				$filter[] = "{$alias} IS NULL";
 			} elseif($c->type == \dophp\Table::DATA_TYPE_DATE){
