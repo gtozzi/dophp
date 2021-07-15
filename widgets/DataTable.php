@@ -705,9 +705,9 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 			foreach( $this->_cols as $c ) {
 				$idx = $this->colIdToIdx($c->id);
 
-				// Adds visibility info for column (always make PK visible)
+				// Adds visibility info for column (always make PK visible, keep column required for per-row buttons)
 				$visible = $pars['columns'][$idx]['visible'] ?? false;
-				if( $visible || $c->pk )
+				if( $visible || $c->pk || $c->keep )
 					$visibility[] = $c->id;
 			}
 			// Process visibility dependencies (needs)
@@ -1161,6 +1161,8 @@ class DataTableColumn extends DataTableBaseColumn {
 	public $format = null;
 	/** Whether this column is part of the PK */
 	public $pk = false;
+	/** Whether this column can be removed from query */
+	public $keep = false;
 	/** Whether to allow filtering on this column */
 	public $filter = true;
 	/** Column link template or callback */
@@ -1190,6 +1192,9 @@ class DataTableColumn extends DataTableBaseColumn {
 	 *                      ("{columname}" occurrencies will be replaced) or a
 	 *                      callback($value, $row)
 	 *             - needs: array of columns that cannot be removed from the query if this column is present
+	 *             - keep: this column cannot be removed from the query as is used on per-row operations (e.g.
+	 *                     contextual buttons)
+	 *                     default: false
 	 */
 	public function __construct(string $id, array $opt) {
 		parent::__construct($id);
@@ -1203,6 +1208,8 @@ class DataTableColumn extends DataTableBaseColumn {
 			$this->visible = (bool)$opt['visible'];
 		if( isset($opt['pk']) )
 			$this->pk = (bool)$opt['pk'];
+		if( isset($opt['keep']) )
+			$this->keep = (bool)$opt['keep'];
 		if( isset($opt['filter']) )
 			$this->filter = (bool)$opt['filter'];
 		if( isset($opt['tooltip']) && $opt['tooltip'] )
