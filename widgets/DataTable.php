@@ -1737,7 +1737,7 @@ class DataTable extends BaseDataTable {
 		else
 			$q .= "\n LIMIT 0 \n";
 
-		$res = $this->_db->xrun($q, $this->params ? $this->params : []);
+		$res = $this->_db->xrun($q, $this->params);
 		$types = $this->_extractColumnTypesFromRes($res);
 
 		if( $cache )
