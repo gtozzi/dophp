@@ -1593,15 +1593,16 @@ class DataTable extends BaseDataTable {
 	 * Constructs the table object
 	 *
 	 * @param $page PageInterface: the parent page
+	 * @param $params array: Default parameters (see $this->params)
 	 */
-	public function __construct(\dophp\PageInterface $page) {
+	public function __construct(\dophp\PageInterface $page, array $params = null) {
 		// Checks for data validity
 		if( isset($this->_query) )
 			throw new \LogicException('Deprecated Query specification');
 		if( ! isset($this->_from) || ! is_string($this->_from) )
 			throw new \LogicException('Missing or invalid From definition');
 
-		parent::__construct($page);
+		parent::__construct($page, $params);
 	}
 
 	/**
@@ -1736,7 +1737,7 @@ class DataTable extends BaseDataTable {
 		else
 			$q .= "\n LIMIT 0 \n";
 
-		$res = $this->_db->xrun($q);
+		$res = $this->_db->xrun($q, $this->params ? $this->params : []);
 		$types = $this->_extractColumnTypesFromRes($res);
 
 		if( $cache )
