@@ -106,126 +106,128 @@
 			</div>
 		</div>
 	{{/block}}
-	<script>
-		/**
-		 * Warns the user before leaving the page if form has been modified
-		 */
-		$(document).ready(function() {
-			var formModified = new Set();
-			var formEls = $('#mainForm').find('input, textarea, select');
+	{{block name='formscript'}}
+		<script>
+			/**
+			* Warns the user before leaving the page if form has been modified
+			*/
+			$(document).ready(function() {
+				var formModified = new Set();
+				var formEls = $('#mainForm').find('input, textarea, select');
 
-			$('input').on('input', formChanged);
-			$('textarea').on('input', formChanged);
-			$('select').on('change', formChanged);
+				$('input').on('input', formChanged);
+				$('textarea').on('input', formChanged);
+				$('select').on('change', formChanged);
 
-			window.onbeforeunload = confirmExit;
+				window.onbeforeunload = confirmExit;
 
-			function formChanged(ev) {
-				let field = ev.target;
-				let $field = $(field);
+				function formChanged(ev) {
+					let field = ev.target;
+					let $field = $(field);
 
-				// Clean validation classes
-				$field.parent().removeClass('has-success');
-				$field.removeClass('form-control-success');
-				$field.parent().removeClass('has-danger');
-				$field.removeClass('form-control-danger');
+					// Clean validation classes
+					$field.parent().removeClass('has-success');
+					$field.removeClass('form-control-success');
+					$field.parent().removeClass('has-danger');
+					$field.removeClass('form-control-danger');
 
-				// update the set of modified fields
-				if( $field.val() == $field.data('hardvalue') ) {
-					// This element has NOT been modified
-					formModified.delete(field);
-					//$field.parent().removeClass('has-success');
-					//$field.removeClass('form-control-success');
-				} else {
-					formModified.add(field);
-					//$field.parent().addClass('has-success');
-					//$field.addClass('form-control-success');
+					// update the set of modified fields
+					if( $field.val() == $field.data('hardvalue') ) {
+						// This element has NOT been modified
+						formModified.delete(field);
+						//$field.parent().removeClass('has-success');
+						//$field.removeClass('form-control-success');
+					} else {
+						formModified.add(field);
+						//$field.parent().addClass('has-success');
+						//$field.addClass('form-control-success');
+					}
+					//console.log('Modifief fields', formModified);
+
+					// Update save button's class
+					if( formModified.size ) {
+						// form has been modified - form is dirty
+						$(".save-button").removeClass('btn-secondary');
+						$(".save-button").addClass('btn-primary');
+						$(".cancel-button").removeClass('btn-secondary');
+						$(".cancel-button").addClass('btn-warning');
+
+						// Disable buttons
+						let doe = $("button.disabled-on-form-dirty");
+						doe.attr("disabled", true);
+						// Enable tooltip (see https://getbootstrap.com/docs/4.0/components/tooltips/)
+						doe.data("toggle", "tooltip");
+						doe.data("delay", 0);
+						doe.attr("title", {{_('Please save or cancel the form before proceeding')|json_encode}});
+						doe.tooltip();
+					} else {
+						$(".save-button").removeClass('btn-primary');
+						$(".save-button").addClass('btn-secondary');
+						$(".cancel-button").removeClass('btn-warning');
+						$(".cancel-button").addClass('btn-secondary');
+
+						// Re-enable buttons
+						let doe = $("button.enabled-on-form-clean");
+						doe.attr("disabled", false);
+						doe.tooltip('dispose');
+					}
 				}
-				//console.log('Modifief fields', formModified);
 
-				// Update save button's class
-				if( formModified.size ) {
-					// form has been modified - form is dirty
-					$(".save-button").removeClass('btn-secondary');
-					$(".save-button").addClass('btn-primary');
-					$(".cancel-button").removeClass('btn-secondary');
-					$(".cancel-button").addClass('btn-warning');
-
-					// Disable buttons
-					let doe = $("button.disabled-on-form-dirty");
-					doe.attr("disabled", true);
-					// Enable tooltip (see https://getbootstrap.com/docs/4.0/components/tooltips/)
-					doe.data("toggle", "tooltip");
-					doe.data("delay", 0);
-					doe.attr("title", {{_('Please save or cancel the form before proceeding')|json_encode}});
-					doe.tooltip();
-				} else {
-					$(".save-button").removeClass('btn-primary');
-					$(".save-button").addClass('btn-secondary');
-					$(".cancel-button").removeClass('btn-warning');
-					$(".cancel-button").addClass('btn-secondary');
-
-					// Re-enable buttons
-					let doe = $("button.enabled-on-form-clean");
-					doe.attr("disabled", false);
-					doe.tooltip('dispose');
+				function confirmExit() {
+					if( formModified.size )
+						return "Ci sono modifiche non salvate. Sei sicuro di voler abbandonare?";
 				}
-			}
 
-			function confirmExit() {
-				if( formModified.size )
-					return "Ci sono modifiche non salvate. Sei sicuro di voler abbandonare?";
-			}
-
-			function confirmDelete() {
-				if( window.confirm({{$deleteConfirmMessage|json_encode}})) {
-					$.ajax({
-						url: {{$form->action()->asString()|json_encode}},
-						type: "DELETE",
-						dataType: "text",
-						success: function(result) {
-							window.confirm(result);
-							console.log('Delete success', result);
-							let url = {{$this->getDeleteRedirectUrl($id)|json_encode}};
-							window.location.href = url;
-						},
-						error: function(jqXHR, textStatus, errorThrown) {
-							let message;
-							if( jqXHR.status == 409 ) {
-								// Constraint failed
-								console.log('Delete constraint failed', jqXHR.responseText, jqXHR);
-								message = 'Impossibile cancellare: ';
-								if( jqXHR.responseText )
-									message += jqXHR.responseText;
-								else
-									message += {{$what|json_encode}} + ' in uso.';
-							} else {
-								// Any other error
-								console.error('Delete error', textStatus, errorThrown, jqXHR);
-								message = 'Errore durante la cancellazione';
+				function confirmDelete() {
+					if( window.confirm({{$deleteConfirmMessage|json_encode}})) {
+						$.ajax({
+							url: {{$form->action()->asString()|json_encode}},
+							type: "DELETE",
+							dataType: "text",
+							success: function(result) {
+								window.confirm(result);
+								console.log('Delete success', result);
+								let url = {{$this->getDeleteRedirectUrl($id)|json_encode}};
+								window.location.href = url;
+							},
+							error: function(jqXHR, textStatus, errorThrown) {
+								let message;
+								if( jqXHR.status == 409 ) {
+									// Constraint failed
+									console.log('Delete constraint failed', jqXHR.responseText, jqXHR);
+									message = 'Impossibile cancellare: ';
+									if( jqXHR.responseText )
+										message += jqXHR.responseText;
+									else
+										message += {{$what|json_encode}} + ' in uso.';
+								} else {
+									// Any other error
+									console.error('Delete error', textStatus, errorThrown, jqXHR);
+									message = 'Errore durante la cancellazione';
+								}
+								window.alert(message);
 							}
-							window.alert(message);
-						}
-					});
+						});
+					}
 				}
-			}
 
-			$(".save-button").click(function() {
-				formModified = new Set();
-				$('#processingModalText').text({{$saveMessage|json_encode}});
-				$('#processingModalProgress').removeClass('bg-warning');
-				$('#processingModal').modal('show')
+				$(".save-button").click(function() {
+					formModified = new Set();
+					$('#processingModalText').text({{$saveMessage|json_encode}});
+					$('#processingModalProgress').removeClass('bg-warning');
+					$('#processingModal').modal('show')
+				});
+				$(".cancel-button").click(function() {
+					formModified = new Set();
+					$('#processingModalText').text({{$cancelMessage|json_encode}});
+					$('#processingModalProgress').addClass('bg-warning');
+					$('#processingModal').modal('show')
+					window.location.reload();
+				});
+				$(".delete-button").click(confirmDelete);
 			});
-			$(".cancel-button").click(function() {
-				formModified = new Set();
-				$('#processingModalText').text({{$cancelMessage|json_encode}});
-				$('#processingModalProgress').addClass('bg-warning');
-				$('#processingModal').modal('show')
-				window.location.reload();
-			});
-			$(".delete-button").click(confirmDelete);
-		});
 
-	</script>
+		</script>
+	{{/block}}
 	{{block name='finalscripts'}}{{/block}}
 {{/block}}
