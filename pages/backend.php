@@ -76,7 +76,7 @@ trait BackendComponent {
 
 
 /**
- * An "admin" table, provides both the table HTML and the AJAX data
+ * An "admin" table, provides both the table(s) HTML and the AJAX data
  */
 abstract class TablePage extends \dophp\HybridRpcMethod {
 
@@ -103,20 +103,44 @@ abstract class TablePage extends \dophp\HybridRpcMethod {
 	/** The page title, if null, generate it */
 	public $title = null;
 
-	/** The data table object class, used by _initTable() */
+	/** The data table object class(es), used by _initTables()
+	 *
+	 * It is usually a single class name, but may be an array list of table class names
+	 * name is kept on singular for backward compatibility
+	*/
 	protected $_tableClass;
 
-	/** The instantiated table holder */
-	protected $_table;
+	/** The instantiated tables holder array */
+	protected $_tables;
+
+	/** The current table ID, used only on ajax requests, populated at init time */
+	protected $_curTableId;
 
 	/**
-	 * Inits the table object, by default inits a new _tableClass instance,
+	 * Inits the table object(s), by default inits a new _tableClass instance,
 	 * may be overridden
+	 *
+	 * @return array of \dophp\widgets\DataTableInterface
 	 */
-	protected function _initTable(): \dophp\widgets\DataTableInterface {
+	protected function _initTables(): array {
 		if( ! isset($this->_tableClass) )
 			throw new \LogicException('Missing Table class');
-		return new $this->_tableClass($this);
+
+		$tcs = is_array($this->_tableClass) ? $this->_tableClass : [ $this->_tableClass ];
+		$tables = [];
+		foreach( $tcs as $tc )
+			$tables[] = new $tc($this);
+
+		return $tables;
+	}
+
+	/**
+	 * Placeholder for deprecated function, should trigger an error on old code
+	 *
+	 * @deprecated
+	 */
+	private function _initTable(): void {
+		throw new \dophp\NotImplementedException();
 	}
 
 	/**
@@ -148,15 +172,23 @@ abstract class TablePage extends \dophp\HybridRpcMethod {
 		$this->_initChild();
 
 		// Instantiate the table
-		$this->_table = $this->_initTable();
+		$this->_tables = $this->_initTables();
+		foreach( $this->_tables as $idx => $table ) {
+			if( ! $table instanceof \dophp\widgets\DataTableInterface )
+				throw new \LogicException('Unexpected table type');
+
+			$table->ajaxId = $idx;
+		}
 
 		// Parses the super filter
 		switch( $_SERVER['REQUEST_METHOD'] ) {
 		case 'POST':
-			$this->_table->setSFilter($_POST);
+			foreach( $this->_tables as $table )
+				$table->setSFilter($_POST);
 			break;
 		case 'GET':
-			$this->_table->setGParams($_GET);
+			foreach( $this->_tables as $table )
+				$table->setGParams($_GET);
 			break;
 		}
 
@@ -175,6 +207,8 @@ abstract class TablePage extends \dophp\HybridRpcMethod {
 			return parent::run();
 
 		case self::ACTION_XLSX:
+			$this->__requireCurTableId();
+
 			// Return XLSX export
 			if( $_GET['export'] != 'xlsx' )
 				throw new \dophp\PageError('Only xlsx export is supported');
@@ -182,7 +216,7 @@ abstract class TablePage extends \dophp\HybridRpcMethod {
 			// Run on low priority
 			proc_nice(9);
 
-			$spreadsheet = $this->_table->getXlsxData($_GET);
+			$spreadsheet = $this->_tables[$this->_curTableId]->getXlsxData($_GET);
 			$writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
 			$data = \dophp\Spreadsheet::writeToString($writer);
 
@@ -212,10 +246,28 @@ abstract class TablePage extends \dophp\HybridRpcMethod {
 	}
 
 	/**
+	 * Reads table ajax id from a request interesting a single table, assigns it to $this->_curTableId
+	 *
+	 * @throws \dophp\PageError when not found or invalid
+	 */
+	private function __requireCurTableId(): void {
+		// Pre-select table based on sent id
+		if( ! isset($_REQUEST['ajaxid']) )
+			throw new \dophp\PageError('Missing ajax table id');
+		$this->_curTableId = (int)$_REQUEST['ajaxid'];
+
+		if( ! array_key_exists($this->_curTableId, $this->_tables) )
+			throw new \dophp\PageError('Invalid ajax table id');
+	}
+
+	/**
 	 * Inits the method
 	 */
 	protected function _init() {
-		$this->_params = $this->_table->getParamStructure();
+		$this->_params = [];
+
+		$this->__requireCurTableId();
+		$this->_params = $this->_tables[$this->_curTableId]->getParamStructure();
 
 		parent::_init();
 	}
@@ -239,7 +291,7 @@ abstract class TablePage extends \dophp\HybridRpcMethod {
 		$this->_templateFallback('backend/tablepage.tpl');
 
 		$this->_smarty->assignByRef('baseTpl', $this->_baseTpl);
-		$this->_smarty->assign('table', $this->_table);
+		$this->_smarty->assign('tables', $this->_tables);
 		$this->_smarty->assignByRef('pageTitle', $this->_pageTitle);
 		$this->_smarty->assign('action', '?'.\DoPhp::BASE_KEY."={$this->_name}");
 		$this->_smarty->assignByRef('ajaxURL', $this->_ajaxURL);
@@ -253,7 +305,7 @@ abstract class TablePage extends \dophp\HybridRpcMethod {
 	}
 
 	protected function _buildAjax( $pars ): array {
-		return $this->_table->getData($pars);
+		return $this->_tables[$this->_curTableId]->getData($pars);
 	}
 }
 

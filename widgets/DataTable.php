@@ -89,6 +89,9 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 	/** Associative array of fixed query params and button params */
 	public $params = [];
 
+	/** Optional ID to be sent in ajax requests */
+	public $ajaxId = null;
+
 	/**
 	 * The columns definitions, used as DataTableColumn constructors ($id=>$opt)
 	 * Must be specified in child, also used to build the "SELECT" part of query
@@ -612,6 +615,7 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 		$this->_ajaxURL = \dophp\Url::getToStr($_GET);
 
 		$this->_smarty->assign('id', $this->_id);
+		$this->_smarty->assign('ajaxId', $this->ajaxId);
 		$this->_smarty->assign('cols', $this->_cols);
 		$this->_smarty->assign('order', $this->_getSavedOrder(true) ?? $this->_getDefaultOrder(true));
 		$this->_smarty->assign('initOpts', $this->_getHtmlInitOptions());
@@ -1021,6 +1025,8 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 			]]],
 			'columns' => ['array', [ 'rules' => [] ] ],
 			'filter' => ['array', [ 'rules' => [] ] ],
+			// Custom ajaxId
+			'ajaxid' => ['int', []],
 		];
 
 		foreach( $this->_cols as $c ) {
