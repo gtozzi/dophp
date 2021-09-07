@@ -474,6 +474,8 @@ class DoPhp {
 				$to = \dophp\Url::fullPageUrl($def, $key);
 				header("HTTP/1.1 303 Login Required");
 				header("Location: $to");
+				$referer = \dophp\Url::myUrl();
+				header("Referer: $referer");
 				echo $e->getMessage();
 				echo "\nPlease login at: $to";
 				return;

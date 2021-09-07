@@ -96,6 +96,9 @@ trait SmartyFunctionalities {
 		if( property_exists($this, '_pageTitle') )
 			$this->_smarty->assignByRef('pageTitle', $this->_pageTitle);
 
+		// Assign relevant headers
+		$this->_smarty->assign('referer', $_SERVER['HTTP_REFERER'] ?? null);
+
 		// Init default template name
 		$base_file = basename($_SERVER['PHP_SELF'], '.php');
 		if( ! isset($this->_template) && isset($this->_name) )
