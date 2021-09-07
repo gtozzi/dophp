@@ -461,6 +461,7 @@ class DoPhp {
 
 			list($out, $headers) = $this->__runPage($pobj);
 		} catch( \dophp\PageDenied $e ) {
+
 			if( $def && $e->redirect !== false ) {
 				if( $def == $page ) {
 					// Prevent loop redirection
@@ -471,11 +472,16 @@ class DoPhp {
 
 				self::addAlert(new \dophp\LoginErrorAlert($e));
 
-				$to = \dophp\Url::fullPageUrl($def, $key);
-				header("HTTP/1.1 303 Login Required");
-				header("Location: $to");
 				$referer = \dophp\Url::myUrl();
+				$to = \dophp\Url::buildUrl([
+					'query' => [
+						$key => $def,
+						'referer' => $referer,
+					],
+				]);
+				header("HTTP/1.1 303 Login Required");
 				header("Referer: $referer");
+				header("Location: $to");
 				echo $e->getMessage();
 				echo "\nPlease login at: $to";
 				return;

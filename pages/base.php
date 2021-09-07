@@ -108,6 +108,8 @@ abstract class PageBase {
 	protected $_logid;
 	/** Headers to be output */
 	protected $_headers = array();
+	/** Referer from HTTP Referer header or explicit argument*/
+	protected $_referer;
 	/**
 	* ZLib deflate compression level for output
 	* if different than 0, enables compression. -1 to 9 or bool true.
@@ -146,6 +148,7 @@ abstract class PageBase {
 		$this->_name = $name;
 		$this->_path = $path;
 		$this->_logid = $logid;
+		$this->_referer = $_GET['referer'] ?? $_SERVER['HTTP_REFERER'] ?? null;
 
 		$this->_alerts = \DoPhp::getAlerts();
 		foreach( $this->_alerts as $alert )
