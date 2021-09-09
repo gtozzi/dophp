@@ -110,6 +110,9 @@ abstract class PageBase {
 	protected $_headers = array();
 	/** Referer from HTTP Referer header or explicit argument*/
 	protected $_referer;
+	/** Wether this page is loaded over a secure connection */
+	protected $_isHttps;
+
 	/**
 	* ZLib deflate compression level for output
 	* if different than 0, enables compression. -1 to 9 or bool true.
@@ -149,6 +152,7 @@ abstract class PageBase {
 		$this->_path = $path;
 		$this->_logid = $logid;
 		$this->_referer = $_GET['referer'] ?? $_SERVER['HTTP_REFERER'] ?? null;
+		$this->_isHttps = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] == 'on';
 
 		$this->_alerts = \DoPhp::getAlerts();
 		foreach( $this->_alerts as $alert )
