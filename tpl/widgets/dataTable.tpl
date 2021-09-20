@@ -14,11 +14,13 @@
 			// Calculate the new text
 			let st = '';
 			{{foreach $sfilter as $f}}
-				if( $('#'+{{$f->getId()|json_encode}}).prop('checked') ) {
-					if( st.length )
-						st += ', ';
-					st += {{$f->getName()|json_encode}};
-				}
+				if( st.length )
+					st += ', ';
+				if( ! $('#'+{{$f->getId()|json_encode}}).prop('checked') )
+					st += '<del>';
+				st += {{$f->getName()|json_encode}};
+				if( ! $('#'+{{$f->getId()|json_encode}}).prop('checked') )
+					st += '</del>';
 			{{/foreach}}
 			if( ! st.length )
 				st = 'tutto';
@@ -931,7 +933,6 @@
 	}
 
 	function rpcDateFilter(filterValue) {
-
 		if(filterValue == '')
 			return;
 
@@ -998,48 +999,67 @@
 
 </script>
 
-{{if $sfilter}}
-	<!-- Filter summary -->
+{{$doubleButtons=isset($config['datatable']['double_buttons']) && $config['datatable']['double_buttons']}}
+{{if $sfilter || $doubleButtons}}
+	<!-- Filter summary and double buttons -->
 	<p>
-		Mostra:
-		<a href="#" onclick="$('#{{$id}}_filmodal').modal('show'); return false;">
-			<span id="sfilter-text" class="fa fa-pencil">
-				{{$first=true}}
-				{{foreach $sfilter as $f}}{{strip}}
-					{{if ! $f->getInternalValue()}}
-						{{continue}}
-					{{/if}}
-					{{if ! $first}}, {{/if}}
-					{{$f->getLabel()|strtolower|htmlentities}}
-					{{$first=false}}
-				{{/strip}}{{/foreach}}
-			</span>
-		</a>
+		{{if $doubleButtons}}
+			{{foreach $btns as $name => $b}}
+				<a class="btn btn-primary"
+				{{if $b->isPost()}}
+					href="javascript:onDTPostButton({{$name|json_encode|urlencode}});"
+				{{else}}
+					href="{{$b->getUrl()}}"
+				{{/if}}
+				><span class="fa {{$b->icon}}"></span> {{$b->label|htmlentities}}</a>
+			{{/foreach}}
+		{{/if}}
+		{{if $sfilter}}
+			Mostra:
+			<a href="#" onclick="$('#{{$id}}_filmodal').modal('show'); return false;">
+				<span id="sfilter-text" class="fa fa-pencil">
+					{{$first=true}}
+					{{foreach $sfilter as $f}}{{strip}}
+						{{if ! $first}}, {{/if}}
+						{{if ! $f->getInternalValue()}}
+							<del>
+						{{/if}}
+						{{$f->getLabel()|strtolower|htmlentities}}
+						{{$first=false}}
+						{{if ! $f->getInternalValue()}}
+							</del>
+						{{/if}}
+					{{/strip}}{{/foreach}}
+				</span>
+			</a>
+		{{/if}}
 	</p>
-	<!-- Filter modal -->
-	<div class="modal fade" id="{{$id}}_filmodal">
-		<div class="modal-dialog" role="document">
-			<form action="#" onsubmit="updateSFilter(this); return false;">
-				<div class="modal-content">
-					<div class="modal-header">
-						<h5 class="modal-title">Mostra</h5>
-						<button type="button" class="close" data-dismiss="modal" aria-label="Close">
-							<span aria-hidden="true">&times;</span>
-						</button>
+	{{if $sfilter}}
+		<!-- Filter modal -->
+		<div class="modal fade" id="{{$id}}_filmodal">
+			<div class="modal-dialog" role="document">
+				<form action="#" onsubmit="updateSFilter(this); return false;">
+					<div class="modal-content">
+						<div class="modal-header">
+							<h5 class="modal-title">Mostra</h5>
+							<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+								<span aria-hidden="true">&times;</span>
+							</button>
+						</div>
+						<div class="modal-body">
+							{{foreach $sfilter as $f}}
+								{{include file=$f->getTemplate() field=$f}}
+							{{/foreach}}
+						</div>
+						<div class="modal-footer">
+							<button type="submit" class="btn btn-primary">Conferma</button>
+							<button type="button" class="btn btn-secondary" data-dismiss="modal">Annulla</button>
+						</div>
 					</div>
-					<div class="modal-body">
-						{{foreach $sfilter as $f}}
-							{{include file=$f->getTemplate() field=$f}}
-						{{/foreach}}
-					</div>
-					<div class="modal-footer">
-						<button type="submit" class="btn btn-primary">Conferma</button>
-						<button type="button" class="btn btn-secondary" data-dismiss="modal">Annulla</button>
-					</div>
-				</div>
-			</form>
+				</form>
+			</div>
 		</div>
-	</div>
+	{{/if}}
 {{/if}}
 
 <!-- Column selection modal -->
