@@ -79,6 +79,7 @@ trait SmartyFunctionalities {
 		// Init custom plugins
 		$this->_smarty->registerPlugin('block', 'mstrip', ['dophp\SmartyFunctionalities','mStrip']);
 		$this->_smarty->registerPlugin('modifier', 'diedump', ['dophp\SmartyFunctionalities','dieDump']);
+		$this->_smarty->registerPlugin('modifier', 'urlencode', ['dophp\SmartyFunctionalities','urlEncode']);
 
 		// Assign utility variables
 		$this->_smarty->assign('this', $this);
@@ -95,6 +96,8 @@ trait SmartyFunctionalities {
 			$this->_smarty->assignByRef('loginError', $this->_loginError);
 		if( property_exists($this, '_pageTitle') )
 			$this->_smarty->assignByRef('pageTitle', $this->_pageTitle);
+		if( property_exists($this, '_referer') )
+			$this->_smarty->assignByRef('referer', $this->_referer);
 
 		// Init default template name
 		$base_file = basename($_SERVER['PHP_SELF'], '.php');
@@ -139,6 +142,15 @@ trait SmartyFunctionalities {
 	 */
 	public static function dieDump($var) {
 		die(var_dump($var));
+	}
+
+	/**
+	 * Smarty plugin
+	 *
+	 * Urlencode provided variable
+	 */
+	public static function urlEncode($var) {
+		return urlencode($var);
 	}
 
 	/**
