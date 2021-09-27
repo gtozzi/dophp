@@ -35,6 +35,8 @@ class DoPhp {
 
 	/** This is the base for $_GET parameters and prefix for page classes */
 	const BASE_KEY = 'do';
+	/** Special $_GET parameter to redirect after login */
+	const LOGIN_REDIR_KEY = 'donext';
 	/** This is the text domain used by the framework */
 	const TEXT_DOMAIN = 'dophp';
 	/** This is the prefix used for model classes */
@@ -333,6 +335,24 @@ class DoPhp {
 				throw new \LogicException('Wrong logger interface');
 		}
 
+		// Redirects after login if requested
+		if( array_key_exists(self::LOGIN_REDIR_KEY, $_REQUEST) && $_REQUEST[self::LOGIN_REDIR_KEY]
+				&& $this->__auth && $this->__auth->getUid() ) {
+			$donext = new \dophp\Url($_REQUEST[self::LOGIN_REDIR_KEY]);
+
+			// Some URL safety validation
+			$myurl = new \dophp\Url(\dophp\Url::myUrl());
+			if( $donext->scheme == $myurl->scheme && $donext->host == $myurl->host && $donext->port == $myurl->port ) {
+				// Redirect after succesful login
+				$to = $donext->asString();
+				header("HTTP/1.1 303 See Other");
+				header("Location: $to");
+				echo $to;
+				return;
+			} else
+				error_log('Ignoring unsafe login redire to ' . $donext->asString());
+		}
+
 		// Calculates the name of the page to be loaded
 		if( array_key_exists($key, $_REQUEST) && $_REQUEST[$key] ) {
 			// Page specified, use it and also explode the sub-path
@@ -461,8 +481,9 @@ class DoPhp {
 
 			list($out, $headers) = $this->__runPage($pobj);
 		} catch( \dophp\PageDenied $e ) {
-
 			if( $def && $e->redirect !== false ) {
+				// Redirect to login page
+
 				if( $def == $page ) {
 					// Prevent loop redirection
 					header("HTTP/1.1 500 Internal Server Error");
@@ -472,18 +493,16 @@ class DoPhp {
 
 				self::addAlert(new \dophp\LoginErrorAlert($e));
 
-				$referer = \dophp\Url::myUrl();
-				$to = \dophp\Url::buildUrl([
-					'query' => [
-						$key => $def,
-						'referer' => $referer,
-					],
-				]);
+				$to = new \dophp\Url(\dophp\Url::fullPageUrl($def, $key));
+
+				// Redirect after login to current page
+				$to->args[self::LOGIN_REDIR_KEY] = \dophp\Url::myUrl();
+
+				$tostr = $to->asString();
 				header("HTTP/1.1 303 Login Required");
-				header("Referer: $referer");
-				header("Location: $to");
+				header("Location: $tostr");
 				echo $e->getMessage();
-				echo "\nPlease login at: $to";
+				echo "\nPlease login at: $tostr";
 				return;
 			} elseif( $e instanceof \dophp\InvalidCredentials ) {
 				header("HTTP/1.1 401 Unhautorized");

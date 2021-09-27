@@ -38,10 +38,3 @@ class PHPErrorException extends \Exception {
  */
 class NotImplementedException extends \LogicException {
 }
-
-/**
- * Exception thrown when security standards cannot be guaranteed
- * I.E. when the code expects to be run via an HTTPS connection, but an HTTP one is found
- */
-class SecurityException extends \Exception {
-}
