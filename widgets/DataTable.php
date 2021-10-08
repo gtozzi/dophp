@@ -701,7 +701,7 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 			if( isset($pars['filter'][$field->getName()]) )
 				$field->setInternalValue( (bool)$pars['filter'][$field->getName()] );
 
-		// Calculate visible columns
+		// Calculate visibility of columns in data
 		if( $allColumns )
 			$visibility = null;
 		else {
@@ -709,7 +709,7 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 			foreach( $this->_cols as $c ) {
 				$idx = $this->colIdToIdx($c->id);
 
-				// Adds visibility info for column (always make PK visible, keep column required for per-row buttons)
+				// Adds visibility info for column (always make PK and explicitly requested columns visible)
 				$visible = $pars['columns'][$idx]['visible'] ?? false;
 				if( $visible || $c->pk || $c->keep )
 					$visibility[] = $c->id;
@@ -1168,7 +1168,7 @@ class DataTableColumn extends DataTableBaseColumn {
 	public $format = null;
 	/** Whether this column is part of the PK */
 	public $pk = false;
-	/** Whether this column can be removed from query */
+	/** When true, prevents this column to be removed from the query */
 	public $keep = false;
 	/** Whether to allow filtering on this column */
 	public $filter = true;
