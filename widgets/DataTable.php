@@ -89,6 +89,9 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 	/** Associative array of fixed query params and button params */
 	public $params = [];
 
+	/** Optional ID to be sent in ajax requests */
+	public $ajaxId = null;
+
 	/**
 	 * The columns definitions, used as DataTableColumn constructors ($id=>$opt)
 	 * Must be specified in child, also used to build the "SELECT" part of query
@@ -612,6 +615,7 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 		$this->_ajaxURL = \dophp\Url::getToStr($_GET);
 
 		$this->_smarty->assign('id', $this->_id);
+		$this->_smarty->assign('ajaxId', $this->ajaxId);
 		$this->_smarty->assign('cols', $this->_cols);
 		$this->_smarty->assign('order', $this->_getSavedOrder(true) ?? $this->_getDefaultOrder(true));
 		$this->_smarty->assign('initOpts', $this->_getHtmlInitOptions());
@@ -758,20 +762,21 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 
 			$saveFilter[$c->id] = $search;
 
-			// checks if filter is a date filter and calculate where clause
+			// checks if filter is a date filter and calculate where clause. Using alias to avoid errors in MySql.
+			$alias = $this->_db->type() == $this->_db::TYPE_MYSQL ? $this->_db->quoteObj($c->id) : $c->qname;
 			if($search == '-') {
-				$filter[] = "{$c->qname} IS NULL";
+				$filter[] = "{$alias} IS NULL";
 			} elseif($c->type == \dophp\Table::DATA_TYPE_DATE){
 				$dateFilter = new \dophp\DateFilter($search, self::DFILTER_DIVIDER);
-				list($sql, $params) = $dateFilter->getSqlSearchFilter($c->qname, ":f{$idx}_");
+				list($sql, $params) = $dateFilter->getSqlSearchFilter($alias, ":f{$idx}_");
 				if( $sql ) {
 					$filter[] = $sql;
 					$filterArgs = array_merge($filterArgs, $params);
 				}
 			} elseif($c->type == \dophp\Table::DATA_TYPE_BOOLEAN) {
-				$filter[] = ( $search ? '' : 'NOT ' ) . $c->qname;
+				$filter[] = ( $search ? '' : 'NOT ' ) . $alias;
 			} else {
-				$filter[] = "{$c->qname} LIKE :f$idx";
+				$filter[] = "{$alias} LIKE :f$idx";
 				$filterArgs[":f$idx"] = "%$search%";
 			}
 		}
@@ -1021,6 +1026,8 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 			]]],
 			'columns' => ['array', [ 'rules' => [] ] ],
 			'filter' => ['array', [ 'rules' => [] ] ],
+			// Custom ajaxId
+			'ajaxid' => ['int', []],
 		];
 
 		foreach( $this->_cols as $c ) {
@@ -1599,15 +1606,16 @@ class DataTable extends BaseDataTable {
 	 * Constructs the table object
 	 *
 	 * @param $page PageInterface: the parent page
+	 * @param $params array: Default parameters (see $this->params)
 	 */
-	public function __construct(\dophp\PageInterface $page) {
+	public function __construct(\dophp\PageInterface $page, array $params = null) {
 		// Checks for data validity
 		if( isset($this->_query) )
 			throw new \LogicException('Deprecated Query specification');
 		if( ! isset($this->_from) || ! is_string($this->_from) )
 			throw new \LogicException('Missing or invalid From definition');
 
-		parent::__construct($page);
+		parent::__construct($page, $params);
 	}
 
 	/**
@@ -1742,7 +1750,7 @@ class DataTable extends BaseDataTable {
 		else
 			$q .= "\n LIMIT 0 \n";
 
-		$res = $this->_db->xrun($q);
+		$res = $this->_db->xrun($q, $this->params);
 		$types = $this->_extractColumnTypesFromRes($res);
 
 		if( $cache )

@@ -1,4 +1,6 @@
 {{extends file=$baseTpl}}
 {{block name='content'}}
-	{{$table->getHTMLStructure()}}
+	{{foreach $tables as $table}}
+		{{$table->getHTMLStructure()}}
+	{{/foreach}}
 {{/block}}

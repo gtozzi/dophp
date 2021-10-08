@@ -53,6 +53,11 @@
 			data.columns[index].visible = table.column(index).visible();
 		});
 
+		{{if isset($ajaxId) }}
+			// Add ajax ID
+			data.ajaxid = {{$ajaxId|json_encode}};
+		{{/if}}
+
 		return data;
 	}
 
@@ -687,7 +692,9 @@
 			filterargs += `&columns[${coln}][search][value]=${val}`;
 		}
 
-		let href = {{$ajaxURL|json_encode}} + '&export=xlsx' + filterargs;
+		let href = {{$ajaxURL|json_encode}} + '&export=xlsx'
+			{{if isset($ajaxId)}} + '&ajaxid=' + {{$ajaxId|json_encode}} {{/if}}
+			+ filterargs;
 		$('#data-table-export-url').attr('href', href);
 	}
 
@@ -1164,7 +1171,7 @@
 				{{/foreach}}
 			</th>
 			{{foreach $cols as $c}}
-				<th {{if $c->tooltip}}title="{{$c->tooltip|htmlentities}}"{{/if}}>{{$c->descr|htmlentities}}</th>
+				<th {{if $c->tooltip}}class="tooltipped" title="{{$c->tooltip|htmlentities}}"{{/if}}>{{$c->descr|htmlentities}}</th>
 			{{/foreach}}
 		</tr>
 		<tr>
