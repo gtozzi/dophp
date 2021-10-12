@@ -758,6 +758,18 @@ class DoPhp {
 	}
 
 	/**
+	 * Returns when execution started
+	 *
+	 * @return double: The start time, in seconds since epoch
+	 */
+	public static function start() {
+		if( ! self::$__instance )
+			throw new \dophp\DoPhpNotInitedException();
+
+		return self::$__instance->__start;
+	}
+
+	/**
 	* Returns execution time so far
 	*
 	* @return double: The execution time, in seconds
