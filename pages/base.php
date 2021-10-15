@@ -303,8 +303,14 @@ abstract class PageBase {
 		if ( ! key_exists("HTTP_REFERER", $_SERVER) || ! $_SERVER["HTTP_REFERER"] )
 			return null;
 
-		$rUrl = new \dophp\Url($_SERVER["HTTP_REFERER"]);
+		try {
+			$rUrl = new \dophp\Url($_SERVER["HTTP_REFERER"]);
+		} catch( \UnexpectedValueException $e ) {
+			error_log("Error parsing referer url: {$_SERVER['HTTP_REFERER']}");
+			return null;
+		}
 		$iUrl = new \dophp\Url(\dophp\Url::myUrl());
-		return \dophp\Url::isParent($rUrl, $iUrl);
+
+		return $rUrl->isParent($iUrl);
 	}
 }

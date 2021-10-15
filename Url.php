@@ -85,6 +85,7 @@ class Url {
 	* @see buildUrl()
 	* @param $url string: The URL string
 	* @return array: The URL array
+	* @throws \UnexpectedValueException when url is too bad
 	*/
 	public static function parseUrl($url) {
 		$parsed = parse_url($url);
@@ -236,7 +237,7 @@ class Url {
 	}
 
 	/**
-	 * Find wether an url is a subpath of another.
+	 * Tells wether right url is a subpath of left one.
 	 * An url is a subpath of another one if both share the same protocol, port and host,
 	 * and the first's uri starts with the second's uri.
 	 * Eventual query arguments are ignored.
@@ -245,32 +246,69 @@ class Url {
 	 * @param $cUrl Url children url
 	 * @return bool True if $pUrl is parent of $cUrl, False otherwise
 	 */
-	public static function isParent(Url $pUrl, Url $cUrl): bool {
-		if ( $pUrl->scheme != $cUrl->scheme )
+	public static function isSubPath(Url $pUrl, Url $cUrl): bool {
+		if ( $pUrl->scheme !== $cUrl->scheme )
 			return false;
 
-		if ( $pUrl->port != $cUrl->port )
+		if ( ($pUrl->port ?? 80) !== ($cUrl->port ?? 80) )
 			return false;
 
-		if ( $pUrl->host != $cUrl->host )
+		if ( $pUrl->host !== $cUrl->host )
 			return false;
 
-		// Remove leading "/", not always present
-		$pPath = explode('/', preg_replace('/^\//m', '', $pUrl->path));
-		$cPath = explode('/', preg_replace('/^\//m', '', $cUrl->path));
-		if ( ! $pPath )
+		if ( $pUrl->path === null || $pUrl->path === '' )
 			return true;
+
+		if ( $cUrl->path === null || $cUrl->path === '' )
+			return false;
+
+		$pPath = self::__normPath($pUrl->path);
+		$cPath = self::__normPath($cUrl->path);
 
 		if ( count($cPath) < count($pPath) )
 			return false;
 
 		// Check path one piece a time to avoid matching /abcd as valid child of /abc
 		for ( $i = 0; $i < count($pPath); $i++ ) {
-			if ( $pPath[$i] !== '' && $pPath[$i] !== $cPath[$i] )
+			if ( $pPath[$i] !== $cPath[$i] )
 				return false;
 		}
 
 		return true;
+	}
+
+	/**
+	 * Explode given (path usually starts and ends with / so first and last
+	 * explodes are supposed to be empty: trim them)
+	 *
+	 * @return array of exploded path parts (may be empty)
+	 */
+	private static function __normPath(string $path): array {
+		$parts = explode('/', $path);
+		if( count($parts) && $parts[0] === '' )
+			array_shift($parts);
+		if( count($parts) && end($parts) === '' )
+			array_pop($parts);
+		reset($parts);
+		return $parts;
+	}
+
+	/**
+	 * Tells wether given url is a subpath of this one
+	 *
+	 * @see self::isSubPath
+	 */
+	public function isChild(Url $cUrl): bool {
+		return self::isSubPath($this, $cUrl);
+	}
+
+	/**
+	 * Tells wether this url given url is a subpath of given one
+	 *
+	 * @see self::isSubPath
+	 */
+	public function isParent(Url $pUrl): bool {
+		return self::isSubPath($pUrl, $this);
 	}
 
 	private static function __getArrayArgToString($namespace, $v) {
