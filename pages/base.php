@@ -290,4 +290,21 @@ abstract class PageBase {
 			throw new \UnexpectedValueException(json_last_error_msg(), json_last_error());
 		return $encoded;
 	}
+
+	/**
+	 * Checks if the referer page belongs to this instance.
+	 * The check is done on the request's REFERER HTTP header, if present.
+	 * If the referer header is missing from the request, will return null.
+	 *
+	 * @return bool|null: true if the referer page belongs to this instance,
+	 * false if is external, null if cannot be determined.
+	 */
+	protected function _isOwnReferer(): ?bool {
+		if ( ! key_exists("HTTP_REFERER", $_SERVER) || ! $_SERVER["HTTP_REFERER"] )
+			return null;
+
+		$rUrl = new \dophp\Url($_SERVER["HTTP_REFERER"]);
+		$iUrl = new \dophp\Url(\dophp\Url::myUrl());
+		return \dophp\Url::isParent($rUrl, $iUrl);
+	}
 }

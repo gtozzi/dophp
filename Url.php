@@ -235,6 +235,44 @@ class Url {
 		return '?' . implode('&', $ret);
 	}
 
+	/**
+	 * Find wether an url is a subpath of another.
+	 * An url is a subpath of another one if both share the same protocol, port and host,
+	 * and the first's uri starts with the second's uri.
+	 * Eventual query arguments are ignored.
+	 *
+	 * @param $pUrl Url parent url
+	 * @param $cUrl Url children url
+	 * @return bool True if $pUrl is parent of $cUrl, False otherwise
+	 */
+	public static function isParent(Url $pUrl, Url $cUrl): bool {
+		if ( $pUrl->scheme != $cUrl->scheme )
+			return false;
+
+		if ( $pUrl->port != $cUrl->port )
+			return false;
+
+		if ( $pUrl->host != $cUrl->host )
+			return false;
+
+		// Remove leading "/", not always present
+		$pPath = explode('/', preg_replace('/^\//m', '', $pUrl->path));
+		$cPath = explode('/', preg_replace('/^\//m', '', $cUrl->path));
+		if ( ! $pPath )
+			return true;
+
+		if ( count($cPath) < count($pPath) )
+			return false;
+
+		// Check path one piece a time to avoid matching /abcd as valid child of /abc
+		for ( $i = 0; $i < count($pPath); $i++ ) {
+			if ( $pPath[$i] !== '' && $pPath[$i] !== $cPath[$i] )
+				return false;
+		}
+
+		return true;
+	}
+
 	private static function __getArrayArgToString($namespace, $v) {
 		$ret = [];
 		foreach($v as $nn => $vv)
