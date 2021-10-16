@@ -11,11 +11,11 @@ namespace dophp;
 
 // apt-get install php-psr-simple-cache
 if( ! interface_exists('Psr\SimpleCache\CacheException') )
-	require_once 'Psr/SimpleCache/CacheException.php';
+	require_once __DIR__ . '/phppsrsimplecache/CacheException.php';
 if( ! interface_exists('Psr\SimpleCache\CacheInterface') )
-	require_once 'Psr/SimpleCache/CacheInterface.php';
+	require_once __DIR__ . '/phppsrsimplecache/CacheInterface.php';
 if( ! interface_exists('Psr\SimpleCache\InvalidArgumentException') )
-	require_once 'Psr/SimpleCache/InvalidArgumentException.php';
+	require_once __DIR__ . '/phppsrsimplecache/InvalidArgumentException.php';
 
 
 require_once __DIR__ . '/phpspreadsheet/Exception.php';
