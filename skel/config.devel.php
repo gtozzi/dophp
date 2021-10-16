@@ -10,9 +10,9 @@ require('base.php');
 
 $config = array_merge($config, [
 	'db' => array(
-		'dsn' => 'mysql:host=localhost;dbname=mydb',
+		'dsn' => 'mysql:host=mysql;dbname=app',
 		'user' => 'root',
-		'pass' => '',
+		'pass' => 'root',
 	),
 	/*
 	'memcache' => [

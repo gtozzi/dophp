@@ -1,0 +1,35 @@
+version: "3"
+
+services:
+  mysql:
+    image: mysql:8.0.26
+    container_name: "mysql"
+    ports:
+      - 3307:3306
+    volumes:
+      - ./db:/var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: "root"
+      MYSQL_DATABASE: "app"
+    restart: always
+
+  adminer:
+    image: adminer
+    container_name: "adminer"
+    ports:
+      - 8080:8080
+    restart: always
+    depends_on:
+      - mysql
+
+  app:
+    build: docker/apache
+    container_name: "app"
+    ports:
+      - 8081:80
+    volumes:
+      - "./src:/var/www/html"
+    environment:
+      - TZ=Europe/Rome
+    depends_on:
+      - mysql
