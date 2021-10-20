@@ -720,4 +720,34 @@ class Utils {
 
 		return false;
 	}
+
+	/**
+	 * Provide a custom JSON pre-serialization for values
+	 * (i.e. encode DateTime as single string instead of array object)
+	 *
+	 * @param $value mixed: The value to be pre-serialized in-place
+	 */
+	protected static function jsonSerialize(&$value) {
+		if( is_string($value) || is_bool($value) || is_int($value)
+				|| is_float($value) || is_null($value) )
+			return;
+
+		if( is_object($value) ) {
+			if( $value instanceof \JsonSerializable )
+				return $value;
+			elseif( $value instanceof Date )
+				$value = $value->format('Y-m-d');
+			elseif( $value instanceof \DateTime )
+				$value = $value->format('c');
+
+			return;
+		}
+
+		if( is_array($value) ) {
+			foreach( $value as &$v )
+				self::jsonSerialize($v);
+			unset($v);
+			return;
+		}
+	}
 }

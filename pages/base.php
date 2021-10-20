@@ -244,36 +244,6 @@ abstract class PageBase {
 	}
 
 	/**
-	 * Provide a custom JSON pre-serialization for values
-	 * Overridable in child
-	 *
-	 * @param $value mixed: The value to be pre-serialized, to be modified in place
-	 */
-	protected function _jsonSerialize(&$value) {
-		if( is_string($value) || is_bool($value) || is_int($value)
-				|| is_float($value) || is_null($value) )
-			return;
-
-		if( is_object($value) ) {
-			if( $value instanceof \JsonSerializable )
-				return;
-			elseif( $value instanceof Date )
-				$value = $value->format('Y-m-d');
-			elseif( $value instanceof \DateTime )
-				$value = $value->format('c');
-
-			return;
-		}
-
-		if( is_array($value) ) {
-			foreach( $value as &$v )
-				$this->_jsonSerialize($v);
-			unset($v);
-			return;
-		}
-	}
-
-	/**
 	 * Utility function: returns a json encoded version of data, just like
 	 * json_encode but failsafe and also calls pre-serialization
 	 *
@@ -284,7 +254,7 @@ abstract class PageBase {
 	 * @throws Exception en json_encode error
 	 */
 	protected function _jsonEncode($res, $opts=0) {
-		$this->_jsonSerialize($res);
+		\dophp\Utils::jsonSerialize($res);
 		$encoded = json_encode($res, $opts);
 		if( $encoded === false )
 			throw new \UnexpectedValueException(json_last_error_msg(), json_last_error());
