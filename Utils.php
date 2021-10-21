@@ -727,7 +727,7 @@ class Utils {
 	 *
 	 * @param $value mixed: The value to be pre-serialized in-place
 	 */
-	protected static function jsonSerialize(&$value) {
+	public static function jsonSerialize(&$value) {
 		if( is_string($value) || is_bool($value) || is_int($value)
 				|| is_float($value) || is_null($value) )
 			return;
