@@ -724,7 +724,7 @@ class FileField extends TextField {
  */
 class AsyncFileField extends InputField {
 	protected $_type = 'asyncFile';
-	protected $_vtype = 'int';
+	protected $_vtype = 'string';
 
 	//TODO: make sure file is created by user, maybe do not retransmit ID,
 	//      just store it in session

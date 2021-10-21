@@ -499,7 +499,7 @@ abstract class FormPage extends \dophp\PageSmarty {
 	 */
 	public static function getRequestId() {
 		$id = isset($_REQUEST['id']) && $_REQUEST['id'] ? $_REQUEST['id'] : null;
-		if( $id !== null && ! preg_match('/^[a-zA-Z0-9_]+$/', $id) )
+		if( $id !== null && ! preg_match('/^[a-zA-Z0-9_\-\s\/]+$/', $id) )
 			throw new \dophp\PageError("Invalid id $id");
 
 		// Convert to int or float if numeric
