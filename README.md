@@ -2,29 +2,28 @@
 A Minimal, Fast and Easy-to-Use PHP Framework.
 
 ## Quick Start with Docker
-Create your project's root directory, then add a source folder e.g.: *src* (which is going to be the one containing the *index.html* file)
-Then clone this repository inside your project source directory, e.g.: *src/lib/dophp* (you may need to add it as submodule too).
+Create your project's root directory, then add a source folder e.g.: *web* (which is going to be the one containing the *index.html* file)
+Then clone this repository inside your project source directory, e.g.: *web/lib/dophp* (you may need to add it as submodule too).
 ```bash
 mkdir app && cd app
 git init
-mkdir src && cd src
+mkdir web && cd web
 mkdir lib && cd lib
 git clone https://git.ag2.it/gtozzi/dophp.git
 cd ../..
-git submodule add https://git.ag2.it/gtozzi/dophp.git src/lib/dophp/
+git submodule add https://git.ag2.it/gtozzi/dophp.git web/lib/dophp/
 ```
-Copy the content of skel directories inside the source directory to get the basic code.
+Copy the content of skel directory inside the source directory to get the basic code.
 ```bash
-cp -R src/lib/dophp/skel/. src/
-cp -R src/lib/dophp/skelroot/. .
+cp -R web/lib/dophp/skel/. .
 ```
 Make sure the *cac* directory is writable.
 ```bash
-chmod +w -R src/cac/
+chmod +w -R web/cac/
 ```
 Now duplicate the file named *config.devel.php* (which can be found inside the project's source after step 2) and rename the new copy to *config.php*.
 ```bash
-cp src/config.devel.php src/config.php
+cp web/config.devel.php web/config.php
 ```
 *config.php* file contains the basic server configuration parameters like the DataBase connection info, test's and debug's bits and the relative *dophp* directory location which needs to match with the folder path (`'url' => 'lib/dophp',` if you followed the example in step 1).
 
