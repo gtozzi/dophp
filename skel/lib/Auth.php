@@ -6,34 +6,37 @@
 */
 class Auth extends dophp\AuthPlain {
 
-    // protected $_username = null;
+	/** This is a stub
 
-    // protected function _login($user, $pwd, $source) {
-	// 	$q = '
-	// 		SELECT
-	// 			u.id,
-	// 			c.password
-	// 		FROM users AS u
-    //         WHERE u.username = ?
-	// 	';
-	// 	$p = [
-    //         $user,
-    //     ];
-	// 	$r = $this->_db->xrun($q,$p)->fetch();
+	protected $_username = null;
 
-	// 	if( ! $r || ! $r['id'] )
-	// 		return null;
+	protected function _login($user, $pwd, $source) {
+		$q = '
+			SELECT
+				u.id,
+				c.password
+			FROM users AS u
+			WHERE u.username = ?
+		';
+		$p = [
+			$user,
+		];
+		$r = $this->_db->xrun($q,$p)->fetch();
 
-	// 	if( $source == self::SOURCE_SESSION ) {
-	// 		if( $pwd !== $r['password'] )
-	// 			return null;
-	// 	} elseif( ! hash_equals(sha1($pwd), $r['password']) ) {
-	// 		return null;
-	// 	}
+		if( ! $r || ! $r['id'] )
+			return null;
 
-	// 	$this->_username = $user;
+		if( $source == self::SOURCE_SESSION ) {
+			if( $pwd !== $r['password'] )
+				return null;
+		} elseif( ! hash_equals(sha1($pwd), $r['password']) ) {
+			return null;
+		}
 
-	// 	return [ $r['id'], $r['password'] ];
-	// }
+		$this->_username = $user;
+
+		return [ $r['id'], $r['password'] ];
+	}
+	*/
 
 }
