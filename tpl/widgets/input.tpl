@@ -462,7 +462,7 @@
 							dropdownCssClass: {{$reqCls|json_encode}},
 							width: 'style',
 							{{if $field->isAjax()}}
-								 placeholder: {
+								placeholder: {
 									id: '',
 									text: '',
 								},
