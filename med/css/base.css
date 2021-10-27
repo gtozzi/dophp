@@ -190,7 +190,7 @@
 	display: none;
 }
 
-/** Helper classes for help cursor */
+/* Helper classes for help cursor */
 span[title] {
 	cursor: help;
 }
@@ -198,7 +198,13 @@ span[title] {
 .has-help {
 	cursor: help;
 }
-/** --- */
+/* --- */
+
+/* Custom multiselect field */
+.multiselect-attr-descr {
+	margin-right: 5px;
+}
+/* --- */
 
 @media (min-width:568px){
 	.wp-date-filt-mthCont .wp-mthUnit,
