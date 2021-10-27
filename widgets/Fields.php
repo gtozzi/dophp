@@ -1418,7 +1418,7 @@ abstract class BaseMultiSelectFieldAttr {
 		return $this->_descr;
 	}
 
-	public function getLabel(): string {
+	public function getLabel(): ?string {
 		return $this->_label;
 	}
 

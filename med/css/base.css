@@ -190,6 +190,16 @@
 	display: none;
 }
 
+/** Helper classes for help cursor */
+span[title] {
+	cursor: help;
+}
+
+.has-help {
+	cursor: help;
+}
+/** --- */
+
 @media (min-width:568px){
 	.wp-date-filt-mthCont .wp-mthUnit,
 	.wp-date-filt-yeaCont .wp-yeaUnit{
