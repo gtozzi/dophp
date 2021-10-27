@@ -1,0 +1,150 @@
+nav.navbar {
+	background-color: #f7f7f7 !important;
+}
+
+.navbar-dark .navbar-brand,
+.navbar-dark .navbar-nav .nav-link,
+.navbar-dark .navbar-nav.active .nav-link,
+.navbar-dark .navbar-nav .nav-link:hover,
+.navbar-dark .navbar-nav .nav-link:active,
+.navbar-dark .navbar-nav .nav-link:visited,
+.navbar-dark .navbar-nav .nav-link:focus{
+	color: var(--jm-primary, #1b75bb);
+}
+
+.sub-header-cont .breadcrumb-item a,
+.breadcrumb .bc-arrow{
+	color: var(--jm-primary, #1b75bb);
+}
+
+.breadcrumb .bc-text.active,
+.breadcrumb .bc-text:hover{
+	background: var(--jm-primary, #1b75bb);
+}
+
+.breadcrumb .bc-text{
+	border: 1px solid var(--jm-primary, #1b75bb);
+}
+
+.ag-logged-btn {
+	margin-right: 8px;
+}
+
+/*
+.col.sub-header-cont{
+	padding-right:0px;
+}
+*/
+
+.ag-nav-btn{
+	cursor: pointer;
+	color: var(--jm-primary, #1b75bb);
+}
+
+.ag-nav-btn.ag-img-btn {
+	width: calc( 100% - 33px );
+	display: inline;
+	padding-left: 4px;
+}
+
+.ag-nav-img {
+	color: var(--jm-primary, #1b75bb);
+}
+
+.ag-navbar ul.navbar-nav li a span.fa,
+.ag-navbar form span.fa {
+	width: 30px;
+	text-align:center;
+}
+
+.ag-logged-logo img.logo {
+	width: 93px;
+	max-width: 1000px;
+	max-height: 1000px;
+}
+
+.ag-logged-logo {
+	/* width: 141px; */
+	/* width: 81px; */
+	text-align: center;
+}
+
+.navbar-dark .navbar-toggler-icon {
+	background-image: url("data:image/svg+xml;charset=utf8,%3Csvg viewBox='0 0 30 30' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath stroke='rgba(43,118,182, 1)' stroke-width='2' stroke-linecap='round' stroke-miterlimit='10' d='M4 7h22M4 15h22M4 23h22'/%3E%3C/svg%3E");
+}
+
+.ag-notif-box.ag-fillBtn.ag-redFll{
+	background: none;
+}
+
+.ag-fillBtn.ag-redFll.ag-notif-box span.fa.fa-bell-o{
+	color: var(--jm-red, #ef3b56);
+}
+
+.ag-notif-box.ag-fillBtn.ag-redFll.ag-active{
+	background: var(--jm-red, #ef3b56);
+}
+
+.ag-notif-box.ag-fillBtn.ag-redFll:active {
+	background: none;
+	border: 1px solid var(--jm-red, #ef3b56);
+}
+
+.ag-notif-box.ag-fillBtn.ag-redFll:focus,
+.ag-notif-box.ag-fillBtn.ag-redFll:focus:active{
+	box-shadow: none;
+}
+
+.ag-mmenu-exp {
+	position: absolute;
+	top: 58px;
+	background: #f7f7f7;
+	box-shadow: 1px 1px 1px #ccc;
+	z-index: 2000;
+	display: none;
+	box-shadow: 2px 3px 4px #ccc;
+}
+
+.ag-mmenu-exp li {
+	float: left;
+	list-style: none;
+}
+
+.ag-main-menu-cont .ag-mmexp-targ.ag-moved{
+	/* display: none; */
+	background: #f00;
+}
+
+.ag-mmenu-handler {
+	position: absolute;
+	right: 350px;
+	cursor: pointer;
+	display: none;
+}
+
+.ag-mmenu-handler img {
+	width: 20px;
+}
+
+.ag-mmenu-exp a {
+	color: var(--jm-primary, #1b75bb);
+}
+
+/*body:before, body:after {
+	content: "";
+	position: fixed;
+	background: red;
+	left: 0;
+	right: 0;
+	height: 10px;
+}
+body:before {
+	top: 0;
+}
+body:after {
+	bottom: 0;
+}
+body {
+	border-left: 10px solid red;
+	border-right: 10px solid red;
+}*/

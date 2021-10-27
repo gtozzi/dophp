@@ -1,0 +1,30 @@
+html {
+	position: relative;
+	min-height: 100%;
+}
+body {
+	/* Margin bottom by footer height */
+	margin-bottom: 30px;
+	padding-bottom: 50px;
+}
+.footer {
+	position: absolute;
+	/*bottom: 0;*/
+	width: calc(100% - 44px);
+	/* Set the fixed height of the footer here */
+	/* height: 30px; */
+	min-height: 50px;
+}
+.footer {
+	background: var(--jm-primary, #1b75bb);
+	line-height: 22px;
+	font-size: 14px;
+	text-align: center;
+	padding-top: 3px;
+}
+.footer .text-muted {
+	color: #f7f7f7 !important;
+}
+.footer .text-muted a{
+	color: var(--jm-primary-light, #f7f7f7);
+}

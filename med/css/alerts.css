@@ -1,0 +1,4 @@
+.ag-alerts-tab-cont:not(:empty) {
+	margin-top: 15px;
+	padding: 0px 15px;
+}

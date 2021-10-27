@@ -1,0 +1,151 @@
+
+.data-table.ag-table thead tr:first-child .fa{
+	color: var(--jm-table-head-icon-primary, #f7f7f7);
+}
+
+.data-table.ag-table thead tr:nth-child(2) .fa{
+	color: var(--jm-table-head-icon-secondary, #1b75bb);
+}
+
+.data-table.ag-table .fa{
+	color: var(--jm-table-body-icon-primary, #b76823);
+}
+
+table.data-table {
+}
+
+table.data-table tbody {
+	line-height: 1;
+}
+
+td.data-table-bcol {
+	text-align: center;
+}
+
+td.data-table-col {
+}
+
+table.data-table thead th.data-table-filter,
+table.data-table thead th.data-table-buthead
+{
+	padding-left: 10px;
+	padding-right: 10px;
+	text-align: center;
+	border-bottom: none;
+}
+
+input.data-table-filter {
+	/* width: 95px; */
+	width: 90%;
+}
+
+div.DTS div.dataTables_scrollBody{
+	background: none;
+}
+
+div.DTS{
+	padding-bottom: 50px;
+}
+
+.dataTables_wrapper {
+	z-index: 0;
+}
+
+table.dataTable.nowrap td{
+	white-space: normal;
+}
+
+table.dataTable.no-footer{
+	border-bottom: none;
+}
+
+.dataTables_wrapper.no-footer .dataTables_scrollBody{
+	border-bottom: none;
+}
+
+.ag-table thead tr:first-child a{
+	color: #f7f7f7;
+}
+
+.ag-table thead tr:first-child {
+	background: var(--jm-primary, #1b75bb);
+	color: #f7f7f7;
+}
+
+.ag-table thead tr:first-child th{
+	border: none;
+}
+
+.ag-table thead tr:nth-child(2) {
+	background: #f4f3f4;
+	color: #f7f7f7;
+}
+
+.ag-table thead th{
+	border: none;
+}
+
+.ag-table .table-striped tbody tr.odd{
+	background: #f4f3f4;
+}
+
+.ag-table .table-striped tbody tr.even{
+	background: #fafafa;
+}
+
+.ag-table tr.totals {
+	font-weight: bold;
+	background: #dcefff !important;
+}
+
+.ag-table input.data-table-filter {
+	border: none;
+	padding: 0px 5px;
+}
+
+.dataTables_info{
+	color: #afafaf !important;
+}
+
+.dataTables_scrollBody{
+	box-shadow: 2px 2px 8px #ccc;
+}
+
+span.deleteicon {
+	position: relative;
+}
+
+span.deleteicon span {
+	position: absolute;
+	display: block;
+	top: 5px;
+	right: 10px;
+	width: 16px;
+	height: 16px;
+	background: url('../img/dfilter/dfilter_close_darkgrey.png') 0 -690px;
+	cursor: pointer;
+}
+
+span.deleteicon input {
+	padding-right: 16px;
+	box-sizing: border-box;
+}
+
+#m-y-deleteicon {
+	position: relative;
+	position: absolute;
+	display: block;
+	top: 95px;
+	right: 20px;
+	width: 16px;
+	height: 16px;
+	background: url('../img/dfilter/dfilter_close_darkgrey.png') 0 -690px;
+	cursor: pointer;
+	border: none;
+	outline: none;
+}
+
+.dataTables_wrapper .dataTables_processing{
+	z-index: 10;
+	padding-top: 9px;
+}

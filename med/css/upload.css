@@ -1,0 +1,20 @@
+.ag-progress{
+	display: none;
+}
+
+.progress-ETA {
+	color: #888;
+	margin-top: -13px;
+	text-align: right;
+	font-size: 13px;
+}
+
+.alert.ag-alert-1 {
+	margin-top: 10px;
+	padding: 5px 10px;
+	display: none;
+}
+
+.alert.alert-success.ag-alert-1{
+	color: #36aa52;
+}
