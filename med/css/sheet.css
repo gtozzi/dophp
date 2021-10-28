@@ -1,0 +1,124 @@
+.ag-sheetlist-cont {
+	background: #f3f3f3;
+	padding: 15px;
+	text-align: center;
+}
+
+.ag-sheetlist-itm {
+	display: inline-block;
+	width: 170px;
+	text-align: center;
+	vertical-align: top;
+	font-size: 13px;
+	padding: 20px 10px;
+}
+
+.ag-sheetlist-block {
+	display: block;
+	text-align: left;
+	width: calc( 100% - 30px);
+	margin: auto;
+}
+
+.doc-tpl-link.ag-active .ag-sheetlist-itm,
+.ag-sheetlist-itm:hover{
+	background: #ddeaf5;
+}
+
+.ag-sheetlist-itm-img {
+	width: 40px;
+}
+
+.ag-sheetlist-itm-name {
+	margin-top: 5px;
+}
+
+.ag-sheetlist-frm-sect {
+	display: none;
+	margin-top: 30px;
+}
+
+.ag-sheetlist-frm-sect:first-child {
+	display: block;
+}
+
+.doc-tpl-link.ag-active .ag-sheetlist-itm-name {
+	font-weight: bold;
+	color: var(--jm-primary, #1b75bb);
+}
+
+.doc-tpl-link.ag-active .ag-sheetlist-itm{
+	border: 1px solid var(--jm-primary, #1b75bb);
+}
+
+.ag-sheetlist-cont .doc-tpl-link {
+	display: inline-block;
+	cursor: pointer;
+}
+
+.ag-sheetlist-cont .doc-tpl-link .doc-tpl-ddown {
+	position: absolute;
+	width: 170px;
+	display: none;
+}
+
+.ag-sheetlist-cont .doc-tpl-link .doc-tpl-ddown.ddown-open{
+	display: block;
+}
+
+.ag-sheetlist-cont .doc-tpl-link .doc-tpl-ddown ul {
+	background: #ddd;
+	padding: 0px;
+	margin-top: 80px;
+}
+
+.ag-sheetlist-cont .doc-tpl-link .doc-tpl-ddown ul li{
+	list-style: none;
+}
+
+.ag-sheetlist-cont .doc-tpl-link .doc-tpl-ddown ul li:hover {
+	background: #b9b9b9;
+}
+
+.ag-sheetlist-cont .doc-tpl-link .doc-tpl-ddown ul li .doc-tpl-ddown-entry {
+	padding: 5px 15px;
+	display: block;
+	color: #444;
+	cursor: pointer;
+}
+
+.ag-sheetlist-cont .doc-tpl-link .doc-tpl-ddown ul li a:hover{
+	text-decoration: none;
+}
+
+.ag-sheetlist-frm-tlt-cont {
+	text-align: center;
+	margin-bottom: 30px;
+}
+
+.ag-sheetlist-frm-tlt {
+	text-align: center;
+	color: var(--jm-primary, #1b75bb);
+	border-bottom: 2px solid var(--jm-primary, #1b75bb);
+	display: inline-block;
+}
+
+.ag-sheetlist-frm-tlt img {
+	height: 27px;
+	margin-right: 6px;
+	display: block;
+	margin: auto;
+}
+
+.ag-sheetlist-itm-upl {
+	width: 0%;
+	height: 2px;
+	background: #72ae7f;
+	margin-top: 9px;
+	transition: 0.5s;
+}
+
+.doc-tpl-link.ag-active .ag-sheetlist-itm-upl {
+	font-weight: bold;
+	color: var(--jm-primary, #1b75bb);
+}

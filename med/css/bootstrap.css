@@ -1,0 +1,29 @@
+.btn:focus{
+	box-shadow: none !important;
+}
+
+.btn-danger{
+	background-color: var(--jm-btn-danger-bg, #ef3b56) !important;
+	border-color: var(--jm-btn-danger-bg, #ef3b56) !important;
+	color: var(--jm-btn-danger-color, #f7f7f7) !important;
+}
+.btn-warning{
+	background-color: var(--jm-btn-warning-bg, #ff671a) !important;
+	border-color: var(--jm-btn-warning-bg, #ff671a) !important;
+	color: var(--jm-btn-warning-color, #f7f7f7) !important;
+}
+.btn-info{
+	background-color: var(--jm-btn-info-bg, #a8dadc) !important;
+	border-color: var(--jm-btn-info-bg, #a8dadc) !important;
+	color: var(--jm-btn-info-color, #f7f7f7) !important;
+}
+
+.badge-danger{
+	background-color: var(--jm-btn-danger-bg, #ef3b56) !important;
+	color: var(--jm-btn-danger-color, #f7f7f7) !important;
+}
+
+.badge-warning{
+	background-color: var(--jm-btn-warning-bg, #f0ad4e) !important;
+	color: var(--jm-btn-danger-color, #f7f7f7) !important;
+}

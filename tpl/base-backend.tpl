@@ -93,6 +93,16 @@
 	{{/block}}
 
 	<!-- Dophp default styles and scripts -->
+	<link rel="stylesheet" href="{{$config['dophp']['url']}}/med/css/bootstrap.css">
+	<link rel="stylesheet" href="{{$config['dophp']['url']}}/med/css/general.css">
+	<link rel="stylesheet" href="{{$config['dophp']['url']}}/med/css/header.css">
+	<link rel="stylesheet" href="{{$config['dophp']['url']}}/med/css/footer.css">
+	<link rel="stylesheet" href="{{$config['dophp']['url']}}/med/css/datatable.css">
+	<link rel="stylesheet" href="{{$config['dophp']['url']}}/med/css/alerts.css">
+	<link rel="stylesheet" href="{{$config['dophp']['url']}}/med/css/form.css">
+	<link rel="stylesheet" href="{{$config['dophp']['url']}}/med/css/sheet.css">
+	<link rel="stylesheet" href="{{$config['dophp']['url']}}/med/css/upload.css">
+	<link rel="stylesheet" href="{{$config['dophp']['url']}}/med/css/collapsable.css">
 	<link rel="stylesheet" href="{{$config['dophp']['url']}}/med/css/base.css">
 
 	{{block name='head'}}{{/block}}
