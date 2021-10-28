@@ -87,6 +87,7 @@
 		<link rel="stylesheet" type="text/css" href="{{$config['dophp']['url']}}/webcontent/css/base-backend.css"/>
 		<script src="{{$config['dophp']['url']}}/webcontent/js/form.js"></script>
 		<script src="{{$config['dophp']['url']}}/webcontent/js/buttons.js"></script>
+		<script src="{{$config['dophp']['url']}}/webcontent/js/datatable.js"></script>
 
 		<!-- DoPhp font -->
 		<link rel="stylesheet" type="text/css" href="{{$config['dophp']['url']}}/webcontent/css/mgmt-glyph.css"/>
