@@ -109,7 +109,7 @@
 	{{block name='head'}}{{/block}}
 </head>
 {{$testServer=isset($config['testserver']) && $config['testserver']}}
-<body {{if $testServer}}class="testserver"{{/if}}>
+<body class="{{block name='bodyClasses'}}{{/block}}{{if $testServer}} testserver{{/if}}">
 {{if $testServer}}
 	<div class="testserver-top">
 		Attenzione! Questo è un server di test. Tutti i dati inseriti potrebbero essere cancellati senza preavviso.
