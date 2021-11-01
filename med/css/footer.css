@@ -36,3 +36,11 @@ body > #bodyDiv{
 .footer .text-muted a{
 	color: var(--jm-primary-light, #f7f7f7);
 }
+body.no-footer-sticky-bottom > #bodyDiv {
+	padding-bottom: 0px;
+	margin-bottom: 0px;
+	min-height: 0px;
+}
+body.no-footer-sticky-bottom footer.footer{
+	position: relative;
+}
