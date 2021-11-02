@@ -4,11 +4,6 @@
 	display:none;
 }
 
-/** Body frame (test server) */
-body.testserver{
-	padding-top: 15px;
-}
-
 /* Full width pages */
 .container{
 	max-width:100%;
@@ -16,16 +11,6 @@ body.testserver{
 
 #bodyDiv {
 	background: white;
-}
-
-.testserver-top{
-	position: fixed;
-	background-color: red;
-	z-index: 10;
-	color: yellow;
-	width: 100%;
-	height: 15px;
-	top: 0px;
 }
 
 /** Navbar */

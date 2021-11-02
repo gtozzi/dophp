@@ -110,9 +110,6 @@
 </head>
 {{$testServer=isset($config['testserver']) && $config['testserver']}}
 <body class="{{block name='bodyClasses'}}{{/block}}{{if $testServer}} testserver{{/if}}">
-{{if $testServer}}
-	<div class="testserver-top"></div>
-{{/if}}
 <div id="bodyDiv">
 {{block name='body'}}
 	{{block name='navbar'}}
