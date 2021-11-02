@@ -111,11 +111,9 @@
 {{$testServer=isset($config['testserver']) && $config['testserver']}}
 <body class="{{block name='bodyClasses'}}{{/block}}{{if $testServer}} testserver{{/if}}">
 {{if $testServer}}
-	<div class="testserver-top">
-		Attenzione! Questo è un server di test. Tutti i dati inseriti potrebbero essere cancellati senza preavviso.
-	</div>
+	<div class="testserver-top"></div>
 {{/if}}
-<div id="bodyDiv" {{if $testServer}}class="testserver"{{/if}}>
+<div id="bodyDiv">
 {{block name='body'}}
 	{{block name='navbar'}}
 		{{if isset($user) && $user->getUid()}}
@@ -269,5 +267,10 @@
 	{{/if}}
 {{/block}}
 </div>
+{{if $testServer}}
+	<div class="testserver-bottom">
+		Attenzione! Questo è un server di test. Tutti i dati inseriti potrebbero essere cancellati senza preavviso.
+	</div>
+{{/if}}
 </body>
 </html>
