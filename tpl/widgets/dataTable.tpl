@@ -1035,57 +1035,59 @@
 
 
 <!-- Data Table -->
-<table id="{{$id}}" class="table table-striped table-bordered nowrap data-table ag-table" style="min-width:100%">
-	<thead>
-		<tr>
-			<th style="width: 20px" class="data-table-buthead">
-				{{if $selectable}}
-					<span id="selectAllBox" class="fa fa-square-o selectbox" onclick="onSelectAllBox();"></span>
-				{{/if}}
-				{{foreach $btns as $name => $b}}
-					<a class="fa {{$b->icon}}" title="{{$b->label|htmlentities}}"
-					{{if $b->isPost()}}
-						href="javascript:onDTPostButton({{$name|json_encode|urlencode}});"
-					{{else}}
-						href="{{$b->getUrl()}}"
+<div class="container-fluid ag-datatable-container">
+	<table id="{{$id}}" class="table table-striped table-bordered nowrap data-table ag-table" style="min-width:100%">
+		<thead>
+			<tr>
+				<th style="width: 20px" class="data-table-buthead">
+					{{if $selectable}}
+						<span id="selectAllBox" class="fa fa-square-o selectbox" onclick="onSelectAllBox();"></span>
 					{{/if}}
-					></a>
-				{{/foreach}}
-			</th>
-			{{foreach $cols as $c}}
-				<th {{if $c->tooltip}}class="tooltipped" title="{{$c->tooltip|htmlentities}}"{{/if}}>{{$c->descr|htmlentities}}</th>
-			{{/foreach}}
-		</tr>
-		<tr>
-			<th style="width: 20px" class="data-table-filter">
-				<a href="#" title="seleziona colonne" class="fa fa-columns" onclick="selectColumns('{{$id}}');return false;"></a>&nbsp;
-				<a href="#" title="pulisci filtro" class="fa fa-eraser" onclick="$(':input.data-table-filter').val('');table.columns().search('').draw();return false;"></a>
-			</th>
-			{{foreach $cols as $c}}
-				<th class="data-table-filter">
-					{{if $c->filter}}
-						<input
-							class="data-table-filter {{if $c->type == \dophp\Table::DATA_TYPE_DATE}}ag-dt-dtFilt{{/if}}"
-							type="text" placeholder="filtra - cerca" onkeyup="console.log(event);filterKeyUp(event);" onchange="filterChanged(this);"
-							data-timer="" data-coln="{{$c@iteration}}" data-type="{{$c->type|htmlentities}}"
-							{{if $c->type == \dophp\Table::DATA_TYPE_DATE}}
-								onfocus="filterShowDate(this);"
-								data-seltab=""
-								id="ag-dt-dtFilt-{{$c@iteration}}"
-							{{else}}
-								onfocus="wpHideDateWidget()"
-							{{/if}}
-							{{if $c->search}}
-								value="{{$c->search|htmlentities}}"
-								data-lastval="{{$c->search|htmlentities}}"
-							{{else}}
-								data-lastval=""
-							{{/if}}
-						/>
-					{{/if}}
+					{{foreach $btns as $name => $b}}
+						<a class="fa {{$b->icon}}" title="{{$b->label|htmlentities}}"
+						{{if $b->isPost()}}
+							href="javascript:onDTPostButton({{$name|json_encode|urlencode}});"
+						{{else}}
+							href="{{$b->getUrl()}}"
+						{{/if}}
+						></a>
+					{{/foreach}}
 				</th>
-			{{/foreach}}
-		</tr>
-	</thead>
-	<tbody></tbody>
-</table>
+				{{foreach $cols as $c}}
+					<th {{if $c->tooltip}}class="tooltipped" title="{{$c->tooltip|htmlentities}}"{{/if}}>{{$c->descr|htmlentities}}</th>
+				{{/foreach}}
+			</tr>
+			<tr>
+				<th style="width: 20px" class="data-table-filter">
+					<a href="#" title="seleziona colonne" class="fa fa-columns" onclick="selectColumns('{{$id}}');return false;"></a>&nbsp;
+					<a href="#" title="pulisci filtro" class="fa fa-eraser" onclick="$(':input.data-table-filter').val('');table.columns().search('').draw();return false;"></a>
+				</th>
+				{{foreach $cols as $c}}
+					<th class="data-table-filter">
+						{{if $c->filter}}
+							<input
+								class="data-table-filter {{if $c->type == \dophp\Table::DATA_TYPE_DATE}}ag-dt-dtFilt{{/if}}"
+								type="text" placeholder="filtra - cerca" onkeyup="console.log(event);filterKeyUp(event);" onchange="filterChanged(this);"
+								data-timer="" data-coln="{{$c@iteration}}" data-type="{{$c->type|htmlentities}}"
+								{{if $c->type == \dophp\Table::DATA_TYPE_DATE}}
+									onfocus="filterShowDate(this);"
+									data-seltab=""
+									id="ag-dt-dtFilt-{{$c@iteration}}"
+								{{else}}
+									onfocus="wpHideDateWidget()"
+								{{/if}}
+								{{if $c->search}}
+									value="{{$c->search|htmlentities}}"
+									data-lastval="{{$c->search|htmlentities}}"
+								{{else}}
+									data-lastval=""
+								{{/if}}
+							/>
+						{{/if}}
+					</th>
+				{{/foreach}}
+			</tr>
+		</thead>
+		<tbody></tbody>
+	</table>
+</div>
