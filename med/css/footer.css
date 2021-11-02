@@ -40,7 +40,7 @@ body.testserver .footer{
 	height: 75px;
 }
 body.testserver .footer .footer-test-server-text {
-    color: yellow;
+	color: yellow;
 }
 body.testserver > #bodyDiv{
 	padding-bottom: 75px;
