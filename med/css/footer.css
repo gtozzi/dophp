@@ -35,3 +35,25 @@ body.no-footer-sticky-bottom > #bodyDiv {
 body.no-footer-sticky-bottom footer.footer{
 	position: relative;
 }
+body.testserver .footer{
+	background: #f00 !important;
+	height: 75px;
+}
+body.testserver .footer .footer-test-server-text {
+    color: yellow;
+}
+body.testserver > #bodyDiv{
+	padding-bottom: 75px;
+}
+body.testserver.no-footer-sticky-bottom > #bodyDiv{
+	padding-bottom: 0px;
+}
+
+@media (max-width: 768px){
+	body.testserver > #bodyDiv{
+		padding-bottom: 90px;
+	}
+	body.testserver .footer{
+		height: 90px;
+	}
+}

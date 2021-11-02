@@ -7,7 +7,6 @@
 /** Body frame (test server) */
 body.testserver{
 	padding-top: 15px;
-	padding-bottom: 75px;
 }
 
 /* Full width pages */
@@ -19,25 +18,14 @@ body.testserver{
 	background: white;
 }
 
-.testserver-top,
-.testserver-bottom{
+.testserver-top{
 	position: fixed;
 	background-color: red;
 	z-index: 10;
 	color: yellow;
 	width: 100%;
-}
-.testserver-top{
 	height: 15px;
 	top: 0px;
-}
-.testserver-bottom{
-	display: flex;
-	justify-content: center;
-	align-items: center;
-	bottom: 0px;
-	height: 75px;
-	text-align: center;
 }
 
 /** Navbar */

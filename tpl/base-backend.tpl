@@ -238,6 +238,11 @@
 
 	<footer class="footer">
 		<div class="container text-muted navbar-dark">
+			{{if $testServer}}
+				<div class="footer-test-server-text">
+					Attenzione! Questo è un server di test. Tutti i dati inseriti potrebbero essere cancellati senza preavviso.
+				</div>
+			{{/if}}
 			{{$config['site']['name']}} ver. {{$config['site']['version']}}
 			{{block name='footerinnerend'}}{{/block}}
 		</div>
@@ -267,10 +272,5 @@
 	{{/if}}
 {{/block}}
 </div>
-{{if $testServer}}
-	<div class="testserver-bottom">
-		Attenzione! Questo è un server di test. Tutti i dati inseriti potrebbero essere cancellati senza preavviso.
-	</div>
-{{/if}}
 </body>
 </html>
