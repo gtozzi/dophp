@@ -2,14 +2,6 @@ html {
 	position: relative;
 	min-height: 100%;
 }
-/*
-Removed margin and padding bottom from the body
-body {
-	/* Margin bottom by footer height *@@##/
-	margin-bottom: 30px;
-	padding-bottom: 50px;
-}
-*/
 body > #bodyDiv{
 	min-height: 100vh;
 	position: relative;
@@ -21,7 +13,6 @@ body > #bodyDiv{
 	width: 100%;
 	/* Set the fixed height of the footer here */
 	height: 50px;
-	/* min-height: 50px; */
 }
 .footer {
 	background: var(--jm-primary, #1b75bb);
