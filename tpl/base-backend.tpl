@@ -226,7 +226,7 @@
 		</div>
 	</div>
 
-	<div class="container">
+	<div class="container-fluid">
 		{{if isset($alerts)}}
 			{{foreach $alerts as $alert}}
 				<div class="alert alert-{{$alert->getType()}}" role="alert">

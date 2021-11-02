@@ -9,11 +9,6 @@ body.testserver {
 	background: red;
 }
 
-/* Full width pages */
-.container{
-	max-width:100%;
-}
-
 #bodyDiv {
 	background: white;
 }
