@@ -126,16 +126,16 @@ body.testserver {
 .dtbl-buttons-container {
 	float: right;
 	margin-top: 10px;
-	color: #2b76b6;
+	color: var(--jm-primary, #2b76b6);
 }
 
 .dtbl-buttons-container a{
 	text-decoration: none;
-	color: #2b76b6;
+	color: var(--jm-primary, #2b76b6);
 }
 
 .dtbl-buttons-itm {
-	color: #2b76b6;
+	color: var(--jm-primary, #2b76b6);
 	cursor: pointer;
 	position: relative;
 	z-index: 500;
