@@ -63,6 +63,10 @@ nav.navbar {
 	max-height: 1000px;
 }
 
+body.testserver .ag-logged-logo img.logo{
+	filter: hue-rotate(90deg);
+}
+
 .ag-logged-logo {
 	/* width: 141px; */
 	/* width: 81px; */

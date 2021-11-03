@@ -13,18 +13,6 @@ body.testserver {
 	background: white;
 }
 
-#bodyDiv.testserver {
-	margin: 10px;
-}
-
-.testserver-top {
-	background-color: red;
-	color: yellow;
-	text-align: center;
-	padding: 5px;
-	padding-bottom: 0;
-}
-
 /** Navbar */
 .navbar-brand img.logo {
 	max-height: 35px;
