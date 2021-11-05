@@ -82,7 +82,7 @@ class DoPhpDataTable {
 								href = url;
 
 							// Trailing space to separate next
-							html += `<a class="fa ${btn.icon}" href="${url}" title="${btn.label}"></a> `;
+							html += `<a class="fa ${btn.icon}" href="${href}" title="${btn.label}"></a> `;
 						}
 					}
 					return html;
