@@ -2,18 +2,17 @@ html {
 	position: relative;
 	min-height: 100%;
 }
-body {
-	/* Margin bottom by footer height */
-	margin-bottom: 30px;
+body > #bodyDiv{
+	min-height: 100vh;
+	position: relative;
 	padding-bottom: 50px;
 }
 .footer {
 	position: absolute;
-	/*bottom: 0;*/
-	width: calc(100% - 44px);
+	bottom: 0px;
+	width: 100%;
 	/* Set the fixed height of the footer here */
-	/* height: 30px; */
-	min-height: 50px;
+	height: 50px;
 }
 .footer {
 	background: var(--jm-primary, #1b75bb);
@@ -27,4 +26,34 @@ body {
 }
 .footer .text-muted a{
 	color: var(--jm-primary-light, #f7f7f7);
+}
+body.no-footer-sticky-bottom > #bodyDiv {
+	padding-bottom: 0px;
+	margin-bottom: 0px;
+	min-height: 0px;
+}
+body.no-footer-sticky-bottom footer.footer{
+	position: relative;
+}
+body.testserver .footer{
+	background: #f00 !important;
+	height: 75px;
+}
+body.testserver .footer .footer-test-server-text {
+	color: yellow;
+}
+body.testserver > #bodyDiv{
+	padding-bottom: 75px;
+}
+body.testserver.no-footer-sticky-bottom > #bodyDiv{
+	padding-bottom: 0px;
+}
+
+@media (max-width: 768px){
+	body.testserver > #bodyDiv{
+		padding-bottom: 90px;
+	}
+	body.testserver .footer{
+		height: 90px;
+	}
 }

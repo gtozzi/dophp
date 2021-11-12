@@ -1,10 +1,6 @@
 <script type="text/javascript">
-	/** The selected class */
-	var selClass = 'fa-check-square-o';
-	/** The deselected class */
-	var deselClass = 'fa-square-o';
 	/** The data table holder */
-	var table;
+	let table;
 
 	{{if $sfilter}}
 		/**
@@ -196,146 +192,32 @@
 	// Sets up the table
 	$(document).ready(function() {
 		// Create the table
-		table = $('#{{$id}}').DataTable( {
-			ajax: {
-				url:         {{$ajaxURL|json_encode}},
-				type:        'POST',
-				data:        prepareServerData,
-			},
-
-			"initComplete": function(settings, json) {
-				// Save the fixed elements vertical size used to compute table height on window resize
-				window.vSizeElementsOutsideTableHeight = $('body').outerHeight(true) - $('.dataTables_scrollBody').outerHeight(true);
-				// Set datatable size to cover all free space
-				window.resizeDatatable();
-			},
-
-			{{foreach $initOpts as $k => $v}}
-				{{$k|json_encode}}: {{$v|json_encode}},
-			{{/foreach}}
-
-			// Default order
-			order: {{$order|json_encode}},
-
-			columns: [
-				// Buttons column
-				{
-					orderable: false,
-					data: '{{$btnKey}}',
-					name: '{{$btnKey}}',
-					render: function( data, type, row, meta ) {
-						if( ! type ) // Datatable requests unmodified data
-							return data;
-
-						// No buttons in total by now
-						if( row[{{$totKey|json_encode}}] )
-							return 'Tot';
-
-						html = ''
-						{{if $selectable}}
-							let cls = table.isRowSelected(table.row(row)) ? selClass : deselClass;
-							html += '<span class="fa ' + cls + ' selectbox"></span>';
-						{{/if}}
-						{{foreach $rbtns as $name => $btn}}
-							if( data.includes({{$name|json_encode}}) ) {
-								let url = {{$btn->getUrl()|json_encode}};
-								for(let key in row)
-									url = url.replace("{{'{{"+key+"}}'}}", row[key]);
-
-								{{if $btn->isPost()}}
-									let href = "javascript:onDTPostRowButton('" + encodeURI({{$name|json_encode}}) + "', " + row.id + ")";
-								{{else}}
-									let href = url;
-								{{/if}}
-
-								html += '<a class="fa ' + {{$btn->icon|htmlentities|json_encode}}
-									+ '" href="' + href + '" title="' + {{$btn->label|htmlentities|json_encode}} + '"'
-									+ '></a> '; // Trailing space to separate next
-							}
-						{{/foreach}}
-						return html;
+		let dotable = new DoPhpDataTable($('#{{$id}}'), {
+				'selectable': {{$selectable|json_encode}},
+				'ajaxId': {{if isset($ajaxId)}}{{$ajaxId|json_encode}}{{else}}null{{/if}},
+				'ajaxURL': {{$ajaxURL|json_encode}},
+				'btnKey': {{$btnKey|json_encode}},
+				'totKey': {{$totKey|json_encode}},
+				'initOpts': { {{foreach $initOpts as $k => $v}} {{$k|json_encode}}: {{$v|json_encode}}, {{/foreach}} },
+				'rbtns': { {{foreach $rbtns as $name => $btn}}
+					{{$name|json_encode}}: {
+						'url': {{$btn->getUrl()|json_encode}},
+						'post': {{$btn->isPost()|json_encode}},
+						'icon': {{$btn->icon|json_encode}},
+						'label': {{$btn->label|json_encode}},
 					},
-					className: 'dt-body-nowrap data-table-bcol',
-				},
-				// Any other column
-				{{foreach $cols as $c}}
-					{
-						data: '{{$c->id}}',
-						name: '{{$c->id}}',
-						className: 'data-table-col',
-						visible: {{$c->visible|json_encode}},
-						//width: "200px",
-						render: function( data, type, row, meta ) {
-							if( ! type ) // Datatable requests unmodified data
-								return data;
-
-							// Cast data to user-friendly type
-
-							if( data === undefined ) {
-								// Server omitted the cell
-								return '';
-							}
-							if( data === null ) {
-								// Null is considered object in JS
-								return '-';
-							}
-
-							let format = {{if $c->format}}{{$c->format|json_encode}}{{else}}typeof data{{/if}};
-
-							switch( format ) {
-							case 'string':
-								return data;
-							case 'boolean':
-							case 'number':
-							case 'undefined':
-								return getValueRepr(data);
-							case 'object':
-								return getObjectRepr(data);
-							case 'currency':
-								return getCurrencyRepr(data);
-							default:
-								return data;
-							}
-						},
-						{{if $c->format=='number' || $c->format=='currency'}}
-							className: 'dt-body-right',
-						{{/if}}
-					},
-				{{/foreach}}
-			],
-
-			// Initial search values
-			searchCols: [
-				null, // Buttons column
-				{{foreach $cols as $c}}
-					{{if $c->search}}
-						{ search: {{$c->search|json_encode}}, regex: {{$c->regex|json_encode}}, },
-					{{else}}
-						null,
-					{{/if}}
-				{{/foreach}}
-			],
-
-			// Callback for custom selection
-			createdRow: function( row, data, dataIndex ) {
-				// Keeps selection display on redraw
-				table.updateSelectRow(table.row(row));
-			},
-
-			// Callback for info row redraw
-			infoCallback: function( settings, start, end, max, total, pre ) {
-				{{if $selectable}}
-					// Adds info about the selection
-					let selInfo = ', ' +
-						'<span id="data-table-sel-count">' +
-						( table.selectedAll ? 'tutti' : table.selectedItems.size.toString() )
-						+ '</span> selezionati';
-					pre += selInfo;
-				{{/if}}
-
-				return pre;
-			},
+				{{/foreach}} },
+				'cols': [ {{foreach $cols as $c}} {
+					'id': {{$c->id|json_encode}},
+					'visible': {{$c->visible|json_encode}},
+					'format': {{$c->format|json_encode}},
+					'search': {{$c->search|json_encode}},
+					'regex': {{$c->regex|json_encode}},
+				}, {{/foreach}} ],
+				'order': {{$order|json_encode}},
 		});
+		//TODO: temporary
+		table = dotable.table;
 
 		table.on( 'draw', function(){
 			$(".dtbl-buttons-container").html(
@@ -387,11 +269,11 @@
 
 			let box = $('#selectAllBox');
 			if( allSelected ) {
-				box.addClass(selClass);
-				box.removeClass(deselClass);
+				box.addClass(DoPhpDataTable.selClass);
+				box.removeClass(DoPhpDataTable.deselClass);
 			} else {
-				box.addClass(deselClass);
-				box.removeClass(selClass);
+				box.addClass(DoPhpDataTable.deselClass);
+				box.removeClass(DoPhpDataTable.selClass);
 			}
 		};
 
@@ -406,12 +288,12 @@
 
 			if( table.isRowSelected(row) ) {
 				$(row.node()).addClass('selected');
-				selBox.removeClass(deselClass);
-				selBox.addClass(selClass);
+				selBox.removeClass(DoPhpDataTable.deselClass);
+				selBox.addClass(DoPhpDataTable.selClass);
 			} else {
 				$(row.node()).removeClass('selected');
-				selBox.removeClass(selClass);
-				selBox.addClass(deselClass);
+				selBox.removeClass(DoPhpDataTable.selClass);
+				selBox.addClass(DoPhpDataTable.deselClass);
 			}
 		}
 
@@ -1153,57 +1035,59 @@
 
 
 <!-- Data Table -->
-<table id="{{$id}}" class="table table-striped table-bordered nowrap data-table ag-table" style="min-width:100%">
-	<thead>
-		<tr>
-			<th style="width: 20px" class="data-table-buthead">
-				{{if $selectable}}
-					<span id="selectAllBox" class="fa fa-square-o selectbox" onclick="onSelectAllBox();"></span>
-				{{/if}}
-				{{foreach $btns as $name => $b}}
-					<a class="fa {{$b->icon}}" title="{{$b->label|htmlentities}}"
-					{{if $b->isPost()}}
-						href="javascript:onDTPostButton({{$name|json_encode|urlencode}});"
-					{{else}}
-						href="{{$b->getUrl()}}"
+<div class="container-fluid ag-datatable-container">
+	<table id="{{$id}}" class="table table-striped table-bordered nowrap data-table ag-table" style="min-width:100%">
+		<thead>
+			<tr>
+				<th style="width: 20px" class="data-table-buthead">
+					{{if $selectable}}
+						<span id="selectAllBox" class="fa fa-square-o selectbox" onclick="onSelectAllBox();"></span>
 					{{/if}}
-					></a>
-				{{/foreach}}
-			</th>
-			{{foreach $cols as $c}}
-				<th {{if $c->tooltip}}class="tooltipped" title="{{$c->tooltip|htmlentities}}"{{/if}}>{{$c->descr|htmlentities}}</th>
-			{{/foreach}}
-		</tr>
-		<tr>
-			<th style="width: 20px" class="data-table-filter">
-				<a href="#" title="seleziona colonne" class="fa fa-columns" onclick="selectColumns('{{$id}}');return false;"></a>&nbsp;
-				<a href="#" title="pulisci filtro" class="fa fa-eraser" onclick="$(':input.data-table-filter').val('');table.columns().search('').draw();return false;"></a>
-			</th>
-			{{foreach $cols as $c}}
-				<th class="data-table-filter">
-					{{if $c->filter}}
-						<input
-							class="data-table-filter {{if $c->type == \dophp\Table::DATA_TYPE_DATE}}ag-dt-dtFilt{{/if}}"
-							type="text" placeholder="filtra - cerca" onkeyup="console.log(event);filterKeyUp(event);" onchange="filterChanged(this);"
-							data-timer="" data-coln="{{$c@iteration}}" data-type="{{$c->type|htmlentities}}"
-							{{if $c->type == \dophp\Table::DATA_TYPE_DATE}}
-								onfocus="filterShowDate(this);"
-								data-seltab=""
-								id="ag-dt-dtFilt-{{$c@iteration}}"
-							{{else}}
-								onfocus="wpHideDateWidget()"
-							{{/if}}
-							{{if $c->search}}
-								value="{{$c->search|htmlentities}}"
-								data-lastval="{{$c->search|htmlentities}}"
-							{{else}}
-								data-lastval=""
-							{{/if}}
-						/>
-					{{/if}}
+					{{foreach $btns as $name => $b}}
+						<a class="fa {{$b->icon}}" title="{{$b->label|htmlentities}}"
+						{{if $b->isPost()}}
+							href="javascript:onDTPostButton({{$name|json_encode|urlencode}});"
+						{{else}}
+							href="{{$b->getUrl()}}"
+						{{/if}}
+						></a>
+					{{/foreach}}
 				</th>
-			{{/foreach}}
-		</tr>
-	</thead>
-	<tbody></tbody>
-</table>
+				{{foreach $cols as $c}}
+					<th {{if $c->tooltip}}class="tooltipped" title="{{$c->tooltip|htmlentities}}"{{/if}}>{{$c->descr|htmlentities}}</th>
+				{{/foreach}}
+			</tr>
+			<tr>
+				<th style="width: 20px" class="data-table-filter">
+					<a href="#" title="seleziona colonne" class="fa fa-columns" onclick="selectColumns('{{$id}}');return false;"></a>&nbsp;
+					<a href="#" title="pulisci filtro" class="fa fa-eraser" onclick="$(':input.data-table-filter').val('');table.columns().search('').draw();return false;"></a>
+				</th>
+				{{foreach $cols as $c}}
+					<th class="data-table-filter">
+						{{if $c->filter}}
+							<input
+								class="data-table-filter {{if $c->type == \dophp\Table::DATA_TYPE_DATE}}ag-dt-dtFilt{{/if}}"
+								type="text" placeholder="filtra - cerca" onkeyup="console.log(event);filterKeyUp(event);" onchange="filterChanged(this);"
+								data-timer="" data-coln="{{$c@iteration}}" data-type="{{$c->type|htmlentities}}"
+								{{if $c->type == \dophp\Table::DATA_TYPE_DATE}}
+									onfocus="filterShowDate(this);"
+									data-seltab=""
+									id="ag-dt-dtFilt-{{$c@iteration}}"
+								{{else}}
+									onfocus="wpHideDateWidget()"
+								{{/if}}
+								{{if $c->search}}
+									value="{{$c->search|htmlentities}}"
+									data-lastval="{{$c->search|htmlentities}}"
+								{{else}}
+									data-lastval=""
+								{{/if}}
+							/>
+						{{/if}}
+					</th>
+				{{/foreach}}
+			</tr>
+		</thead>
+		<tbody></tbody>
+	</table>
+</div>

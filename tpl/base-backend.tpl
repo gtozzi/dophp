@@ -87,6 +87,7 @@
 		<link rel="stylesheet" type="text/css" href="{{$config['dophp']['url']}}/webcontent/css/base-backend.css"/>
 		<script src="{{$config['dophp']['url']}}/webcontent/js/form.js"></script>
 		<script src="{{$config['dophp']['url']}}/webcontent/js/buttons.js"></script>
+		<script src="{{$config['dophp']['url']}}/webcontent/js/datatable.js"></script>
 
 		<!-- DoPhp font -->
 		<link rel="stylesheet" type="text/css" href="{{$config['dophp']['url']}}/webcontent/css/mgmt-glyph.css"/>
@@ -108,13 +109,8 @@
 	{{block name='head'}}{{/block}}
 </head>
 {{$testServer=isset($config['testserver']) && $config['testserver']}}
-<body {{if $testServer}}class="testserver"{{/if}}>
-{{if $testServer}}
-	<div class="testserver-top">
-		Attenzione! Questo è un server di test. Tutti i dati inseriti potrebbero essere cancellati senza preavviso.
-	</div>
-{{/if}}
-<div id="bodyDiv" {{if $testServer}}class="testserver"{{/if}}>
+<body class="{{block name='bodyClasses'}}{{/block}}{{if $testServer}} testserver{{/if}}">
+<div id="bodyDiv">
 {{block name='body'}}
 	{{block name='navbar'}}
 		{{if isset($user) && $user->getUid()}}
@@ -225,7 +221,7 @@
 		</div>
 	</div>
 
-	<div class="container">
+	<div class="container-fluid">
 		{{if isset($alerts)}}
 			{{foreach $alerts as $alert}}
 				<div class="alert alert-{{$alert->getType()}}" role="alert">
@@ -239,6 +235,11 @@
 
 	<footer class="footer">
 		<div class="container text-muted navbar-dark">
+			{{if $testServer}}
+				<div class="footer-test-server-text">
+					Attenzione! Questo è un server di test. Tutti i dati inseriti potrebbero essere cancellati senza preavviso.
+				</div>
+			{{/if}}
 			{{$config['site']['name']}} ver. {{$config['site']['version']}}
 			{{block name='footerinnerend'}}{{/block}}
 		</div>

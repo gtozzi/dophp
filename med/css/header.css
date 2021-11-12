@@ -57,10 +57,8 @@ nav.navbar {
 	text-align:center;
 }
 
-.ag-logged-logo img.logo {
-	width: 93px;
-	max-width: 1000px;
-	max-height: 1000px;
+body.testserver .ag-logged-logo img.logo{
+	filter: hue-rotate(90deg);
 }
 
 .ag-logged-logo {

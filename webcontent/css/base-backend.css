@@ -9,25 +9,8 @@ body.testserver {
 	background: red;
 }
 
-/* Full width pages */
-.container{
-	max-width:100%;
-}
-
 #bodyDiv {
 	background: white;
-}
-
-#bodyDiv.testserver {
-	margin: 10px;
-}
-
-.testserver-top {
-	background-color: red;
-	color: yellow;
-	text-align: center;
-	padding: 5px;
-	padding-bottom: 0;
 }
 
 /** Navbar */
@@ -131,16 +114,16 @@ body.testserver {
 .dtbl-buttons-container {
 	float: right;
 	margin-top: 10px;
-	color: #2b76b6;
+	color: var(--jm-primary, #2b76b6);
 }
 
 .dtbl-buttons-container a{
 	text-decoration: none;
-	color: #2b76b6;
+	color: var(--jm-primary, #2b76b6);
 }
 
 .dtbl-buttons-itm {
-	color: #2b76b6;
+	color: var(--jm-primary, #2b76b6);
 	cursor: pointer;
 	position: relative;
 	z-index: 500;
