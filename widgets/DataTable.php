@@ -776,7 +776,8 @@ abstract class BaseDataTable extends BaseWidget implements DataTableInterface {
 			} elseif($c->type == \dophp\Table::DATA_TYPE_BOOLEAN) {
 				$filter[] = ( $search ? '' : 'NOT ' ) . $alias;
 			} else {
-				$filter[] = "{$alias} LIKE :f$idx";
+				$op = $this->_db->type() == $this->_db::TYPE_PGSQL ? 'ILIKE' : 'LIKE';
+				$filter[] = "{$alias} $op :f$idx";
 				$filterArgs[":f$idx"] = "%$search%";
 			}
 		}

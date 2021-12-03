@@ -884,7 +884,8 @@ class SelectField extends InputField {
 					$pt = "%{$ajax['term']}%";
 					$ajaxparam = self::__addParam($params, 'term', $pt);
 					$qcol = $query->col($desck)['qname'];
-					$where = "$qcol LIKE :$ajaxparam";
+					$op = \DoPhp::db()->type() == \DoPhp::db()::TYPE_PGSQL ? 'ILIKE' : 'LIKE';
+					$where = "$qcol $op :$ajaxparam";
 					$query->addWhere($where);
 
 					// Show exact match first
