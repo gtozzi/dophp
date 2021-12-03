@@ -271,6 +271,9 @@ class Lang {
 	*/
 	public function setLanguage($lang, $save=true) {
 		$locale = $this->getLocaleName($lang);
+		// A default "LANGUAGE" env variable could generate priority problems
+		// if( ! putenv("LANGUAGE=" . $locale) )
+		//	throw new SetLocaleException("Error during setting LANGUAGE env: $locale");
 		if( ! setlocale(LC_ALL, $locale) )
 			throw new SetLocaleException("Unable to set locale $locale");
 		$this->_lang = $lang;
