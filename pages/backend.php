@@ -666,8 +666,13 @@ abstract class FormPage extends \dophp\PageSmarty {
 				return json_encode($field->ajaxQuery($_GET));
 			} else {
 				// Instantiate a new form for the fields
-				if( ! $this->hasPerm(self::PERM_EDIT) )
-					$this->_form->setReadOnly(true);
+				if( $id ) {
+					if( ! $this->hasPerm(self::PERM_EDIT) )
+						$this->_form->setReadOnly(true);
+				} else {
+					if( ! $this->hasPerm(self::PERM_INS) )
+						$this->_form->setReadOnly(true);
+				}
 
 				$data = null;
 				$errors = null;
@@ -821,7 +826,7 @@ abstract class FormPage extends \dophp\PageSmarty {
 			$this->_buttons->add(new \dophp\buttons\SaveButton());
 			$this->_buttons->add(new \dophp\buttons\CancelButton());
 
-			if( $this->hasPerm(self::PERM_EDIT) ) {
+			if( ($id && $this->hasPerm(self::PERM_EDIT)) || (!$id && $this->hasPerm(self::PERM_INS)) ) {
 				$this->_buttons->enable(\dophp\buttons\SaveButton::DEFAULT_ID);
 				$this->_buttons->enable(\dophp\buttons\CancelButton::DEFAULT_ID);
 			}
