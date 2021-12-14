@@ -10,6 +10,7 @@ function dophpPostButton(element) {
 	let btn = $(element);
 	let url = btn.data('url');
 	let confirm = btn.data('confirm');
+	let prompt = btn.data('prompt');
 	let newtab = Boolean(btn.data('newtab'));
 	let post = btn.data('post');
 
@@ -17,6 +18,9 @@ function dophpPostButton(element) {
 		window.alert('Software error: missing URL');
 		return;
 	}
+
+	if( prompt )
+		post.prompt = window.prompt(prompt);
 
 	if( confirm && ! window.confirm(confirm) )
 		return;

@@ -350,22 +350,30 @@ class PostButton extends LinkButton {
 	/** POST data array */
 	public $post;
 
+	/** Opens a modal */
+	public $prompt = null;
+
 	/**
 	 * @param $url string: The url to send the user to
 	 * @param $post array: Post data array
 	 * @param $options array: Array of options:
 	 *        - newtab: If true, opens the url in new tab
+	 *        - prompt: str, prompt message
 	 */
 	public function __construct(string $id, string $label, string $icon, string $url, array $post=[], array $options=[]) {
 		parent::__construct($id, $label, $icon, $url, $options);
 
 		$this->post = $post;
+
+		if( isset($options['prompt']) && $options['prompt'] )
+			$this->prompt = $options['prompt'];
 	}
 
 	public function htmldata(): array {
 		$data = parent::htmldata();
 
 		$data['post'] = json_encode($this->post);
+		$data['prompt'] = json_encode($this->prompt);
 
 		return $data;
 	}
