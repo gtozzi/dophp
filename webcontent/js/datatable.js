@@ -66,7 +66,7 @@ class DoPhpDataTable {
 
 					let html = ''
 					if( this.selectable ) {
-						let cls = this.table.isRowSelected(this.table.row(row)) ? DoPhpDatathis.selClass : DoPhpDataTable.deselClass;
+						let cls = this.table.isRowSelected(this.table.row(row)) ? DoPhpDataTable.selClass : DoPhpDataTable.deselClass;
 						html += '<span class="fa ' + cls + ' selectbox"></span>';
 					}
 					for( const [name, btn] of Object.entries(this.rbtns) ) {
