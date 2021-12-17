@@ -237,115 +237,6 @@
 			}
 		});
 
-		// Custom selection handling
-		table.selectedItems = new Set();
-		table.selectedAll = false;
-
-		/**
-		 * Updates select count (custom selection api)
-		 */
-		table.updateSelectCount = function() {
-			if( table.selectedAll )
-				$('#data-table-sel-count').html('tutti');
-			else
-				$('#data-table-sel-count').html(table.selectedItems.size.toString());
-		};
-
-		/**
-		 * Updates the select all box (custom selection api)
-		 */
-		table.updateSelectAllBox = function() {
-			let allSelected = true;
-			if( table.selectedAll )
-				allSelected = true;
-			else
-				table.rows().every( function( rowIdx, tableLoop, rowLoop ) {
-					let data = this.data();
-					if( ! table.selectedItems.has(data.id) ) {
-						allSelected = false;
-						return false; // Not sure if this works
-					}
-				} );
-
-			let box = $('#selectAllBox');
-			if( allSelected ) {
-				box.addClass(DoPhpDataTable.selClass);
-				box.removeClass(DoPhpDataTable.deselClass);
-			} else {
-				box.addClass(DoPhpDataTable.deselClass);
-				box.removeClass(DoPhpDataTable.selClass);
-			}
-		};
-
-		/**
-		 * Refresh selection for a single row
-		 *
-		 * @param row The row
-		 */
-		table.updateSelectRow = function(row) {
-			let btnCell = table.cell(row, 0);
-			let selBox = $(btnCell.node()).find('span.selectbox');
-
-			if( table.isRowSelected(row) ) {
-				$(row.node()).addClass('selected');
-				selBox.removeClass(DoPhpDataTable.deselClass);
-				selBox.addClass(DoPhpDataTable.selClass);
-			} else {
-				$(row.node()).removeClass('selected');
-				selBox.removeClass(DoPhpDataTable.selClass);
-				selBox.addClass(DoPhpDataTable.deselClass);
-			}
-		}
-
-		/**
-		 * Tells whether given row is selected (custom selection api)
-		 *
-		 * @param row: The datatables row object
-		 */
-		table.isRowSelected = function(row) {
-			if( table.selectedAll )
-				return true;
-
-			let data = row.data();
-			return table.selectedItems.has(data.id);
-		};
-
-		/**
-		 * Selects a row (custom selection api)
-		 *
-		 * @param row: The datatables row object
-		 */
-		table.selectRow = function(row) {
-			if( table.isRowSelected(row) )
-				return;
-
-			let data = row.data();
-			table.selectedItems.add(data.id);
-			table.updateSelectRow(row);
-			console.log('Row selected id', data.id, table.selectedItems);
-		};
-
-		/**
-		 * Deselects a row (custom selection api)
-		 *
-		 * @param row: The datatables row object
-		 */
-		table.deselectRow = function(row) {
-			if( ! table.isRowSelected(row) )
-				return;
-
-			let data = row.data();
-			table.selectedItems.delete(data.id);
-			if( table.selectedAll ) {
-				table.selectedAll = false;
-				table.rows().every( function( rowIdx, tableLoop, rowLoop ) {
-					table.updateSelectRow(this);
-				});
-			}
-			table.updateSelectRow(row);
-			console.log('Row unselected id', data.id, table.selectedItems);
-		};
-
 		/**
 		 * Toggle a row selection (custom selection api)
 		 *
@@ -529,26 +420,6 @@
 		});
 
 	});
-
-	/**
-	 * Called when the "select all" box has been clicked
-	 *
-	 * If all rows are selected, unselected them; select all otherwise
-	 */
-	function onSelectAllBox() {
-		{{if $selectable}}
-			table.selectedAll = ! table.selectedAll;
-
-			// Apply selection loop
-			table.rows().every( function( rowIdx, tableLoop, rowLoop ) {
-				table.updateSelectRow(this);
-			});
-
-			// Update count
-			table.updateSelectCount();
-			table.updateSelectAllBox();
-		{{/if}}
-	}
 
 	/**
 	 * Updates the export url when filter is changed
@@ -1041,7 +912,7 @@
 			<tr>
 				<th style="width: 20px" class="data-table-buthead">
 					{{if $selectable}}
-						<span id="selectAllBox" class="fa fa-square-o selectbox" onclick="onSelectAllBox();"></span>
+						<span id="selectAllBox" class="fa fa-square-o selectbox" onclick="table.onSelectAllBox();"></span>
 					{{/if}}
 					{{foreach $btns as $name => $b}}
 						<a class="fa {{$b->icon}}" title="{{$b->label|htmlentities}}"
