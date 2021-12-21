@@ -8,138 +8,9 @@ class DoPhpDataTable {
 	/** The deselected class */
 	static deselClass = 'fa-square-o';
 
-	table = class extends DataTable {
-		// Custom selection handling
-		selectedItems = new Set();
-		selectedAll = false;
-
-		/**
-		 * Updates select count (custom selection api)
-		 */
-		updateSelectCount = function() {
-			if( this.selectedAll )
-				$('#data-table-sel-count').html('tutti');
-			else
-				$('#data-table-sel-count').html(this.selectedItems.size.toString());
-		}.bind(this);
-
-		/**
-		 * Updates the select all box (custom selection api)
-		 */
-		updateSelectAllBox = function() {
-			let self = this;
-			let allSelected = true;
-			if( this.selectedAll )
-				allSelected = true;
-			else
-				this.rows().every( function( rowIdx, tableLoop, rowLoop ) {
-					let data = this.data();
-					if( ! self.selectedItems.has(data.id) ) {
-						allSelected = false;
-						return false; // Not sure if this works
-					}
-				} );
-
-			let box = $('#selectAllBox');
-			if( allSelected ) {
-				box.addClass(DoPhpDataTable.selClass);
-				box.removeClass(DoPhpDataTable.deselClass);
-			} else {
-				box.addClass(DoPhpDataTable.deselClass);
-				box.removeClass(DoPhpDataTable.selClass);
-			}
-		}.bind(this);
-
-		/**
-		 * Refresh selection for a single row
-		 *
-		 * @param row The row
-		 */
-			updateSelectRow = function(row) {
-			let btnCell = this.cell(row, 0);
-			let selBox = $(btnCell.node()).find('span.selectbox');
-
-			if( this.isRowSelected(row) ) {
-				$(row.node()).addClass('selected');
-				selBox.removeClass(DoPhpDataTable.deselClass);
-				selBox.addClass(DoPhpDataTable.selClass);
-			} else {
-				$(row.node()).removeClass('selected');
-				selBox.removeClass(DoPhpDataTable.selClass);
-				selBox.addClass(DoPhpDataTable.deselClass);
-			}
-		}.bind(this);
-
-		/**
-		 * Tells whether given row is selected (custom selection api)
-		 *
-		 * @param row: The datatables row object
-		 */
-		isRowSelected = function(row) {
-			if( this.selectedAll )
-				return true;
-
-			let data = row.data();
-			return this.selectedItems.has(data.id);
-		}.bind(this);
-
-		/**
-		 * Selects a row (custom selection api)
-		 *
-		 * @param row: The datatables row object
-		 */
-		selectRow = function(row) {
-			if( this.isRowSelected(row) )
-				return;
-
-			let data = row.data();
-			this.selectedItems.add(data.id);
-			this.updateSelectRow(row);
-			console.log('Row selected id', data.id, this.selectedItems);
-		}.bind(this);
-
-		/**
-		 * Deselects a row (custom selection api)
-		 *
-		 * @param row: The datatables row object
-		 */
-		deselectRow = function(row) {
-			if( ! this.isRowSelected(row) )
-				return;
-
-			let data = row.data();
-			this.selectedItems.delete(data.id);
-			if( this.selectedAll ) {
-				this.selectedAll = false;
-				this.rows().every( function( rowIdx, tableLoop, rowLoop ) {
-					this.updateSelectRow(this);
-				}.bind(this) );
-			}
-			this.updateSelectRow(row);
-			console.log('Row unselected id', data.id, this.selectedItems);
-		}.bind(this);
-
-		/**
-		 * Called when the "select all" box has been clicked
-		 *
-		 * If all rows are selected, unselected them; select all otherwise
-		 */
-		onSelectAllBox = function() {
-			let self = this;
-			if( this.selectable ) {
-				this.selectedAll = ! this.selectedAll;
-
-				// Apply selection loop
-				this.rows().every( function( rowIdx, tableLoop, rowLoop ) {
-					self.table.updateSelectRow(this);
-				} );
-
-				// Update count
-				this.updateSelectCount();
-				this.updateSelectAllBox();
-			}
-		}.bind(this);
-	}
+	// Custom selection handling
+	selectedItems = new Set();
+	selectedAll = false;
 
 	/**
 	 * Instantiate the wrapper
@@ -199,7 +70,7 @@ class DoPhpDataTable {
 
 					let html = ''
 					if( this.selectable ) {
-						let cls = this.table.isRowSelected(this.table.row(row)) ? DoPhpDataTable.selClass : DoPhpDataTable.deselClass;
+						let cls = this.isRowSelected(this.table.row(row)) ? DoPhpDataTable.selClass : DoPhpDataTable.deselClass;
 						html += '<span class="fa ' + cls + ' selectbox"></span>';
 					}
 					for( const [name, btn] of Object.entries(this.rbtns) ) {
@@ -234,7 +105,7 @@ class DoPhpDataTable {
 		// Callback for custom selection
 		initOpts['createdRow'] = ( row, data, dataIndex ) => {
 			// Keeps selection display on redraw
-			this.table.updateSelectRow(this.table.row(row));
+			this.updateSelectRow(this.table.row(row));
 		};
 
 		// Callback for info row redraw
@@ -307,7 +178,133 @@ class DoPhpDataTable {
 
 	}
 
+	/**
+	 * Updates select count (custom selection api)
+	 */
+	 updateSelectCount = function() {
+		if( this.selectedAll )
+			$('#data-table-sel-count').html('tutti');
+		else
+			$('#data-table-sel-count').html(this.selectedItems.size.toString());
+	}.bind(this);
 
+	/**
+	 * Updates the select all box (custom selection api)
+	 */
+	updateSelectAllBox = function() {
+		let self = this;
+		let allSelected = true;
+		if( this.selectedAll )
+			allSelected = true;
+		else
+			this.rows().every( function( rowIdx, tableLoop, rowLoop ) {
+				let data = this.data();
+				if( ! self.selectedItems.has(data.id) ) {
+					allSelected = false;
+					return false; // Not sure if this works
+				}
+			} );
+
+		let box = $('#selectAllBox');
+		if( allSelected ) {
+			box.addClass(DoPhpDataTable.selClass);
+			box.removeClass(DoPhpDataTable.deselClass);
+		} else {
+			box.addClass(DoPhpDataTable.deselClass);
+			box.removeClass(DoPhpDataTable.selClass);
+		}
+	}.bind(this);
+
+	/**
+	 * Refresh selection for a single row
+	 *
+	 * @param row The row
+	 */
+	updateSelectRow = function(row) {
+		let btnCell = this.table.cell(row, 0);
+		let selBox = $(btnCell.node()).find('span.selectbox');
+
+		if( this.isRowSelected(row) ) {
+			$(row.node()).addClass('selected');
+			selBox.removeClass(DoPhpDataTable.deselClass);
+			selBox.addClass(DoPhpDataTable.selClass);
+		} else {
+			$(row.node()).removeClass('selected');
+			selBox.removeClass(DoPhpDataTable.selClass);
+			selBox.addClass(DoPhpDataTable.deselClass);
+		}
+	}.bind(this);
+
+	/**
+	 * Tells whether given row is selected (custom selection api)
+	 *
+	 * @param row: The datatables row object
+	 */
+	isRowSelected = function(row) {
+		if( this.selectedAll )
+			return true;
+
+		let data = row.data();
+		return this.selectedItems.has(data.id);
+	}.bind(this);
+
+	/**
+	 * Selects a row (custom selection api)
+	 *
+	 * @param row: The datatables row object
+	 */
+	selectRow = function(row) {
+		if( this.isRowSelected(row) )
+			return;
+
+		let data = row.data();
+		this.selectedItems.add(data.id);
+		this.updateSelectRow(row);
+		console.log('Row selected id', data.id, this.selectedItems);
+	}.bind(this);
+
+	/**
+	 * Deselects a row (custom selection api)
+	 *
+	 * @param row: The datatables row object
+	 */
+	deselectRow = function(row) {
+		if( ! this.isRowSelected(row) )
+			return;
+
+		let data = row.data();
+		this.selectedItems.delete(data.id);
+		if( this.selectedAll ) {
+			this.selectedAll = false;
+			let self = this;
+			this.rows().every( function( rowIdx, tableLoop, rowLoop ) {
+				self.updateSelectRow(this);
+			}.bind(this) );
+		}
+		this.updateSelectRow(row);
+		console.log('Row unselected id', data.id, this.selectedItems);
+	}.bind(this);
+
+	/**
+	 * Called when the "select all" box has been clicked
+	 *
+	 * If all rows are selected, unselected them; select all otherwise
+	 */
+	onSelectAllBox = function() {
+		let self = this;
+		if( this.selectable ) {
+			this.selectedAll = ! this.selectedAll;
+
+			// Apply selection loop
+			this.rows().every( function( rowIdx, tableLoop, rowLoop ) {
+				self.updateSelectRow(this);
+			} );
+
+			// Update count
+			this.updateSelectCount();
+			this.updateSelectAllBox();
+		}
+	}.bind(this);
 
 
 }
