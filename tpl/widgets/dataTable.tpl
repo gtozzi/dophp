@@ -192,7 +192,7 @@
 	// Sets up the table
 	$(document).ready(function() {
 		// Create the table
-		let dotable = new DoPhpDataTable($('#{{$id}}'), {
+		dotable = new DoPhpDataTable($('#{{$id}}'), {
 				'selectable': {{$selectable|json_encode}},
 				'ajaxId': {{if isset($ajaxId)}}{{$ajaxId|json_encode}}{{else}}null{{/if}},
 				'ajaxURL': {{$ajaxURL|json_encode}},
@@ -237,30 +237,8 @@
 			}
 		});
 
-		/**
-		 * Toggle a row selection (custom selection api)
-		 *
-		 * @param row: The datatables row object
-		 */
-		table.toggleRow = function(row) {
-			if( table.isRowSelected(row) )
-				table.deselectRow(row);
-			else
-				table.selectRow(row);
-		};
-
 		// Listen to row click event
-		$('#{{$id}}'+' tbody').on('click', 'tr', function () {
-			{{if $selectable}}
-				let tr = $(this);
-				let row = table.row(this);
-
-				table.toggleRow(row);
-				table.updateSelectCount();
-				table.updateSelectAllBox();
-			{{/if}}
-		});
-
+		$('#{{$id}}'+' tbody').on('click', 'tr', function(){ dotable.onRowClick(this); });
 
 		// ADDED WP ELEMENTS
 
@@ -912,7 +890,7 @@
 			<tr>
 				<th style="width: 20px" class="data-table-buthead">
 					{{if $selectable}}
-						<span id="selectAllBox" class="fa fa-square-o selectbox" onclick="table.onSelectAllBox();"></span>
+						<span id="selectAllBox" class="fa fa-square-o selectbox" onclick="dotable.onSelectAllBox();"></span>
 					{{/if}}
 					{{foreach $btns as $name => $b}}
 						<a class="fa {{$b->icon}}" title="{{$b->label|htmlentities}}"

@@ -114,7 +114,7 @@ class DoPhpDataTable {
 				// Adds info about the selection
 				let selInfo = ', ' +
 					'<span id="data-table-sel-count">' +
-					( this.table.selectedAll ? 'tutti' : this.table.selectedItems.size.toString() )
+					( this.selectedAll ? 'tutti' : this.selectedItems.size.toString() )
 					+ '</span> selezionati';
 				pre += selInfo;
 			}
@@ -178,6 +178,9 @@ class DoPhpDataTable {
 
 	}
 
+
+	// ============================= Selection methods =============================
+
 	/**
 	 * Updates select count (custom selection api)
 	 */
@@ -197,7 +200,7 @@ class DoPhpDataTable {
 		if( this.selectedAll )
 			allSelected = true;
 		else
-			this.rows().every( function( rowIdx, tableLoop, rowLoop ) {
+			this.table.rows().every( function( rowIdx, tableLoop, rowLoop ) {
 				let data = this.data();
 				if( ! self.selectedItems.has(data.id) ) {
 					allSelected = false;
@@ -277,7 +280,7 @@ class DoPhpDataTable {
 		if( this.selectedAll ) {
 			this.selectedAll = false;
 			let self = this;
-			this.rows().every( function( rowIdx, tableLoop, rowLoop ) {
+			this.table.rows().every( function( rowIdx, tableLoop, rowLoop ) {
 				self.updateSelectRow(this);
 			}.bind(this) );
 		}
@@ -296,11 +299,36 @@ class DoPhpDataTable {
 			this.selectedAll = ! this.selectedAll;
 
 			// Apply selection loop
-			this.rows().every( function( rowIdx, tableLoop, rowLoop ) {
+			this.table.rows().every( function( rowIdx, tableLoop, rowLoop ) {
 				self.updateSelectRow(this);
 			} );
 
 			// Update count
+			this.updateSelectCount();
+			this.updateSelectAllBox();
+		}
+	}.bind(this);
+
+	/**
+	 * Toggle a row selection (custom selection api)
+	 *
+	 * @param row: The datatables row object
+	 */
+	toggleRow = function(row) {
+		if( this.isRowSelected(row) )
+			this.deselectRow(row);
+		else
+			this.selectRow(row);
+	}.bind(this);
+
+	/**
+	 * Listen to row click event
+	 */
+	onRowClick = function (el) {
+		if( this.selectable ) {
+			let row = table.row(el);
+
+			this.toggleRow(row);
 			this.updateSelectCount();
 			this.updateSelectAllBox();
 		}
