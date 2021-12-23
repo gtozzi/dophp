@@ -2,7 +2,15 @@
 /**
  * Customized datatable script/wrapper
  */
+
+// Returns the DoPhp DataTable instance
+$.fn.DoPhpDataTable = function(){
+	return this.data(DoPhpDataTable.propName);
+};
+
 class DoPhpDataTable {
+	/** The prop used to retrieve this class from the dom element */
+	static propName = 'dophpdatatable';
 	/** The selected class */
 	static selClass = 'fa-check-square-o';
 	/** The deselected class */
@@ -175,6 +183,9 @@ class DoPhpDataTable {
 		}
 
 		this.table = element.DataTable(initOpts);
+
+		// Saves the current instance. Obtain it with $('#myDataTable').DoPhpDataTable()
+		element.data(DoPhpDataTable.propName, this);
 
 	}
 

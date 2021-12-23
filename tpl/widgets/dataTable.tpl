@@ -192,7 +192,7 @@
 	// Sets up the table
 	$(document).ready(function() {
 		// Create the table
-		dotable = new DoPhpDataTable($('#{{$id}}'), {
+		let dotable = new DoPhpDataTable($('#{{$id}}'), {
 				'selectable': {{$selectable|json_encode}},
 				'ajaxId': {{if isset($ajaxId)}}{{$ajaxId|json_encode}}{{else}}null{{/if}},
 				'ajaxURL': {{$ajaxURL|json_encode}},
@@ -890,7 +890,7 @@
 			<tr>
 				<th style="width: 20px" class="data-table-buthead">
 					{{if $selectable}}
-						<span id="selectAllBox" class="fa fa-square-o selectbox" onclick="dotable.onSelectAllBox();"></span>
+						<span id="selectAllBox" class="fa fa-square-o selectbox" onclick="$('#{{$id}}').DoPhpDataTable().onSelectAllBox();"></span>
 					{{/if}}
 					{{foreach $btns as $name => $b}}
 						<a class="fa {{$b->icon}}" title="{{$b->label|htmlentities}}"
