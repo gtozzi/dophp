@@ -5,12 +5,12 @@
 
 // Returns the DoPhp DataTable instance
 $.fn.DoPhpDataTable = function(){
-	return this.data(DoPhpDataTable.propName);
+	return this.data(DoPhpDataTable.domDataPropName);
 };
 
 class DoPhpDataTable {
-	/** The prop used to retrieve this class from the dom element */
-	static propName = 'dophpdatatable';
+	/** The data prop used to retrieve this instance from the dom element */
+	static domDataPropName = 'dophpdatatable';
 	/** The selected class */
 	static selClass = 'fa-check-square-o';
 	/** The deselected class */
@@ -185,7 +185,7 @@ class DoPhpDataTable {
 		this.table = element.DataTable(initOpts);
 
 		// Saves the current instance. Obtain it with $('#myDataTable').DoPhpDataTable()
-		element.data(DoPhpDataTable.propName, this);
+		element.data(DoPhpDataTable.domDataPropName, this);
 
 	}
 
@@ -206,14 +206,13 @@ class DoPhpDataTable {
 	 * Updates the select all box (custom selection api)
 	 */
 	updateSelectAllBox() {
-		let self = this;
 		let allSelected = true;
 		if( this.selectedAll )
 			allSelected = true;
 		else
-			this.table.rows().every( function( rowIdx, tableLoop, rowLoop ) {
-				let data = this.data();
-				if( ! self.selectedItems.has(data.id) ) {
+			this.table.rows().every( ( rowIdx, tableLoop, rowLoop ) => {
+				let data = this.table.row(rowIdx).data();
+				if( ! this.selectedItems.has(data.id) ) {
 					allSelected = false;
 					return false; // Not sure if this works
 				}
@@ -290,10 +289,9 @@ class DoPhpDataTable {
 		this.selectedItems.delete(data.id);
 		if( this.selectedAll ) {
 			this.selectedAll = false;
-			let self = this;
-			this.table.rows().every( function( rowIdx, tableLoop, rowLoop ) {
-				self.updateSelectRow(this);
-			}.bind(this) );
+			this.table.rows().every( ( rowIdx, tableLoop, rowLoop ) => {
+				this.updateSelectRow(this.table.row(rowIdx));
+			} );
 		}
 		this.updateSelectRow(row);
 		console.log('Row unselected id', data.id, this.selectedItems);
@@ -305,13 +303,12 @@ class DoPhpDataTable {
 	 * If all rows are selected, unselected them; select all otherwise
 	 */
 	onSelectAllBox() {
-		let self = this;
 		if( this.selectable ) {
 			this.selectedAll = ! this.selectedAll;
 
 			// Apply selection loop
-			this.table.rows().every( function( rowIdx, tableLoop, rowLoop ) {
-				self.updateSelectRow(this);
+			this.table.rows().every( ( rowIdx, tableLoop, rowLoop ) => {
+				this.updateSelectRow(this.table.row(rowIdx));
 			} );
 
 			// Update count

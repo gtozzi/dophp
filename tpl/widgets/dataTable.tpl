@@ -890,7 +890,7 @@
 			<tr>
 				<th style="width: 20px" class="data-table-buthead">
 					{{if $selectable}}
-						<span id="selectAllBox" class="fa fa-square-o selectbox" onclick="$('#{{$id}}').DoPhpDataTable().onSelectAllBox();"></span>
+						<span id="selectAllBox" class="fa fa-square-o selectbox" onclick="$('#' + {{$id|json_encode}}).DoPhpDataTable().onSelectAllBox();"></span>
 					{{/if}}
 					{{foreach $btns as $name => $b}}
 						<a class="fa {{$b->icon}}" title="{{$b->label|htmlentities}}"
