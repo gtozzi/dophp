@@ -1,13 +1,6 @@
-
 /**
  * Customized datatable script/wrapper
  */
-
-// Returns the DoPhp DataTable instance
-$.fn.DoPhpDataTable = function(){
-	return this.data(DoPhpDataTable.domDataPropName);
-};
-
 class DoPhpDataTable {
 	/** The data prop used to retrieve this instance from the dom element */
 	static domDataPropName = 'dophpdatatable';
@@ -343,3 +336,11 @@ class DoPhpDataTable {
 	}
 
 }
+
+
+/**
+ * Returns the DoPhp DataTable instance when jQuery is loaded
+ */
+$.fn.DoPhpDataTable = function(){
+	return this.data(DoPhpDataTable.domDataPropName);
+};
