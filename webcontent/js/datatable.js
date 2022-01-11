@@ -31,7 +31,8 @@ class DoPhpDataTable {
 
 		this.selectable = settings['selectable'];
 		this.ajaxId = settings['ajaxId'];
-		this.ajaxUrl = settings['ajaxUrl'];
+		this.ajaxUrl = settings['ajaxURL'];
+
 		this.btnKey = settings['btnKey'];
 		this.totKey = settings['totKey'];
 		this.rbtns = settings['rbtns'];
@@ -179,7 +180,6 @@ class DoPhpDataTable {
 
 		// Saves the current instance. Obtain it with $('#myDataTable').DoPhpDataTable()
 		element.data(DoPhpDataTable.domDataPropName, this);
-
 	}
 
 
@@ -333,6 +333,37 @@ class DoPhpDataTable {
 		this.toggleRow(row);
 		this.updateSelectCount();
 		this.updateSelectAllBox();
+	}
+
+	/**
+	 * Updates the export url when filter is changed
+	 */
+	 updateDataTableUrls() {
+		// Read the filter and put it in the $_GET url
+		let filters = {};
+		let iter = 0;
+		let nFilters = $('input.data-table-filter').length
+		$('input.data-table-filter').each(function() {
+			iter++;
+			if (iter > nFilters/2)
+				return false;
+			let el = $(this);
+			let coln = el.data('coln');
+			let val = encodeURIComponent(el.val());
+			if( coln && val)
+				filters[coln] = val;
+		});
+		let filterargs = '';
+		for( let coln in filters ) {
+			let val = filters[coln];
+			filterargs += `&columns[${coln}][search][value]=${val}`;
+		}
+
+		let href = this.ajaxUrl + '&export=xlsx';
+		if( this.ajaxId !== null )
+			href += `&ajaxid=${this.ajaxId}`;
+		href += filterargs;
+		$('#data-table-export-url').attr('href', href);
 	}
 
 }

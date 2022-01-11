@@ -224,7 +224,8 @@
 				'<a id="data-table-export-url" class="dtbl-buttons-itm">'
 				+ '<span class="fa fa-file-excel-o"></span> ' + {{_('Export')|json_encode}} + '</a>');
 
-			updateDataTableUrls();
+			dotable.updateDataTableUrls();
+
 		} );
 
 		// change opacity for table body while processing data
@@ -398,36 +399,6 @@
 		});
 
 	});
-
-	/**
-	 * Updates the export url when filter is changed
-	 */
-	function updateDataTableUrls() {
-		// Read the filter and put it in the $_GET url
-		let filters = {};
-		let iter = 0;
-		let nFilters = $('input.data-table-filter').length
-		$('input.data-table-filter').each(function() {
-			iter++;
-			if (iter > nFilters/2)
-				return false;
-			let el = $(this);
-			let coln = el.data('coln');
-			let val = encodeURIComponent(el.val());
-			if( coln && val)
-				filters[coln] = val;
-		});
-		let filterargs = '';
-		for( let coln in filters ) {
-			let val = filters[coln];
-			filterargs += `&columns[${coln}][search][value]=${val}`;
-		}
-
-		let href = {{$ajaxURL|json_encode}} + '&export=xlsx'
-			{{if isset($ajaxId)}} + '&ajaxid=' + {{$ajaxId|json_encode}} {{/if}}
-			+ filterargs;
-		$('#data-table-export-url').attr('href', href);
-	}
 
 	/**
 	 * Called when it is time to update the filter
