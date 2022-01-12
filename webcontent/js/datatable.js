@@ -509,7 +509,7 @@ class DoPhpDataTable {
 	/**
 	 * Called when months/years container or buttons are clicked to select a range
 	 */
-	 onDateFilterRangeClick(elem) {
+	onDateFilterRangeClick(elem) {
 		$(".wp-date-filt-mthCont .wp-mthUnit, .wp-date-filt-yeaCont .wp-yeaUnit")
 			.removeClass("wp-range")
 
