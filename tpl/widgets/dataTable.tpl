@@ -215,9 +215,16 @@
 					'regex': {{$c->regex|json_encode}},
 				}, {{/foreach}} ],
 				'order': {{$order|json_encode}},
+				'dFilterDivider': {{$dFilterDivider|json_encode}},
 		});
 		//TODO: temporary
 		table = dotable.table;
+
+		//TODO: temporary, move selectors calling this functions to DoPhpDataTable object and make it relative?
+		updateFilter = dotable.updateFilter;
+		realtimeFilter = dotable.realtimeFilter;
+		filterKeyUp = dotable.filterKeyUp;
+		filterChanged = dotable.filterChanged;
 
 		table.on( 'draw', function(){
 			$(".dtbl-buttons-container").html(
@@ -256,7 +263,7 @@
 			$('.wp-yeaUnit.wp-range').removeClass('wp-range');
 
 			var el = $('#ag-dt-dtFilt-'+$('.wp-date-filt-univCont').data('coln'));
-			updateFilter(el, "");
+			dotable.updateFilter(el, "");
 			el.data('lastval', "");
 		}));
 
@@ -399,95 +406,6 @@
 		});
 
 	});
-
-	/**
-	 * Called when it is time to update the filter
-	 */
-	function updateFilter(input, val) {
-
-		let el = $(input);
-		let coln = el.data('coln');
-		let type = el.data('type');
-
-		if(coln == undefined)
-			return;
-
-		// Convert search values
-		if( type == 'boolean' ) {
-			val = val.toLowerCase();
-			if (['s', 'si', 'sì', 'y', 'ye', 'yes'].includes(val))
-				val = '1';
-			else if (['n', 'no'].includes(val))
-				val = '0';
-		}
-
-		el.data('timer', '');
-		console.log("filtering...", val);
-
-		console.log('Applying new filter for col', coln, val);
-
-		table.column(coln).search(val).draw();
-	}
-
-	/**
-	 * Realtime Filter Updater
-	 */
-	function realtimeFilter(input) {
-
-		var newFilter = "";
-		let el =  $('#ag-dt-dtFilt-'+$(input).data('coln'));
-
-		if($('#wp-dfilt-start').val() != "")
-			newFilter = $('#wp-dfilt-start').val();
-		if($('#wp-dfilt-end').val() != "")
-			newFilter = newFilter +"{{$dFilterDivider}}"+ $('#wp-dfilt-end').val();
-
-		// Ignore duplicated changes
-		if( el.data('lastval') == newFilter )
-			return;
-
-		el.val(newFilter);
-		el.data('lastval', newFilter);
-		updateFilter(el, newFilter);
-	}
-
-	function filterKeyUp(event){
-		var code = event.keyCode || event.which;
-		// Avoid key that not have to activate the filter (9 = TAB, 16 = SHIFT, 20 = CAPS LOCK)
-		if (code != '9' && code != '16' && code != '20')
-		{
-			filterChanged(event.target);
-			wpHideDateWidget();
-		}
-	}
-
-
-	/**
-	 * Called when the filter input changed
-	 */
-	function filterChanged(input) {
-		// Gestisce i filtri inseriti da tastiera
-		let updDelay = 300;
-
-		let el = $(input);
-		let val = el.val();
-
-		// Ignore duplicated changes
-		if( el.data('lastval') == val )
-			return;
-
-		// Remove old timer
-		if( el.data('timer') ) {
-			console.log('Clearing previous filter timer', el.data('timer'));
-			clearTimeout(el.data('timer'));
-		}
-
-		// Process the change
-		let timer = setTimeout(updateFilter, updDelay, input, val);
-		el.data('lastval', val);
-		el.data('timer', timer);
-		console.log('New timer set for col', el.data('coln'), timer);
-	}
 
 	/**
 	 * Show column selection modal
