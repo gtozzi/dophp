@@ -220,12 +220,6 @@
 		//TODO: temporary
 		table = dotable.table;
 
-		//TODO: temporary, move selectors calling this functions to DoPhpDataTable object and make it relative?
-		updateFilter = dotable.updateFilter;
-		realtimeFilter = dotable.realtimeFilter;
-		filterKeyUp = dotable.filterKeyUp;
-		filterChanged = dotable.filterChanged;
-
 		table.on( 'draw', function(){
 			$(".dtbl-buttons-container").html(
 				'<a id="data-table-export-url" class="dtbl-buttons-itm">'
@@ -385,7 +379,7 @@
 			// store the identifier of the used date_tab for the current used filter
 			$("#ag-dt-dtFilt-"+currColNo).attr("data-seltab",activeTab);
 
-			updateFilter(currFilter, filterString);
+			$("#" + {{$id|json_encode}}).DoPhpDataTable().updateFilter(currFilter, filterString);
 
 		});
 
@@ -736,11 +730,11 @@
 			<div class="wp-date-filter-dpck">
 				<div class="wp-pck-blck">
 					<label>Da</label>
-					<input id="wp-dfilt-start" class="wp-dfilt-dpck" name="wp-dfilt-start" type="text" value="" onchange="realtimeFilter(this);" readonly>
+					<input id="wp-dfilt-start" class="wp-dfilt-dpck" name="wp-dfilt-start" type="text" value="" onchange='$("#" + {{$id|json_encode}}).DoPhpDataTable().realtimeFilter(this);' readonly>
 				</div>
 				<div class="wp-pck-blck">
 					<label>A</label>
-					<input id="wp-dfilt-end" class="wp-dfilt-dpck" name="wp-dfilt-end" type="text" value="" onchange="realtimeFilter(this);" readonly>
+					<input id="wp-dfilt-end" class="wp-dfilt-dpck" name="wp-dfilt-end" type="text" value="" onchange='$("#" + {{$id|json_encode}}).DoPhpDataTable().realtimeFilter(this);' readonly>
 				</div>
 			</div>
 		</div>
@@ -805,7 +799,7 @@
 						{{if $c->filter}}
 							<input
 								class="data-table-filter {{if $c->type == \dophp\Table::DATA_TYPE_DATE}}ag-dt-dtFilt{{/if}}"
-								type="text" placeholder="filtra - cerca" onkeyup="console.log(event);filterKeyUp(event);" onchange="filterChanged(this);"
+								type="text" placeholder="filtra - cerca" onkeyup='$("#" + {{$id|json_encode}}).DoPhpDataTable().filterKeyUp(event);' onchange='$("#" + {{$id|json_encode}}).DoPhpDataTable().filterChanged(this);'
 								data-timer="" data-coln="{{$c@iteration}}" data-type="{{$c->type|htmlentities}}"
 								{{if $c->type == \dophp\Table::DATA_TYPE_DATE}}
 									onfocus="filterShowDate(this);"

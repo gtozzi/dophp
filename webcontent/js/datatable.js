@@ -452,7 +452,7 @@ class DoPhpDataTable {
 		}
 
 		// Process the change
-		let timer = setTimeout(updateFilter, updDelay, input, val);
+		let timer = setTimeout(() => { this.updateFilter(input, val) }, updDelay);
 		el.data('lastval', val);
 		el.data('timer', timer);
 		console.log('New timer set for col', el.data('coln'), timer);
