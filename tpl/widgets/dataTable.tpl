@@ -250,16 +250,7 @@
 		}));
 
 		// Reset month/year selection
-		$('.wp-date-filt-univCont').after($('<button class="deleteicon" id="m-y-deleteicon"></button>').click(function(event) {
-			$('.wp-mthUnit.wp-active').removeClass('wp-active');
-			$('.wp-mthUnit.wp-range').removeClass('wp-range');
-			$('.wp-yeaUnit.wp-active').removeClass('wp-active');
-			$('.wp-yeaUnit.wp-range').removeClass('wp-range');
-
-			var el = $('#ag-dt-dtFilt-'+$('.wp-date-filt-univCont').data('coln'));
-			dotable.updateFilter(el, "");
-			el.data('lastval', "");
-		}));
+		$('.wp-date-filt-univCont').after($('<button class="deleteicon" id="m-y-deleteicon"></button>').click(dotable.filterResetMonthYearSelection()));
 
 		// block search when the user click on the column filter
 		$(".data-table-filter").click(function(){ return false; })

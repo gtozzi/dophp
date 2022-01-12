@@ -434,7 +434,7 @@ class DoPhpDataTable {
 	/**
 	 * Called when the filter input changed
 	 */
-	 filterChanged(input) {
+	filterChanged(input) {
 		// Gestisce i filtri inseriti da tastiera
 		let updDelay = 300;
 
@@ -456,6 +456,20 @@ class DoPhpDataTable {
 		el.data('lastval', val);
 		el.data('timer', timer);
 		console.log('New timer set for col', el.data('coln'), timer);
+	}
+
+	/**
+	 * Reset month/year selection
+	 */
+	filterResetMonthYearSelection() {
+		$('.wp-mthUnit.wp-active').removeClass('wp-active');
+		$('.wp-mthUnit.wp-range').removeClass('wp-range');
+		$('.wp-yeaUnit.wp-active').removeClass('wp-active');
+		$('.wp-yeaUnit.wp-range').removeClass('wp-range');
+
+		var el = $('#ag-dt-dtFilt-'+$('.wp-date-filt-univCont').data('coln'));
+		this.updateFilter(el, "");
+		el.data('lastval', "");
 	}
 
 }
