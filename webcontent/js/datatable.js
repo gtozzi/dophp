@@ -472,6 +472,41 @@ class DoPhpDataTable {
 		el.data('lastval', "");
 	}
 
+	/**
+	 * Toggle date filter window minification
+	 */
+	toggleDateFilterWindowMinification() {
+		if($(".wp-date-filter-cont").hasClass("wp-closed")){
+			$(".wp-date-filter-cont").removeClass("wp-closed");
+		}
+		else{
+			$(".wp-date-filter-cont").addClass("wp-closed");
+		}
+	}
+
+	/**
+	 * Hide date widget
+	 */
+	wpHideDateWidget() {
+		if(!($(".wp-date-filter-cont").hasClass("do-hide")))
+			$(".wp-date-filter-cont").addClass("do-hide");
+	}
+
+	/**
+	 * Switch date filter active tab and form content
+	 *
+	 */
+	switchDateFilterActiveTab(elem) {
+		var elID=elem.attr("id");
+		var formID = elID.replace("tab-","");
+
+		$(".wp-date-filter-body .wp-date-filter-form").removeClass("wp-active");
+		$(".wp-date-filter-body .wp-date-filter-form.form-"+formID).addClass("wp-active");
+
+		$(".wp-date-filter-body .wp-date-filter-tab").removeClass("wp-active");
+		$(".wp-date-filter-body .wp-date-filter-tab#tab-"+formID).addClass("wp-active");
+	}
+
 }
 
 

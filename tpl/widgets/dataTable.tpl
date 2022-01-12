@@ -250,7 +250,9 @@
 		}));
 
 		// Reset month/year selection
-		$('.wp-date-filt-univCont').after($('<button class="deleteicon" id="m-y-deleteicon"></button>').click(dotable.filterResetMonthYearSelection()));
+		$('.wp-date-filt-univCont').after($('<button class="deleteicon" id="m-y-deleteicon"></button>').click(function(){
+			$("#" + {{$id|json_encode}}).DoPhpDataTable().filterResetMonthYearSelection();
+		}));
 
 		// block search when the user click on the column filter
 		$(".data-table-filter").click(function(){ return false; })
@@ -263,32 +265,15 @@
 		});
 
 		$(".wp-date-filter-cont .wpdf_close, .wp-date-filter-head .wp-close").click(function(){
-			wpHideDateWidget();
+			$("#" + {{$id|json_encode}}).DoPhpDataTable().wpHideDateWidget();
 		});
 
 		$(".wp-date-filter-head .wp-minimize").click(function(){
-			if($(".wp-date-filter-cont").hasClass("wp-closed")){
-				$(".wp-date-filter-cont").removeClass("wp-closed");
-			}
-			else{
-				$(".wp-date-filter-cont").addClass("wp-closed");
-			}
+			$("#" + {{$id|json_encode}}).DoPhpDataTable().toggleDateFilterWindowMinification();
 		});
 
-		/**
-		 * Switch date filter active tab and form content
-		 *
-		 */
 		$(".wp-date-fiter-tab-cont .wp-date-filter-tab").click(function(){
-			var elID=$(this).attr("id");
-			var formID = elID.replace("tab-","");
-
-			$(".wp-date-filter-body .wp-date-filter-form").removeClass("wp-active");
-			$(".wp-date-filter-body .wp-date-filter-form.form-"+formID).addClass("wp-active");
-
-			$(".wp-date-filter-body .wp-date-filter-tab").removeClass("wp-active");
-			$(".wp-date-filter-body .wp-date-filter-tab#tab-"+formID).addClass("wp-active");
-
+			$("#" + {{$id|json_encode}}).DoPhpDataTable().switchDateFilterActiveTab($(this));
 		});
 
 		$(".wp-date-filt-mthCont .wp-mthUnit, .wp-date-filt-yeaCont .wp-yeaUnit").click(function(){
@@ -577,11 +562,6 @@
 
 	}
 
-	function wpHideDateWidget(){
-		if(!($(".wp-date-filter-cont").hasClass("do-hide")))
-			$(".wp-date-filter-cont").addClass("do-hide");
-	}
-
 	/**
 	 * Asks for an element deletion confirmation
 	 */
@@ -797,7 +777,7 @@
 									data-seltab=""
 									id="ag-dt-dtFilt-{{$c@iteration}}"
 								{{else}}
-									onfocus="wpHideDateWidget()"
+									onfocus='$("#" + {{$id|json_encode}}).DoPhpDataTable().wpHideDateWidget()'
 								{{/if}}
 								{{if $c->search}}
 									value="{{$c->search|htmlentities}}"
