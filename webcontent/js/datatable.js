@@ -494,7 +494,6 @@ class DoPhpDataTable {
 
 	/**
 	 * Switch date filter active tab and form content
-	 *
 	 */
 	switchDateFilterActiveTab(elem) {
 		var elID=elem.attr("id");
@@ -505,6 +504,90 @@ class DoPhpDataTable {
 
 		$(".wp-date-filter-body .wp-date-filter-tab").removeClass("wp-active");
 		$(".wp-date-filter-body .wp-date-filter-tab#tab-"+formID).addClass("wp-active");
+	}
+
+	/**
+	 * Called when months/years container or buttons are clicked to select a range
+	 */
+	 onDateFilterRangeClick(elem) {
+		$(".wp-date-filt-mthCont .wp-mthUnit, .wp-date-filt-yeaCont .wp-yeaUnit")
+			.removeClass("wp-range")
+
+		if(elem.hasClass("wp-active")){
+			elem.removeClass("wp-active");
+		} else {
+
+			// check if selected dates are more than one, if so
+			// get the first and last selected items
+			var currParent = elem.parents(".wp-date-filt-univCont");
+			var selectedElem = currParent.children(".wp-active");
+
+			elem.addClass("wp-active");
+
+			if((selectedElem.length+1)>1){
+				let firstElem=selectedElem.first();
+				let lastElem=selectedElem.last();
+
+				let firstElemID =$(firstElem).attr("id");
+				let lastElemID =$(lastElem).attr("id");
+
+				$(".wp-date-filt-mthCont .wp-mthUnit, .wp-date-filt-yeaCont .wp-yeaUnit")
+					.removeClass("wp-range wp-active")
+
+				// last click is after lastSelection
+				if(elem.prevAll("div#"+lastElemID).length) {
+					$(firstElem).addClass("wp-active");
+					$(firstElem).nextUntil("#"+elem.attr("id")).addClass("wp-range");
+					elem.addClass("wp-active");
+				} else if(elem.prevAll("div#"+firstElemID).length) {
+						$(firstElem).addClass("wp-active");
+						$(firstElem).nextUntil("#"+elem.attr("id")).addClass("wp-range");
+						elem.addClass("wp-active");
+					} else {
+						elem.addClass("wp-active");
+						elem.nextUntil("#"+lastElemID).addClass("wp-range")
+						$(lastElem).addClass("wp-active");
+					}
+			}
+		}
+
+		var filterString="";
+		var monthsList=[];
+		var yearsList=[];
+		var activeTab = $(".wp-date-filter-tab.wp-active").attr("id").replace("tab-","");
+
+		// fill filter_string with user input
+		switch(activeTab){
+			//month
+			case "2":
+				$(".wp-mthUnit.wp-active").each(function(){
+					monthsList.push($(this).data("year-month"));
+					filterString = monthsList.reverse().join(this.dFilterDivider);
+				});
+			break;
+
+			//year
+			case "3":
+				$(".wp-yeaUnit.wp-active").each(function(){
+					yearsList.push($(this).data("year"));
+					filterString = yearsList.reverse().join(this.dFilterDivider);
+				});
+			break;
+
+		}
+
+		// get current colon id
+		var currColNo = $(".wp-date-filter-cont #wp-date-filter-colNo").val();
+		var currFilter = document.getElementById("ag-dt-dtFilt-"+currColNo);
+
+		// fill given date filter with the search_string
+		$("#ag-dt-dtFilt-"+currColNo).val(filterString);
+
+		// store the identifier of the used date_tab for the current used filter
+		$("#ag-dt-dtFilt-"+currColNo).attr("data-seltab",activeTab);
+
+		this.updateFilter(currFilter, filterString);
+
 	}
 
 }
