@@ -427,7 +427,7 @@ class DoPhpDataTable {
 		if (code != '9' && code != '16' && code != '20')
 		{
 			this.filterChanged(event.target);
-			wpHideDateWidget();
+			this.wpHideDateWidget();
 		}
 	}
 
