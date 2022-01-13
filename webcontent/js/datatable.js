@@ -336,39 +336,8 @@ class DoPhpDataTable {
 		this.updateSelectAllBox();
 	}
 
-	/**
-	 * Updates the export url when filter is changed
-	 */
-	 updateDataTableUrls() {
-		// Read the filter and put it in the $_GET url
-		let filters = {};
-		let iter = 0;
-		let nFilters = $('input.data-table-filter').length
-		$('input.data-table-filter').each(function() {
-			iter++;
-			if (iter > nFilters/2)
-				return false;
-			let el = $(this);
-			let coln = el.data('coln');
-			let val = encodeURIComponent(el.val());
-			if( coln && val)
-				filters[coln] = val;
-		});
-		let filterargs = '';
-		for( let coln in filters ) {
-			let val = filters[coln];
-			filterargs += `&columns[${coln}][search][value]=${val}`;
-		}
-
-		let href = this.ajaxUrl + '&export=xlsx';
-		if( this.ajaxId !== null )
-			href += `&ajaxid=${this.ajaxId}`;
-		href += filterargs;
-		$('#data-table-export-url').attr('href', href);
-	}
 
 	// ============================= Column filters methods =============================
-
 
 	/**
 	 * Called when it is time to update the filter
@@ -588,6 +557,40 @@ class DoPhpDataTable {
 
 		this.updateFilter(currFilter, filterString);
 
+	}
+
+
+	// ============================= Url generation methods =============================
+
+	/**
+	 * Updates the export url when filter is changed
+	 */
+	 updateDataTableUrls() {
+		// Read the filter and put it in the $_GET url
+		let filters = {};
+		let iter = 0;
+		let nFilters = $('input.data-table-filter').length
+		$('input.data-table-filter').each(function() {
+			iter++;
+			if (iter > nFilters/2)
+				return false;
+			let el = $(this);
+			let coln = el.data('coln');
+			let val = encodeURIComponent(el.val());
+			if( coln && val)
+				filters[coln] = val;
+		});
+		let filterargs = '';
+		for( let coln in filters ) {
+			let val = filters[coln];
+			filterargs += `&columns[${coln}][search][value]=${val}`;
+		}
+
+		let href = this.ajaxUrl + '&export=xlsx';
+		if( this.ajaxId !== null )
+			href += `&ajaxid=${this.ajaxId}`;
+		href += filterargs;
+		$('#data-table-export-url').attr('href', href);
 	}
 
 }
