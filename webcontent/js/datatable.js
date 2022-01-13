@@ -23,6 +23,8 @@ class DoPhpDataTable {
 	 *                 - cols: Column definitions
 	 *                 - initOpts: extra otions passed straight to DataTable
 	 *                 - order: default order
+	 *                 - dFilterDivider: filter separator character
+	 *                 - exportLinkText: export link localized caption
 	 */
 	constructor(element, settings) {
 		// Custom selection handling
@@ -178,6 +180,83 @@ class DoPhpDataTable {
 		}
 
 		this.table = element.DataTable(initOpts);
+
+		// Selectors
+		this.table.on( 'draw', function(){
+			$(".dtbl-buttons-container").html(
+				'<a id="data-table-export-url" class="dtbl-buttons-itm">'
+				+ '<span class="fa fa-file-excel-o"></span> ' + settings['exportLinkText'] + '</a>');
+
+			this.updateDataTableUrls();
+
+		} );
+
+		// change opacity for table body while processing data
+		this.table.on('processing.dt', (e, settings, processing) => {
+			let tableID=this.table.tables().nodes().to$().attr('id');
+			if (processing) {
+				$("#"+tableID+"_wrapper .dataTables_scroll tbody").css("opacity","0.2");
+			} else {
+				$("#"+tableID+"_wrapper .dataTables_scroll tbody").css("opacity","1");
+			}
+		});
+
+		// Listen to row click event
+		$('#{{$id}}'+' tbody').on('click', 'tr', () => { this.onRowClick(this); });
+
+		// ADDED WP ELEMENTS
+
+		$('.wp-dfilt-dpck').wrap('<span class="deleteicon" />').after($('<span/>').click(function(event) {
+			$(this).prev('input').val('').trigger('change');
+			event.stopPropagation();
+		}));
+
+		// Reset month/year selection
+		$('.wp-date-filt-univCont').after($('<button class="deleteicon" id="m-y-deleteicon"></button>').click(function(){
+			this.filterResetMonthYearSelection();
+		}));
+
+		// block search when the user click on the column filter
+		$(".data-table-filter").click(function(){ return false; })
+
+		$(".wp-dfilt-dpck").datepicker({
+			language: "it",
+			autoclose: true,
+			dateFormat: "dd.mm.yyyy",
+			format: "dd.mm.yyyy",
+		});
+
+		$(".wp-date-filter-cont .wpdf_close, .wp-date-filter-head .wp-close").click(function(){
+			this.wpHideDateWidget();
+		});
+
+		$(".wp-date-filter-head .wp-minimize").click(function(){
+			this.toggleDateFilterWindowMinification();
+		});
+
+		$(".wp-date-fiter-tab-cont .wp-date-filter-tab").click(function(){
+			this.switchDateFilterActiveTab($(this));
+		});
+
+		$(".wp-date-filt-mthCont .wp-mthUnit, .wp-date-filt-yeaCont .wp-yeaUnit").click(function(){
+			this.onDateFilterRangeClick($(this));
+		});
+
+		// ./ADDED WP ELEMENTS
+
+		/*
+		* Datatable size management based on window size (as described in
+		* https://stackoverflow.com/questions/7678345/datatables-change-height-of-table-not-working)
+		*/
+		window.resizeDatatable = function() {
+			console.log("Called resizeDatatable");
+			$('.dataTables_scrollBody').css('height', ($(window).height() - window.vSizeElementsOutsideTableHeight));
+		}
+
+		// Called every time the window is resized
+		$(window).on("resize", function() {
+			window.resizeDatatable();
+		});
 
 		// Saves the current instance. Obtain it with $('#myDataTable').DoPhpDataTable()
 		element.data(DoPhpDataTable.domDataPropName, this);
