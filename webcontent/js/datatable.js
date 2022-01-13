@@ -565,7 +565,7 @@ class DoPhpDataTable {
 	/**
 	 * Updates the export url when filter is changed
 	 */
-	 updateDataTableUrls() {
+	updateDataTableUrls() {
 		// Read the filter and put it in the $_GET url
 		let filters = {};
 		let iter = 0;
