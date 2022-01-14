@@ -210,17 +210,17 @@ class DoPhpDataTable {
 		});
 
 		// Listen to row click event
-		this.element.children('tbody').on('click', 'tr', () => { this.onRowClick(this); });
+		this.element.children('tbody').on('click', 'tr', (event) => { this.onRowClick($(event.target)); });
 
 		// ADDED WP ELEMENTS
 
-		$('.wp-dfilt-dpck').wrap('<span class="deleteicon" />').after($('<span/>').click(function(event) {
-			$(this).prev('input').val('').trigger('change');
+		$('.wp-dfilt-dpck').wrap('<span class="deleteicon" />').after($('<span/>').click((event) => {
+			$(event.target).prev('input').val('').trigger('change');
 			event.stopPropagation();
 		}));
 
 		// Reset month/year selection
-		$('.wp-date-filt-univCont').after($('<button class="deleteicon" id="m-y-deleteicon"></button>').click(function(){
+		$('.wp-date-filt-univCont').after($('<button class="deleteicon" id="m-y-deleteicon"></button>').click(() => {
 			this.filterResetMonthYearSelection();
 		}));
 
@@ -234,20 +234,20 @@ class DoPhpDataTable {
 			format: "dd.mm.yyyy",
 		});
 
-		$(".wp-date-filter-cont .wpdf_close, .wp-date-filter-head .wp-close").click(function(){
+		$(".wp-date-filter-cont .wpdf_close, .wp-date-filter-head .wp-close").click(() => {
 			this.wpHideDateWidget();
 		});
 
-		$(".wp-date-filter-head .wp-minimize").click(function(){
+		$(".wp-date-filter-head .wp-minimize").click(() => {
 			this.toggleDateFilterWindowMinification();
 		});
 
-		$(".wp-date-fiter-tab-cont .wp-date-filter-tab").click(function(){
-			this.switchDateFilterActiveTab($(this));
+		$(".wp-date-fiter-tab-cont .wp-date-filter-tab").click((event) => {
+			this.switchDateFilterActiveTab($(event.target));
 		});
 
-		$(".wp-date-filt-mthCont .wp-mthUnit, .wp-date-filt-yeaCont .wp-yeaUnit").click(function(){
-			this.onDateFilterRangeClick($(this));
+		$(".wp-date-filt-mthCont .wp-mthUnit, .wp-date-filt-yeaCont .wp-yeaUnit").click((event) => {
+			this.onDateFilterRangeClick($(event.target));
 		});
 
 		// ./ADDED WP ELEMENTS
@@ -413,7 +413,7 @@ class DoPhpDataTable {
 	onRowClick (el) {
 		if( ! this.selectable )
 			return;
-		let row = table.row(el);
+		let row = this.table.row(el);
 
 		this.toggleRow(row);
 		this.updateSelectCount();

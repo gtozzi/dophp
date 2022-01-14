@@ -1,6 +1,4 @@
 <script type="text/javascript">
-	/** The data table holder */
-	let table;
 
 	{{if $sfilter}}
 		/**
@@ -23,39 +21,12 @@
 			$('#sfilter-text').html(' ' + st);
 
 			console.log('sfilter text updated, refreshing table…');
-			table.ajax.reload( function() {
+			$("#" + {{$id|json_encode}}).DoPhpDataTable().table.ajax.reload( function() {
 				console.log('table refreshed');
 				$('#{{$id}}_filmodal').modal('hide');
 			});
 		}
 	{{/if}}
-
-	/**
-	 * Adds custom data before it is sent to the server
-	 *
-	 * @see https://datatables.net/reference/option/ajax.data
-	 */
-	function prepareServerData(data, settings) {
-		// Add the global superfilter info
-		data.filter = {};
-		{{if $sfilter}}
-			{{foreach $sfilter as $f}}
-				data.filter[{{$f->getName()|json_encode}}] = $('#'+{{$f->getId()|json_encode}}).prop('checked') ? '1' : '0';
-			{{/foreach}}
-		{{/if}}
-
-		// Add visibility info for each column
-		table.columns().every(function(index) {
-			data.columns[index].visible = table.column(index).visible();
-		});
-
-		{{if isset($ajaxId) }}
-			// Add ajax ID
-			data.ajaxid = {{$ajaxId|json_encode}};
-		{{/if}}
-
-		return data;
-	}
 
 	/**
 	 * Parses an encoded object into a JavaScript Object
@@ -159,7 +130,7 @@
 				data[key] = rowid;
 
 		$.post(url, data, function(data) {
-			table.ajax.reload();
+			$("#" + {{$id|json_encode}}).DoPhpDataTable().table.ajax.reload();
 		});
 	}
 
@@ -185,7 +156,7 @@
 		}
 
 		$.post(url, data, function(data) {
-			table.ajax.reload();
+			$("#" + {{$id|json_encode}}).DoPhpDataTable().table.ajax.reload();
 		});
 	}
 
@@ -246,13 +217,13 @@
 			let input = $(this);
 			let coln = input.data('coln');
 			let visible = input.prop('checked');
-			let previous = table.column(coln).visible();
+			let previous = $("#" + {{$id|json_encode}}).DoPhpDataTable().table.column(coln).visible();
 
 			if( previous == visible )
 				return;
 
 			console.log('Changing column visibility', coln, previous, visible);
-			table.column(coln).visible(visible);
+			$("#" + {{$id|json_encode}}).DoPhpDataTable().table.column(coln).visible(visible);
 
 			// When re-adding a column, data needs to be refreshed
 			if( ! previous )
@@ -262,7 +233,7 @@
 		$(formEl).closest('div.modal').modal('hide');
 
 		if( needsReload )
-			table.ajax.reload( function() {
+			$("#" + {{$id|json_encode}}).DoPhpDataTable().table.ajax.reload( function() {
 				console.log('table refreshed');
 			});
 	}
@@ -615,7 +586,7 @@
 			<tr>
 				<th style="width: 20px" class="data-table-filter">
 					<a href="#" title="seleziona colonne" class="fa fa-columns" onclick="selectColumns('{{$id}}');return false;"></a>&nbsp;
-					<a href="#" title="pulisci filtro" class="fa fa-eraser" onclick="$(':input.data-table-filter').val('');{{$id|json_encode}}).DoPhpDataTable().table.columns().search('').draw();return false;"></a>
+					<a href="#" title="pulisci filtro" class="fa fa-eraser" onclick='$(":input.data-table-filter").val("");$("#" + {{$id|json_encode}}).DoPhpDataTable().table.columns().search("").draw();return false;'></a>
 				</th>
 				{{foreach $cols as $c}}
 					<th class="data-table-filter">
