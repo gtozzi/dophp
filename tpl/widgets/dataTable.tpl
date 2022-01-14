@@ -194,7 +194,9 @@
 				}, {{/foreach}} ],
 				'order': {{$order|json_encode}},
 				'dFilterDivider': {{$dFilterDivider|json_encode}},
-				'exportLinkText': {{_('Export')|json_encode}},
+				'texts': {
+					'exportLink': {{_('Export')|json_encode}}
+				},
 				'sfilter': sfilter,
 		});
 

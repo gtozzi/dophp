@@ -24,7 +24,7 @@ class DoPhpDataTable {
 	 *                 - initOpts: extra otions passed straight to DataTable
 	 *                 - order: default order
 	 *                 - dFilterDivider: filter separator character
-	 *                 - exportLinkText: export link localized caption
+	 *                 - texts: named array of localized strings
 	 *                 - sfilter: superfilters definitions (id: name)
 	 */
 	constructor(element, settings) {
@@ -194,7 +194,7 @@ class DoPhpDataTable {
 		this.table.on( 'draw', () => {
 			$(".dtbl-buttons-container").html(
 				'<a id="data-table-export-url" class="dtbl-buttons-itm">'
-				+ '<span class="fa fa-file-excel-o"></span> ' + settings['exportLinkText'] + '</a>');
+				+ '<span class="fa fa-file-excel-o"></span> ' + settings['texts']['exportLink'] + '</a>');
 
 			this.updateDataTableUrls();
 		} );
