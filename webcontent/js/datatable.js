@@ -28,7 +28,6 @@ class DoPhpDataTable {
 	 *                 - sfilter: superfilters definitions (id: name)
 	 */
 	constructor(element, settings) {
-		this.element = element;
 
 		// Custom selection handling
 		this.selectedItems = new Set();
@@ -210,7 +209,7 @@ class DoPhpDataTable {
 		});
 
 		// Listen to row click event
-		this.element.children('tbody').on('click', 'tr', (event) => { this.onRowClick($(event.target)); });
+		$(this.table.table().body()).on('click', 'tr', (event) => { this.onRowClick($(event.target).closest('tr')) });
 
 		// ADDED WP ELEMENTS
 
