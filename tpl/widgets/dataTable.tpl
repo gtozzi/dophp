@@ -615,7 +615,7 @@
 			<tr>
 				<th style="width: 20px" class="data-table-filter">
 					<a href="#" title="seleziona colonne" class="fa fa-columns" onclick="selectColumns('{{$id}}');return false;"></a>&nbsp;
-					<a href="#" title="pulisci filtro" class="fa fa-eraser" onclick="$(':input.data-table-filter').val('');table.columns().search('').draw();return false;"></a>
+					<a href="#" title="pulisci filtro" class="fa fa-eraser" onclick="$(':input.data-table-filter').val('');{{$id|json_encode}}).DoPhpDataTable().table.columns().search('').draw();return false;"></a>
 				</th>
 				{{foreach $cols as $c}}
 					<th class="data-table-filter">

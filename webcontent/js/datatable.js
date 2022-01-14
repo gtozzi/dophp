@@ -28,6 +28,8 @@ class DoPhpDataTable {
 	 *                 - sfilter: superfilters definitions (id: name)
 	 */
 	constructor(element, settings) {
+		this.element = element;
+
 		// Custom selection handling
 		this.selectedItems = new Set();
 		this.selectedAll = false;
@@ -185,14 +187,16 @@ class DoPhpDataTable {
 
 		this.table = element.DataTable(initOpts);
 
+		// Saves the current instance. Obtain it with $('#myDataTable').DoPhpDataTable()
+		element.data(DoPhpDataTable.domDataPropName, this);
+
 		// Selectors
-		this.table.on( 'draw', function(){
+		this.table.on( 'draw', () => {
 			$(".dtbl-buttons-container").html(
 				'<a id="data-table-export-url" class="dtbl-buttons-itm">'
 				+ '<span class="fa fa-file-excel-o"></span> ' + settings['exportLinkText'] + '</a>');
 
 			this.updateDataTableUrls();
-
 		} );
 
 		// change opacity for table body while processing data
@@ -206,7 +210,7 @@ class DoPhpDataTable {
 		});
 
 		// Listen to row click event
-		$('#{{$id}}'+' tbody').on('click', 'tr', () => { this.onRowClick(this); });
+		this.element.children('tbody').on('click', 'tr', () => { this.onRowClick(this); });
 
 		// ADDED WP ELEMENTS
 
@@ -261,9 +265,6 @@ class DoPhpDataTable {
 		$(window).on("resize", function() {
 			window.resizeDatatable();
 		});
-
-		// Saves the current instance. Obtain it with $('#myDataTable').DoPhpDataTable()
-		element.data(DoPhpDataTable.domDataPropName, this);
 	}
 
 
@@ -694,8 +695,8 @@ class DoPhpDataTable {
 		}
 
 		// Add visibility info for each column
-		table.columns().every(function(index) {
-			data.columns[index].visible = table.column(index).visible();
+		this.table.columns().every((index) => {
+			data.columns[index].visible = this.table.column(index).visible();
 		});
 
 		if( this.ajaxId !== null ) {
