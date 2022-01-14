@@ -213,39 +213,39 @@ class DoPhpDataTable {
 
 		// ADDED WP ELEMENTS
 
-		$('.wp-dfilt-dpck').wrap('<span class="deleteicon" />').after($('<span/>').click((event) => {
+		$('.do-dfilt-dpck').wrap('<span class="deleteicon" />').after($('<span/>').click((event) => {
 			$(event.target).prev('input').val('').trigger('change');
 			event.stopPropagation();
 		}));
 
 		// Reset month/year selection
-		$('.wp-date-filt-univCont').after($('<button class="deleteicon" id="m-y-deleteicon"></button>').click(() => {
+		$('.do-date-filt-univCont').after($('<button class="deleteicon" id="m-y-deleteicon"></button>').click(() => {
 			this.filterResetMonthYearSelection();
 		}));
 
 		// block search when the user click on the column filter
 		$(".data-table-filter").click(function(){ return false; })
 
-		$(".wp-dfilt-dpck").datepicker({
+		$(".do-dfilt-dpck").datepicker({
 			language: "it",
 			autoclose: true,
 			dateFormat: "dd.mm.yyyy",
 			format: "dd.mm.yyyy",
 		});
 
-		$(".wp-date-filter-cont .wpdf_close, .wp-date-filter-head .wp-close").click(() => {
+		$(".do-date-filter-cont .wpdf_close, .do-date-filter-head .do-close").click(() => {
 			this.wpHideDateWidget();
 		});
 
-		$(".wp-date-filter-head .wp-minimize").click(() => {
+		$(".do-date-filter-head .do-minimize").click(() => {
 			this.toggleDateFilterWindowMinification();
 		});
 
-		$(".wp-date-fiter-tab-cont .wp-date-filter-tab").click((event) => {
+		$(".do-date-fiter-tab-cont .do-date-filter-tab").click((event) => {
 			this.switchDateFilterActiveTab($(event.target));
 		});
 
-		$(".wp-date-filt-mthCont .wp-mthUnit, .wp-date-filt-yeaCont .wp-yeaUnit").click((event) => {
+		$(".do-date-filt-mthCont .do-mthUnit, .do-date-filt-yeaCont .do-yeaUnit").click((event) => {
 			this.onDateFilterRangeClick($(event.target));
 		});
 
@@ -446,10 +446,10 @@ class DoPhpDataTable {
 		var newFilter = "";
 		let el =  $('#ag-dt-dtFilt-'+$(input).data('coln'));
 
-		if($('#wp-dfilt-start').val() != "")
-			newFilter = $('#wp-dfilt-start').val();
-		if($('#wp-dfilt-end').val() != "")
-			newFilter = newFilter + this.dFilterDivider + $('#wp-dfilt-end').val();
+		if($('#do-dfilt-start').val() != "")
+			newFilter = $('#do-dfilt-start').val();
+		if($('#do-dfilt-end').val() != "")
+			newFilter = newFilter + this.dFilterDivider + $('#do-dfilt-end').val();
 
 		// Ignore duplicated changes
 		if( el.data('lastval') == newFilter )
@@ -501,12 +501,12 @@ class DoPhpDataTable {
 	 * Reset month/year selection
 	 */
 	filterResetMonthYearSelection() {
-		$('.wp-mthUnit.wp-active').removeClass('wp-active');
-		$('.wp-mthUnit.wp-range').removeClass('wp-range');
-		$('.wp-yeaUnit.wp-active').removeClass('wp-active');
-		$('.wp-yeaUnit.wp-range').removeClass('wp-range');
+		$('.do-mthUnit.do-active').removeClass('do-active');
+		$('.do-mthUnit.do-range').removeClass('do-range');
+		$('.do-yeaUnit.do-active').removeClass('do-active');
+		$('.do-yeaUnit.do-range').removeClass('do-range');
 
-		var el = $('#ag-dt-dtFilt-'+$('.wp-date-filt-univCont').data('coln'));
+		var el = $('#ag-dt-dtFilt-'+$('.do-date-filt-univCont').data('coln'));
 		this.updateFilter(el, "");
 		el.data('lastval', "");
 	}
@@ -515,11 +515,11 @@ class DoPhpDataTable {
 	 * Toggle date filter window minification
 	 */
 	toggleDateFilterWindowMinification() {
-		if($(".wp-date-filter-cont").hasClass("wp-closed")){
-			$(".wp-date-filter-cont").removeClass("wp-closed");
+		if($(".do-date-filter-cont").hasClass("do-closed")){
+			$(".do-date-filter-cont").removeClass("do-closed");
 		}
 		else{
-			$(".wp-date-filter-cont").addClass("wp-closed");
+			$(".do-date-filter-cont").addClass("do-closed");
 		}
 	}
 
@@ -527,8 +527,8 @@ class DoPhpDataTable {
 	 * Hide date widget
 	 */
 	wpHideDateWidget() {
-		if(!($(".wp-date-filter-cont").hasClass("do-hide")))
-			$(".wp-date-filter-cont").addClass("do-hide");
+		if(!($(".do-date-filter-cont").hasClass("do-hide")))
+			$(".do-date-filter-cont").addClass("do-hide");
 	}
 
 	/**
@@ -538,30 +538,30 @@ class DoPhpDataTable {
 		var elID=elem.attr("id");
 		var formID = elID.replace("tab-","");
 
-		$(".wp-date-filter-body .wp-date-filter-form").removeClass("wp-active");
-		$(".wp-date-filter-body .wp-date-filter-form.form-"+formID).addClass("wp-active");
+		$(".do-date-filter-body .do-date-filter-form").removeClass("do-active");
+		$(".do-date-filter-body .do-date-filter-form.form-"+formID).addClass("do-active");
 
-		$(".wp-date-filter-body .wp-date-filter-tab").removeClass("wp-active");
-		$(".wp-date-filter-body .wp-date-filter-tab#tab-"+formID).addClass("wp-active");
+		$(".do-date-filter-body .do-date-filter-tab").removeClass("do-active");
+		$(".do-date-filter-body .do-date-filter-tab#tab-"+formID).addClass("do-active");
 	}
 
 	/**
 	 * Called when months/years container or buttons are clicked to select a range
 	 */
 	onDateFilterRangeClick(elem) {
-		$(".wp-date-filt-mthCont .wp-mthUnit, .wp-date-filt-yeaCont .wp-yeaUnit")
-			.removeClass("wp-range")
+		$(".do-date-filt-mthCont .do-mthUnit, .do-date-filt-yeaCont .do-yeaUnit")
+			.removeClass("do-range")
 
-		if(elem.hasClass("wp-active")){
-			elem.removeClass("wp-active");
+		if(elem.hasClass("do-active")){
+			elem.removeClass("do-active");
 		} else {
 
 			// check if selected dates are more than one, if so
 			// get the first and last selected items
-			var currParent = elem.parents(".wp-date-filt-univCont");
-			var selectedElem = currParent.children(".wp-active");
+			var currParent = elem.parents(".do-date-filt-univCont");
+			var selectedElem = currParent.children(".do-active");
 
-			elem.addClass("wp-active");
+			elem.addClass("do-active");
 
 			if((selectedElem.length+1)>1){
 				let firstElem=selectedElem.first();
@@ -570,22 +570,22 @@ class DoPhpDataTable {
 				let firstElemID =$(firstElem).attr("id");
 				let lastElemID =$(lastElem).attr("id");
 
-				$(".wp-date-filt-mthCont .wp-mthUnit, .wp-date-filt-yeaCont .wp-yeaUnit")
-					.removeClass("wp-range wp-active")
+				$(".do-date-filt-mthCont .do-mthUnit, .do-date-filt-yeaCont .do-yeaUnit")
+					.removeClass("do-range do-active")
 
 				// last click is after lastSelection
 				if(elem.prevAll("div#"+lastElemID).length) {
-					$(firstElem).addClass("wp-active");
-					$(firstElem).nextUntil("#"+elem.attr("id")).addClass("wp-range");
-					elem.addClass("wp-active");
+					$(firstElem).addClass("do-active");
+					$(firstElem).nextUntil("#"+elem.attr("id")).addClass("do-range");
+					elem.addClass("do-active");
 				} else if(elem.prevAll("div#"+firstElemID).length) {
-						$(firstElem).addClass("wp-active");
-						$(firstElem).nextUntil("#"+elem.attr("id")).addClass("wp-range");
-						elem.addClass("wp-active");
+						$(firstElem).addClass("do-active");
+						$(firstElem).nextUntil("#"+elem.attr("id")).addClass("do-range");
+						elem.addClass("do-active");
 					} else {
-						elem.addClass("wp-active");
-						elem.nextUntil("#"+lastElemID).addClass("wp-range")
-						$(lastElem).addClass("wp-active");
+						elem.addClass("do-active");
+						elem.nextUntil("#"+lastElemID).addClass("do-range")
+						$(lastElem).addClass("do-active");
 					}
 			}
 		}
@@ -593,13 +593,13 @@ class DoPhpDataTable {
 		var filterString="";
 		var monthsList=[];
 		var yearsList=[];
-		var activeTab = $(".wp-date-filter-tab.wp-active").attr("id").replace("tab-","");
+		var activeTab = $(".do-date-filter-tab.do-active").attr("id").replace("tab-","");
 
 		// fill filter_string with user input
 		switch(activeTab){
 			//month
 			case "2":
-				$(".wp-mthUnit.wp-active").each(function(){
+				$(".do-mthUnit.do-active").each(function(){
 					monthsList.push($(this).data("year-month"));
 					filterString = monthsList.reverse().join(this.dFilterDivider);
 				});
@@ -607,7 +607,7 @@ class DoPhpDataTable {
 
 			//year
 			case "3":
-				$(".wp-yeaUnit.wp-active").each(function(){
+				$(".do-yeaUnit.do-active").each(function(){
 					yearsList.push($(this).data("year"));
 					filterString = yearsList.reverse().join(this.dFilterDivider);
 				});
@@ -616,7 +616,7 @@ class DoPhpDataTable {
 		}
 
 		// get current colon id
-		var currColNo = $(".wp-date-filter-cont #wp-date-filter-colNo").val();
+		var currColNo = $(".do-date-filter-cont #do-date-filter-colNo").val();
 		var currFilter = document.getElementById("ag-dt-dtFilt-"+currColNo);
 
 		// fill given date filter with the search_string

@@ -1,4 +1,4 @@
-.wp-date-filter-cont {
+.do-date-filter-cont {
 	position: absolute;
 	width: calc( 70% );
 	top: 26vh;
@@ -10,7 +10,7 @@
 	min-width: 224px;
 }
 
-.wp-date-filter-head {
+.do-date-filter-head {
 	height: 50px;
 	background: var(--jm-primary, #343a40);
 	color: #f7f7f7;
@@ -19,13 +19,13 @@
 	padding-left: 15px;
 }
 
-.wp-date-filt-mthCont,
-.wp-date-filt-yeaCont {
+.do-date-filt-mthCont,
+.do-date-filt-yeaCont {
 	max-height: 300px;
 	overflow-y: scroll;
 }
 
-.wp-date-filter-body ul li {
+.do-date-filter-body ul li {
 	list-style: none;
 }
 
@@ -33,7 +33,7 @@
 	padding-left: 17px;
 }
 
-.wp-date-filter-tab {
+.do-date-filter-tab {
 	float: left;
 	width: 33.33%;
 	background: #cccccc;
@@ -44,31 +44,31 @@
 	border-right: 1px solid #eee;
 }
 
-.wp-date-filter-tab:nth-child(3){
+.do-date-filter-tab:nth-child(3){
 	border-right: none;
 }
 
-.wp-date-filter-tab.wp-active {
+.do-date-filter-tab.do-active {
 	background: #f7f7f7;
 	border-bottom: 1px solid #ccc;
 }
 
-.wp-date-clear {
+.do-date-clear {
 	clear: both;
 }
 
-.wp-dfilt-dpck,
-.wp-date-filter-foot button {
+.do-dfilt-dpck,
+.do-date-filter-foot button {
 	background: #f2f2f2;
 	border: 1px solid #ccc;
 }
 
-.wp-dfilt-dpck{
+.do-dfilt-dpck{
 	padding: 7px;
 	width: 100%;
 }
 
-.wp-date-filter-foot button {
+.do-date-filter-foot button {
 	background: none;
 	color: var(--jm-primary, #343a40);
 	border: 1px solid var(--jm-primary, #343a40);
@@ -79,53 +79,53 @@
 	width: calc( 100% - 30px );
 }
 
-.wp-date-filter-foot button:hover {
+.do-date-filter-foot button:hover {
 	background: var(--jm-primary, #343a40);
 	color: #f7f7f7;
 }
 
-.wp-date-filter-tab,
-.wp-date-filter-foot button{
+.do-date-filter-tab,
+.do-date-filter-foot button{
 	cursor: pointer;
 }
 
-.wp-pck-blck>label {
+.do-pck-blck>label {
 	display: block;
 	margin-bottom: 3px;
 }
 
-.wp-date-filter-dpck {
+.do-date-filter-dpck {
 	padding-top: 20px;
 	padding-bottom: 20px;
 }
 
-.wp-date-filter-dpck .wp-pck-blck {
+.do-date-filter-dpck .do-pck-blck {
 	display: inline-block;
 	text-align: left;
 	width: calc( 100% - 30px );
 	margin-left: 15px;
 }
 
-.wp-date-filter-dpck .wp-pck-blck>label {
+.do-date-filter-dpck .do-pck-blck>label {
 	display: block;
 	margin-bottom: 3px;
 }
 
-.wp-date-filter-foot {
+.do-date-filter-foot {
 	text-align: center;
 	margin: 25px 0px 23px 0px;
 }
 
-.wp-date-filter-form {
+.do-date-filter-form {
 	display: none;
 }
 
-.wp-date-filter-form.wp-active {
+.do-date-filter-form.do-active {
 	display: block;
 }
 
-.wp-date-filt-mthCont .wp-mthUnit,
-.wp-date-filt-yeaCont .wp-yeaUnit{
+.do-date-filt-mthCont .do-mthUnit,
+.do-date-filt-yeaCont .do-yeaUnit{
 	display: inline-block;
 	background: #eee;
 	border: 1px solid #ddd;
@@ -136,22 +136,22 @@
 	cursor: pointer;
 }
 
-.wp-date-filt-mthCont,
-.wp-date-filt-yeaCont {
+.do-date-filt-mthCont,
+.do-date-filt-yeaCont {
 	text-align: center;
 }
 
-.wp-date-filt-mthCont .wp-mthUnit.wp-active,
-.wp-date-filt-yeaCont .wp-yeaUnit.wp-active,
-.wp-date-filt-mthCont .wp-mthUnit.wp-range,
-.wp-date-filt-yeaCont .wp-yeaUnit.wp-range {
+.do-date-filt-mthCont .do-mthUnit.do-active,
+.do-date-filt-yeaCont .do-yeaUnit.do-active,
+.do-date-filt-mthCont .do-mthUnit.do-range,
+.do-date-filt-yeaCont .do-yeaUnit.do-range {
 	background: var(--jm-primary, #343a40);
 	color: #f7f7f7;
 	border: 1px solid var(--jm-primary, #343a40);
 }
 
-.wp-date-monthBlck-title,
-.wp-date-yearBlck-title{
+.do-date-monthBlck-title,
+.do-date-yearBlck-title{
 	font-weight: bold;
 	border-bottom: 2px solid var(--jm-primary, #343a40);
 	width: 53px;
@@ -162,31 +162,31 @@
 	font-size: 20px;
 }
 
-.wp-date-yearBlck-title{
+.do-date-yearBlck-title{
 	width: 111px;
 }
 
-.wp-date-filter-cont.wp-closed {
+.do-date-filter-cont.do-closed {
 	height: 50px;
 	overflow: hidden;
 	top: 8px;
 	transition: 0.2s linear;
 }
 
-.wp-date-filter-head .wp-close,
-.wp-date-filter-head .wp-minimize {
+.do-date-filter-head .do-close,
+.do-date-filter-head .do-minimize {
 	float: right;
 	position: relative;
 	margin-right: 16px;
 	cursor: pointer;
 }
 
-.wp-date-filter-cont.wp-closed .wp-minimize {
+.do-date-filter-cont.do-closed .do-minimize {
 	transform: rotate(180deg);
 	top: 5px;
 }
 
-.wp-date-filter-head .wp-minimize{
+.do-date-filter-head .do-minimize{
 	display: none;
 }
 
@@ -207,21 +207,21 @@ span[title] {
 /* --- */
 
 @media (min-width:568px){
-	.wp-date-filt-mthCont .wp-mthUnit,
-	.wp-date-filt-yeaCont .wp-yeaUnit{
+	.do-date-filt-mthCont .do-mthUnit,
+	.do-date-filt-yeaCont .do-yeaUnit{
 		width: 103px;
 	}
 }
 
 @media (min-width:600px){
 
-	.wp-date-filter-cont{
+	.do-date-filter-cont{
 		margin-left: calc( 50% - 200px );
 	}
 }
 
 @media (min-width: 768px){
-	.wp-date-filter-dpck .wp-pck-blck {
+	.do-date-filter-dpck .do-pck-blck {
 		display: inline-block;
 		text-align: left;
 		width: calc( ( 100% - 50px ) / 2);

@@ -251,11 +251,11 @@
 	}
 
 	function resetModal() {
-		$(".wp-date-filter-cont").removeClass("do-hide");
-		$(".wp-date-filter-cont .wp-date-filter-form").removeClass("wp-active");
-		$(".wp-date-filter-cont .wp-date-filter-tab").removeClass("wp-active");
-		$(".wp-date-filter-cont .wp-mthUnit,.wp-date-filter-cont .wp-yeaUnit").removeClass("wp-range");
-		$(".wp-date-filter-cont .wp-mthUnit,.wp-date-filter-cont .wp-yeaUnit").removeClass("wp-active");
+		$(".do-date-filter-cont").removeClass("do-hide");
+		$(".do-date-filter-cont .do-date-filter-form").removeClass("do-active");
+		$(".do-date-filter-cont .do-date-filter-tab").removeClass("do-active");
+		$(".do-date-filter-cont .do-mthUnit,.do-date-filter-cont .do-yeaUnit").removeClass("do-range");
+		$(".do-date-filter-cont .do-mthUnit,.do-date-filter-cont .do-yeaUnit").removeClass("do-active");
 	}
 
 	// Set modal tab and selection, according to the DateFilter in jsonString
@@ -301,14 +301,14 @@
 					currentDay = ("0" + filterStart.getDate()).slice(-2);
 					currentMonth = ("0" + (filterStart.getMonth() + 1)).slice(-2);
 					startDate = currentDay+"-"+currentMonth+"-"+filterStart.getFullYear();
-					$("#wp-dfilt-start").val(startDate);
+					$("#do-dfilt-start").val(startDate);
 				}
 
 				if(dateFilter._endDate != null && dateFilter._endDate.date != null) {
 					currentDay = ("0" + filterEnd.getDate()).slice(-2);
 					currentMonth = ("0" + (filterEnd.getMonth() + 1)).slice(-2);
 					endDate = currentDay+"-"+currentMonth+"-"+filterEnd.getFullYear();
-					$("#wp-dfilt-end").val(endDate);
+					$("#do-dfilt-end").val(endDate);
 				}
 
 			break;
@@ -322,16 +322,16 @@
 
 				// First month
 				currentMonth = ("0" + (filterStart.getMonth() + 1)).slice(-2)
-				$("#mthID-"+currentMonth+"-"+filterStart.getFullYear()).addClass("wp-active");
+				$("#mthID-"+currentMonth+"-"+filterStart.getFullYear()).addClass("do-active");
 
 				// Last month
 				currentMonth = ("0" + (filterEnd.getMonth() + 1)).slice(-2)
-				$("#mthID-"+currentMonth+"-"+filterEnd.getFullYear()).addClass("wp-active");
+				$("#mthID-"+currentMonth+"-"+filterEnd.getFullYear()).addClass("do-active");
 
 				// Range
 				for(i=1; i<=monthOfDifference; i++) {
 					currentMonth = ("0" + (controlDate.getMonth() + 1)).slice(-2)
-					$("#mthID-"+currentMonth+"-"+controlDate.getFullYear()).addClass("wp-range");
+					$("#mthID-"+currentMonth+"-"+controlDate.getFullYear()).addClass("do-range");
 					controlDate.setMonth(controlDate.getMonth() + 1);
 				}
 			break;
@@ -343,12 +343,12 @@
 				yearEnd = filterEnd.getFullYear();
 
 				for (var i = parseInt(yearStart); i <= parseInt(yearEnd); i++)
-					$("#yyID-"+i).addClass("wp-range");
+					$("#yyID-"+i).addClass("do-range");
 			break;
 		}
 
-		$(".wp-date-filter-tab#tab-"+tabId).addClass("wp-active");
-		$(".wp-date-filter-form.form-"+tabId).addClass("wp-active");
+		$(".do-date-filter-tab#tab-"+tabId).addClass("do-active");
+		$(".do-date-filter-form.form-"+tabId).addClass("do-active");
 
 	}
 
@@ -377,18 +377,18 @@
 
 		var jQ_formEl = $(formEl);
 		var currColNo = jQ_formEl.data("coln");
-		var activeTab = $(".wp-date-filter-tab.wp-active").attr("id").replace("tab-","");
+		var activeTab = $(".do-date-filter-tab.do-active").attr("id").replace("tab-","");
 		var filterValue = $(".ag-dt-dtFilt").val();
 
-		$(".wp-date-filter-cont").removeClass("do-hide");
+		$(".do-date-filter-cont").removeClass("do-hide");
 
 		if(filterValue != null && filterValue != "")
 			rpcDateFilter(filterValue);
 
-		$(".wp-date-filter-cont #wp-date-filter-colNo").val(currColNo);
+		$(".do-date-filter-cont #do-date-filter-colNo").val(currColNo);
 
-		$('#wp-dfilt-start').data('coln', currColNo);
-		$('#wp-dfilt-end').data('coln', currColNo);
+		$('#do-dfilt-start').data('coln', currColNo);
+		$('#do-dfilt-end').data('coln', currColNo);
 
 	}
 
@@ -507,62 +507,62 @@
 </div>
 
 <!-- Date Filter -->
-<div class="wp-date-filter-cont do-hide">
-	<input type="hidden" id="wp-date-filter-col" name="wp-date-filter-col" value="-1" />
-	<div class="wp-date-filter-head">
+<div class="do-date-filter-cont do-hide">
+	<input type="hidden" id="do-date-filter-col" name="do-date-filter-col" value="-1" />
+	<div class="do-date-filter-head">
 		Filtra data
-		<div class="wp-close">
+		<div class="do-close">
 			<img src="{{$config['dophp']['url']}}/med/img/dfilter/dfilter_close.png" alt="" />
 		</div>
-		<div class="wp-minimize">
+		<div class="do-minimize">
 			<img src="{{$config['dophp']['url']}}/med/img/dfilter/dfilter_minimize.png" alt="" />
 		</div>
 	</div>
-	<div class="wp-date-filter-body">
+	<div class="do-date-filter-body">
 
-		<div class="wp-date-fiter-tab-cont">
-			<div class="wp-date-filter-tab wp-active" id="tab-1">Data</div>
-			<div class="wp-date-filter-tab" id="tab-2">Mese</div>
-			<div class="wp-date-filter-tab" id="tab-3">Anno</div>
-			<div class="wp-date-clear"></div>
+		<div class="do-date-fiter-tab-cont">
+			<div class="do-date-filter-tab do-active" id="tab-1">Data</div>
+			<div class="do-date-filter-tab" id="tab-2">Mese</div>
+			<div class="do-date-filter-tab" id="tab-3">Anno</div>
+			<div class="do-date-clear"></div>
 		</div>
 
-		<div class="wp-date-filter-form form-1 wp-active">
-			<div class="wp-date-filter-dpck">
-				<div class="wp-pck-blck">
+		<div class="do-date-filter-form form-1 do-active">
+			<div class="do-date-filter-dpck">
+				<div class="do-pck-blck">
 					<label>Da</label>
-					<input id="wp-dfilt-start" class="wp-dfilt-dpck" name="wp-dfilt-start" type="text" value="" onchange='$("#" + {{$id|json_encode}}).DoPhpDataTable().realtimeFilter(this);' readonly>
+					<input id="do-dfilt-start" class="do-dfilt-dpck" name="do-dfilt-start" type="text" value="" onchange='$("#" + {{$id|json_encode}}).DoPhpDataTable().realtimeFilter(this);' readonly>
 				</div>
-				<div class="wp-pck-blck">
+				<div class="do-pck-blck">
 					<label>A</label>
-					<input id="wp-dfilt-end" class="wp-dfilt-dpck" name="wp-dfilt-end" type="text" value="" onchange='$("#" + {{$id|json_encode}}).DoPhpDataTable().realtimeFilter(this);' readonly>
+					<input id="do-dfilt-end" class="do-dfilt-dpck" name="do-dfilt-end" type="text" value="" onchange='$("#" + {{$id|json_encode}}).DoPhpDataTable().realtimeFilter(this);' readonly>
 				</div>
 			</div>
 		</div>
 
-		<div class="wp-date-filter-form form-2">
-			<div class="wp-date-filt-mthCont wp-date-filt-univCont" data-coln="{{$c@iteration}}">
+		<div class="do-date-filter-form form-2">
+			<div class="do-date-filt-mthCont do-date-filt-univCont" data-coln="{{$c@iteration}}">
 				{{foreach from=$monthYearList item=myl_list key=myl_year}}
-					<div class="wp-date-monthBlck-title">{{$myl_year}}</div>
+					<div class="do-date-monthBlck-title">{{$myl_year}}</div>
 					{{foreach from=$myl_list item=month}}
-						<div id="mthID-{{$month["number"]}}-{{$myl_year}}" class="wp-mthUnit" data-year-month="{{$month["number"]}}.{{$myl_year}}">{{$month["name"]}}</div>
+						<div id="mthID-{{$month["number"]}}-{{$myl_year}}" class="do-mthUnit" data-year-month="{{$month["number"]}}.{{$myl_year}}">{{$month["name"]}}</div>
 					{{/foreach}}
 				{{/foreach}}
 			</div>
 		</div>
 
-		<div class="wp-date-filter-form form-3">
-			<div class="wp-date-filt-yeaCont wp-date-filt-univCont" data-coln="{{$c@iteration}}">
+		<div class="do-date-filter-form form-3">
+			<div class="do-date-filt-yeaCont do-date-filt-univCont" data-coln="{{$c@iteration}}">
 				{{foreach from=$yearList item=yl_list key=yl_year_range}}
-					<div class="wp-date-yearBlck-title">{{$yl_year_range}}</div>
+					<div class="do-date-yearBlck-title">{{$yl_year_range}}</div>
 					{{foreach from=$yl_list item=year}}
-						<div id="yyID-{{$year}}" class="wp-yeaUnit" data-year="{{$year}}">{{$year}}</div>
+						<div id="yyID-{{$year}}" class="do-yeaUnit" data-year="{{$year}}">{{$year}}</div>
 					{{/foreach}}
 				{{/foreach}}
 			</div>
 		</div>
 
-		<input type="hidden" name="wp-date-filter-colNo" id="wp-date-filter-colNo" value="" />
+		<input type="hidden" name="do-date-filter-colNo" id="do-date-filter-colNo" value="" />
 	</div>
 </div>
 
