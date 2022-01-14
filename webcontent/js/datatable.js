@@ -58,7 +58,7 @@ class DoPhpDataTable {
 			// Save the fixed elements vertical size used to compute table height on window resize
 			window.vSizeElementsOutsideTableHeight = $('body').outerHeight(true) - $('.dataTables_scrollBody').outerHeight(true);
 			// Set datatable size to cover all free space
-			window.resizeDatatable();
+			this.resizeDatatable();
 		};
 
 		// Default order
@@ -251,19 +251,6 @@ class DoPhpDataTable {
 
 		// ./ADDED WP ELEMENTS
 
-		/*
-		* Datatable size management based on window size (as described in
-		* https://stackoverflow.com/questions/7678345/datatables-change-height-of-table-not-working)
-		*/
-		window.resizeDatatable = function() {
-			console.log("Called resizeDatatable");
-			$('.dataTables_scrollBody').css('height', ($(window).height() - window.vSizeElementsOutsideTableHeight));
-		}
-
-		// Called every time the window is resized
-		$(window).on("resize", function() {
-			window.resizeDatatable();
-		});
 	}
 
 
@@ -703,6 +690,18 @@ class DoPhpDataTable {
 			data.ajaxid = this.ajaxId;
 		}
 		return data;
+	}
+
+
+	// ============================= Global events methods =============================
+
+	/*
+	* Datatable size management based on window size (as described in
+	* https://stackoverflow.com/questions/7678345/datatables-change-height-of-table-not-working)
+	*/
+	resizeDatatable () {
+		console.log("Called resizeDatatable");
+		$('.dataTables_scrollBody').css('height', ($(window).height() - window.vSizeElementsOutsideTableHeight));
 	}
 
 }

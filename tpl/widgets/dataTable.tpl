@@ -200,6 +200,11 @@
 				'sfilter': sfilter,
 		});
 
+		// Called every time the window is resized
+		$(window).on("resize", () => {
+			dotable.resizeDatatable();
+		});
+
 	});
 
 	/**
