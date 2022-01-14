@@ -191,6 +191,13 @@
 
 	// Sets up the table
 	$(document).ready(function() {
+
+		// Superfilters associative array
+		let sfilter = {};
+		{{foreach $sfilter as $f}}
+			sfilter[{{$f->getId()|json_encode}}] = {{$f->getName()|json_encode}};
+		{{/foreach}}
+
 		// Create the table
 		let dotable = new DoPhpDataTable($('#{{$id}}'), {
 				'selectable': {{$selectable|json_encode}},
@@ -217,6 +224,7 @@
 				'order': {{$order|json_encode}},
 				'dFilterDivider': {{$dFilterDivider|json_encode}},
 				'exportLinkText': {{_('Export')|json_encode}},
+				'sfilter': sfilter,
 		});
 
 	});

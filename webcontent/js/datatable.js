@@ -25,6 +25,7 @@ class DoPhpDataTable {
 	 *                 - order: default order
 	 *                 - dFilterDivider: filter separator character
 	 *                 - exportLinkText: export link localized caption
+	 *                 - sfilter: superfilters definitions (id: name)
 	 */
 	constructor(element, settings) {
 		// Custom selection handling
@@ -40,13 +41,16 @@ class DoPhpDataTable {
 		this.rbtns = settings['rbtns'];
 		this.cols = settings['cols'];
 		this.dFilterDivider = settings['dFilterDivider'];
+		this.sfilter = settings['sfilter'];
 
 		let initOpts = settings['initOpts'];
 
 		initOpts['ajax'] = {
 			url:         this.ajaxUrl,
 			type:        'POST',
-			data:        prepareServerData,
+			data:        (data, settings) => {
+				this.prepareServerData(data, settings);
+			}
 		};
 
 		initOpts['initComplete'] = (settings, json) => {
@@ -120,7 +124,7 @@ class DoPhpDataTable {
 				let selInfo = ', ' +
 					'<span id="data-table-sel-count">' +
 					( this.selectedAll ? 'tutti' : this.selectedItems.size.toString() )
-					+ '</span> selezionati';
+		 '</span> selezionati';
 				pre += selInfo;
 			}
 
@@ -670,6 +674,35 @@ class DoPhpDataTable {
 			href += `&ajaxid=${this.ajaxId}`;
 		href += filterargs;
 		$('#data-table-export-url').attr('href', href);
+	}
+
+
+	// ============================= Datatable hooks =============================
+	/**
+	 * Adds custom data before it is sent to the server
+	 *
+	 * @see https://datatables.net/reference/option/ajax.data
+	 */
+	prepareServerData(data, settings) {
+		// Add the global superfilter info
+		data.filter = {};
+		if (this.sfilter.length > 0) {
+			for (var sfId in this.sfilter) {
+				let sfName = this.sfilter[sfId];
+				data.filter[sfName] = $('#'+sfId).prop('checked') ? '1' : '0';
+			}
+		}
+
+		// Add visibility info for each column
+		table.columns().every(function(index) {
+			data.columns[index].visible = table.column(index).visible();
+		});
+
+		if( this.ajaxId !== null ) {
+			// Add ajax ID (0 is a valid value)
+			data.ajaxid = this.ajaxId;
+		}
+		return data;
 	}
 
 }
