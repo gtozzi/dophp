@@ -26,8 +26,9 @@ class DoPhpDataTable {
 	 *                 - dFilterDivider: filter separator character
 	 *                 - texts: named array of localized strings
 	 *                 - sfilter: superfilters definitions (id: name)
+	 * @param dfmodal The datefilter modal element
 	 */
-	constructor(element, settings) {
+	constructor(element, settings, dfmodal) {
 
 		// Custom selection handling
 		this.selectedItems = new Set();
@@ -43,6 +44,7 @@ class DoPhpDataTable {
 		this.cols = settings['cols'];
 		this.dFilterDivider = settings['dFilterDivider'];
 		this.sfilter = settings['sfilter'];
+		this.dfmodal = dfmodal;
 
 		let initOpts = settings['initOpts'];
 
@@ -213,39 +215,39 @@ class DoPhpDataTable {
 
 		// ADDED WP ELEMENTS
 
-		$('.do-dfilt-dpck').wrap('<span class="deleteicon" />').after($('<span/>').click((event) => {
+		this.dfmodal.find('.do-dfilt-dpck').wrap('<span class="deleteicon" />').after($('<span/>').click((event) => {
 			$(event.target).prev('input').val('').trigger('change');
 			event.stopPropagation();
 		}));
 
 		// Reset month/year selection
-		$('.do-date-filt-univCont').after($('<button class="deleteicon" id="m-y-deleteicon"></button>').click(() => {
+		this.dfmodal.find('.do-date-filt-univCont').after($('<button class="deleteicon" id="m-y-deleteicon"></button>').click(() => {
 			this.filterResetMonthYearSelection();
 		}));
 
 		// block search when the user click on the column filter
 		$(".data-table-filter").click(function(){ return false; })
 
-		$(".do-dfilt-dpck").datepicker({
+		this.dfmodal.find(".do-dfilt-dpck").datepicker({
 			language: "it",
 			autoclose: true,
 			dateFormat: "dd.mm.yyyy",
 			format: "dd.mm.yyyy",
 		});
 
-		$(".do-date-filter-cont .wpdf_close, .do-date-filter-head .do-close").click(() => {
+		this.dfmodal.find(".wpdf_close, .do-date-filter-head .do-close").click(() => {
 			this.wpHideDateWidget();
 		});
 
-		$(".do-date-filter-head .do-minimize").click(() => {
+		this.dfmodal.find(".do-date-filter-head .do-minimize").click(() => {
 			this.toggleDateFilterWindowMinification();
 		});
 
-		$(".do-date-fiter-tab-cont .do-date-filter-tab").click((event) => {
+		this.dfmodal.find(".do-date-fiter-tab-cont .do-date-filter-tab").click((event) => {
 			this.switchDateFilterActiveTab($(event.target));
 		});
 
-		$(".do-date-filt-mthCont .do-mthUnit, .do-date-filt-yeaCont .do-yeaUnit").click((event) => {
+		this.dfmodal.find(".do-date-filt-mthCont .do-mthUnit, .do-date-filt-yeaCont .do-yeaUnit").click((event) => {
 			this.onDateFilterRangeClick($(event.target));
 		});
 
@@ -446,9 +448,9 @@ class DoPhpDataTable {
 		var newFilter = "";
 		let el =  $('#ag-dt-dtFilt-'+$(input).data('coln'));
 
-		if($('#do-dfilt-start').val() != "")
+		if(this.dfmodal.find('#do-dfilt-start').val() != "")
 			newFilter = $('#do-dfilt-start').val();
-		if($('#do-dfilt-end').val() != "")
+		if(this.dfmodal.find('#do-dfilt-end').val() != "")
 			newFilter = newFilter + this.dFilterDivider + $('#do-dfilt-end').val();
 
 		// Ignore duplicated changes
@@ -501,12 +503,12 @@ class DoPhpDataTable {
 	 * Reset month/year selection
 	 */
 	filterResetMonthYearSelection() {
-		$('.do-mthUnit.do-active').removeClass('do-active');
-		$('.do-mthUnit.do-range').removeClass('do-range');
-		$('.do-yeaUnit.do-active').removeClass('do-active');
-		$('.do-yeaUnit.do-range').removeClass('do-range');
+		this.dfmodal.find('.do-mthUnit.do-active').removeClass('do-active');
+		this.dfmodal.find('.do-mthUnit.do-range').removeClass('do-range');
+		this.dfmodal.find('.do-yeaUnit.do-active').removeClass('do-active');
+		this.dfmodal.find('.do-yeaUnit.do-range').removeClass('do-range');
 
-		var el = $('#ag-dt-dtFilt-'+$('.do-date-filt-univCont').data('coln'));
+		var el = $('#ag-dt-dtFilt-'+this.dfmodal.find('.do-date-filt-univCont').data('coln'));
 		this.updateFilter(el, "");
 		el.data('lastval', "");
 	}
@@ -515,11 +517,11 @@ class DoPhpDataTable {
 	 * Toggle date filter window minification
 	 */
 	toggleDateFilterWindowMinification() {
-		if($(".do-date-filter-cont").hasClass("do-closed")){
-			$(".do-date-filter-cont").removeClass("do-closed");
+		if(this.dfmodal.hasClass("do-closed")){
+			this.dfmodal.removeClass("do-closed");
 		}
 		else{
-			$(".do-date-filter-cont").addClass("do-closed");
+			this.dfmodal.addClass("do-closed");
 		}
 	}
 
@@ -527,8 +529,8 @@ class DoPhpDataTable {
 	 * Hide date widget
 	 */
 	wpHideDateWidget() {
-		if(!($(".do-date-filter-cont").hasClass("do-hide")))
-			$(".do-date-filter-cont").addClass("do-hide");
+		if(!(this.dfmodal.hasClass("do-hide")))
+			this.dfmodal.addClass("do-hide");
 	}
 
 	/**
@@ -538,18 +540,18 @@ class DoPhpDataTable {
 		var elID=elem.attr("id");
 		var formID = elID.replace("tab-","");
 
-		$(".do-date-filter-body .do-date-filter-form").removeClass("do-active");
-		$(".do-date-filter-body .do-date-filter-form.form-"+formID).addClass("do-active");
+		this.dfmodal.find(".do-date-filter-body .do-date-filter-form").removeClass("do-active");
+		this.dfmodal.find(".do-date-filter-body .do-date-filter-form.form-"+formID).addClass("do-active");
 
-		$(".do-date-filter-body .do-date-filter-tab").removeClass("do-active");
-		$(".do-date-filter-body .do-date-filter-tab#tab-"+formID).addClass("do-active");
+		this.dfmodal.find(".do-date-filter-body .do-date-filter-tab").removeClass("do-active");
+		this.dfmodal.find(".do-date-filter-body .do-date-filter-tab#tab-"+formID).addClass("do-active");
 	}
 
 	/**
 	 * Called when months/years container or buttons are clicked to select a range
 	 */
 	onDateFilterRangeClick(elem) {
-		$(".do-date-filt-mthCont .do-mthUnit, .do-date-filt-yeaCont .do-yeaUnit")
+		this.dfmodal.find(".do-date-filt-mthCont .do-mthUnit, .do-date-filt-yeaCont .do-yeaUnit")
 			.removeClass("do-range")
 
 		if(elem.hasClass("do-active")){
@@ -570,7 +572,7 @@ class DoPhpDataTable {
 				let firstElemID =$(firstElem).attr("id");
 				let lastElemID =$(lastElem).attr("id");
 
-				$(".do-date-filt-mthCont .do-mthUnit, .do-date-filt-yeaCont .do-yeaUnit")
+				this.dfmodal.find(".do-date-filt-mthCont .do-mthUnit, .do-date-filt-yeaCont .do-yeaUnit")
 					.removeClass("do-range do-active")
 
 				// last click is after lastSelection
@@ -593,13 +595,13 @@ class DoPhpDataTable {
 		var filterString="";
 		var monthsList=[];
 		var yearsList=[];
-		var activeTab = $(".do-date-filter-tab.do-active").attr("id").replace("tab-","");
+		var activeTab = this.dfmodal.find(".do-date-filter-tab.do-active").attr("id").replace("tab-","");
 
 		// fill filter_string with user input
 		switch(activeTab){
 			//month
 			case "2":
-				$(".do-mthUnit.do-active").each(function(){
+				this.dfmodal.find(".do-mthUnit.do-active").each(function(){
 					monthsList.push($(this).data("year-month"));
 					filterString = monthsList.reverse().join(this.dFilterDivider);
 				});
@@ -607,7 +609,7 @@ class DoPhpDataTable {
 
 			//year
 			case "3":
-				$(".do-yeaUnit.do-active").each(function(){
+				this.dfmodal.find(".do-yeaUnit.do-active").each(function(){
 					yearsList.push($(this).data("year"));
 					filterString = yearsList.reverse().join(this.dFilterDivider);
 				});
@@ -616,7 +618,7 @@ class DoPhpDataTable {
 		}
 
 		// get current colon id
-		var currColNo = $(".do-date-filter-cont #do-date-filter-colNo").val();
+		var currColNo = this.dfmodal.find("#do-date-filter-colNo").val();
 		var currFilter = document.getElementById("ag-dt-dtFilt-"+currColNo);
 
 		// fill given date filter with the search_string

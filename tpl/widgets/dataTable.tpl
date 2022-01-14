@@ -198,7 +198,7 @@
 					'exportLink': {{_('Export')|json_encode}}
 				},
 				'sfilter': sfilter,
-		});
+		}, $('#{{$id}}-dfmodal'));
 
 		// Called every time the window is resized
 		$(window).on("resize", () => {
@@ -506,8 +506,8 @@
 	</div>
 </div>
 
-<!-- Date Filter -->
-<div class="do-date-filter-cont do-hide">
+<!-- Date Filter modal -->
+<div class="do-date-filter-cont do-hide" id="{{$id}}-dfmodal">
 	<input type="hidden" id="do-date-filter-col" name="do-date-filter-col" value="-1" />
 	<div class="do-date-filter-head">
 		Filtra data
