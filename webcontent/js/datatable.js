@@ -448,10 +448,10 @@ class DoPhpDataTable {
 		var newFilter = "";
 		let el =  $('#ag-dt-dtFilt-'+$(input).data('coln'));
 
-		if(this.dfmodal.find('#do-dfilt-start').val() != "")
-			newFilter = $('#do-dfilt-start').val();
-		if(this.dfmodal.find('#do-dfilt-end').val() != "")
-			newFilter = newFilter + this.dFilterDivider + $('#do-dfilt-end').val();
+		if(this.dfmodal.find('.do-dfilt-start').val() != "")
+			newFilter = this.dfmodal.find('.do-dfilt-start').val();
+		if(this.dfmodal.find('.do-dfilt-end').val() != "")
+			newFilter = newFilter + this.dFilterDivider + this.dfmodal.find('.do-dfilt-end').val();
 
 		// Ignore duplicated changes
 		if( el.data('lastval') == newFilter )
@@ -618,7 +618,7 @@ class DoPhpDataTable {
 		}
 
 		// get current colon id
-		var currColNo = this.dfmodal.find("#do-date-filter-colNo").val();
+		var currColNo = this.dfmodal.find(".do-date-filter-colNo").val();
 		var currFilter = document.getElementById("ag-dt-dtFilt-"+currColNo);
 
 		// fill given date filter with the search_string

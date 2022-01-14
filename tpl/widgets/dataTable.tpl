@@ -259,6 +259,7 @@
 	}
 
 	// Set modal tab and selection, according to the DateFilter in jsonString
+	// TODO: When moved into datatable.js, access .do-dfilt-start/end relatively to dfmodal
 	function setModal(jsonString) {
 
 		const precList = ["dmy", "my", "y"];
@@ -301,14 +302,14 @@
 					currentDay = ("0" + filterStart.getDate()).slice(-2);
 					currentMonth = ("0" + (filterStart.getMonth() + 1)).slice(-2);
 					startDate = currentDay+"-"+currentMonth+"-"+filterStart.getFullYear();
-					$("#do-dfilt-start").val(startDate);
+					$(".do-dfilt-start").val(startDate);
 				}
 
 				if(dateFilter._endDate != null && dateFilter._endDate.date != null) {
 					currentDay = ("0" + filterEnd.getDate()).slice(-2);
 					currentMonth = ("0" + (filterEnd.getMonth() + 1)).slice(-2);
 					endDate = currentDay+"-"+currentMonth+"-"+filterEnd.getFullYear();
-					$("#do-dfilt-end").val(endDate);
+					$(".do-dfilt-end").val(endDate);
 				}
 
 			break;
@@ -372,7 +373,7 @@
 		});
 	}
 
-
+	// TODO: When moved into datatable.js, access .do-date-filter-colNo and do-dfilt-start/end relatively to dfmodal
 	function filterShowDate(formEl){
 
 		var jQ_formEl = $(formEl);
@@ -385,10 +386,10 @@
 		if(filterValue != null && filterValue != "")
 			rpcDateFilter(filterValue);
 
-		$(".do-date-filter-cont #do-date-filter-colNo").val(currColNo);
+		$(".do-date-filter-cont .do-date-filter-colNo").val(currColNo);
 
-		$('#do-dfilt-start').data('coln', currColNo);
-		$('#do-dfilt-end').data('coln', currColNo);
+		$('.do-dfilt-start').data('coln', currColNo);
+		$('.do-dfilt-end').data('coln', currColNo);
 
 	}
 
@@ -531,11 +532,11 @@
 			<div class="do-date-filter-dpck">
 				<div class="do-pck-blck">
 					<label>Da</label>
-					<input id="do-dfilt-start" class="do-dfilt-dpck" name="do-dfilt-start" type="text" value="" onchange='$("#" + {{$id|json_encode}}).DoPhpDataTable().realtimeFilter(this);' readonly>
+					<input class="do-dfilt-dpck do-dfilt-start" name="do-dfilt-start" type="text" value="" onchange='$("#" + {{$id|json_encode}}).DoPhpDataTable().realtimeFilter(this);' readonly>
 				</div>
 				<div class="do-pck-blck">
 					<label>A</label>
-					<input id="do-dfilt-end" class="do-dfilt-dpck" name="do-dfilt-end" type="text" value="" onchange='$("#" + {{$id|json_encode}}).DoPhpDataTable().realtimeFilter(this);' readonly>
+					<input class="do-dfilt-dpck do-dfilt-end" name="do-dfilt-end" type="text" value="" onchange='$("#" + {{$id|json_encode}}).DoPhpDataTable().realtimeFilter(this);' readonly>
 				</div>
 			</div>
 		</div>
@@ -562,7 +563,7 @@
 			</div>
 		</div>
 
-		<input type="hidden" name="do-date-filter-colNo" id="do-date-filter-colNo" value="" />
+		<input type="hidden" name="do-date-filter-colNo" class="do-date-filter-colNo" value="" />
 	</div>
 </div>
 
