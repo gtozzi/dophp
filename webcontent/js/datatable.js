@@ -167,11 +167,11 @@ class DoPhpDataTable {
 					case 'boolean':
 					case 'number':
 					case 'undefined':
-						return getValueRepr(data);
+						return this.getValueRepr(data);
 					case 'object':
-						return getObjectRepr(data);
+						return this.getObjectRepr(data);
 					case 'currency':
-						return getCurrencyRepr(data);
+						return this.getCurrencyRepr(data);
 					default:
 						return data;
 					}
@@ -742,8 +742,68 @@ class DoPhpDataTable {
 
 	// ============================= Formatting methods =============================
 
+	/**
+	 * Parses an encoded object into a user-friendly string
+	 */
+	getValueRepr(value) {
+		switch( typeof value ) {
+		case 'string':
+			return value;
+		case 'boolean':
+			return value ? 'Sì' : 'No';
+		case 'number':
+			return value.toLocaleString();
+		case 'undefined':
+			return '[err:undefined]';
+		case 'object':
+			return '[err:object]';
+		default:
+			return '[err:n/i]';
+		}
+	}
+
+	getObjectRepr(data) {
+		if( data.repr )
+			return data.repr;
+
+		let html = '';
+		if( data.href )
+			html += '<a href="' + data.href + '">';
+
+		if( data.value === undefined )
+			html += '[err:noval]';
+		else
+			html += this.getValueRepr(data.value);
+
+		if( data.href )
+			html += '</a>';
+
+		return html;
+	}
+
+	/**
+	 * Parses a number into a nicely formatted currency value
+	 */
+	getCurrencyRepr(data) {
+		let decimals = 2;
+
+		// Determine decimal separator… a bit tricky, can be done better?
+		let n = 1.1;
+		let decsep = n.toLocaleString().substring(1, 2);
+
+		let formatted = data.toLocaleString();
+		let parts = formatted.split(decsep);
+		if( parts.length > 1 && parts[1].length )
+			if( parts[1].length >= 2 )
+				return formatted;
+			else
+				return formatted + '0'.repeat(decimals - parts[1].length);
+
+		return formatted + decsep + '00';
+	}
 
 	// ============================= Buttons methods =============================
+
 
 }
 
