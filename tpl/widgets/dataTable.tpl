@@ -1,33 +1,5 @@
 <script type="text/javascript">
 
-	{{if $sfilter}}
-		/**
-		 * Called when the superfilter changed
-		 */
-		function updateSFilter( formEl ) {
-			// Calculate the new text
-			let st = '';
-			{{foreach $sfilter as $f}}
-				if( st.length )
-					st += ', ';
-				if( ! $('#'+{{$f->getId()|json_encode}}).prop('checked') )
-					st += '<del>';
-				st += {{$f->getName()|json_encode}};
-				if( ! $('#'+{{$f->getId()|json_encode}}).prop('checked') )
-					st += '</del>';
-			{{/foreach}}
-			if( ! st.length )
-				st = 'tutto';
-			$('#sfilter-text').html(' ' + st);
-
-			console.log('sfilter text updated, refreshing table…');
-			$("#" + {{$id|json_encode}}).DoPhpDataTable().table.ajax.reload( function() {
-				console.log('table refreshed');
-				$('#{{$id}}_filmodal').modal('hide');
-			});
-		}
-	{{/if}}
-
 	/**
 	 * Parses an encoded object into a JavaScript Object
 	 */
@@ -198,7 +170,10 @@
 					'exportLink': {{_('Export')|json_encode}}
 				},
 				'sfilter': sfilter,
-		}, $('#{{$id}}-dfmodal'));
+			},
+			$('#{{$id}}-dfmodal'),
+			$('#{{$id}}_filmodal'),
+		);
 
 		// Called every time the window is resized
 		$(window).on("resize", () => {
@@ -454,7 +429,7 @@
 		<!-- Filter modal -->
 		<div class="modal fade" id="{{$id}}_filmodal">
 			<div class="modal-dialog" role="document">
-				<form action="#" onsubmit="updateSFilter(this); return false;">
+				<form action="#" onsubmit='$("#" + {{$id|json_encode}}).DoPhpDataTable().updateSFilter(); return false;'>
 					<div class="modal-content">
 						<div class="modal-header">
 							<h5 class="modal-title">Mostra</h5>

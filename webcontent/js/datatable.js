@@ -27,8 +27,9 @@ class DoPhpDataTable {
 	 *                 - texts: named array of localized strings
 	 *                 - sfilter: superfilters definitions (id: name)
 	 * @param dfmodal The datefilter modal element
+	 * @param sfmodal The superfilter modal element
 	 */
-	constructor(element, settings, dfmodal) {
+	constructor(element, settings, dfmodal, sfmodal) {
 
 		// Custom selection handling
 		this.selectedItems = new Set();
@@ -45,6 +46,7 @@ class DoPhpDataTable {
 		this.dFilterDivider = settings['dFilterDivider'];
 		this.sfilter = settings['sfilter'];
 		this.dfmodal = dfmodal;
+		this.sfmodal = sfmodal;
 
 		let initOpts = settings['initOpts'];
 
@@ -706,6 +708,42 @@ class DoPhpDataTable {
 		console.log("Called resizeDatatable");
 		$('.dataTables_scrollBody').css('height', ($(window).height() - window.vSizeElementsOutsideTableHeight));
 	}
+
+
+	// ============================= Superfilter methods =============================
+
+	/**
+	 * Called when the superfilter changed
+	 */
+	updateSFilter() {
+		// Calculate the new text
+		let st = '';
+		for (var sfId in this.sfilter) {
+			let sfName = this.sfilter[sfId];
+			if( st.length )
+				st += ', ';
+			if( ! $('#'+sfId).prop('checked') )
+				st += '<del>';
+			st += sfName;
+			if( ! $('#'+sfId).prop('checked') )
+				st += '</del>';
+		}
+		if( ! st.length )
+			st = 'tutto';
+		$('#sfilter-text').html(' ' + st);
+
+		console.log('sfilter text updated, refreshing table…');
+		this.table.ajax.reload( () => {
+			console.log('table refreshed');
+			this.sfmodal.modal('hide');
+		});
+	}
+
+
+	// ============================= Formatting methods =============================
+
+
+	// ============================= Buttons methods =============================
 
 }
 
