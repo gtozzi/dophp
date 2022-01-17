@@ -94,13 +94,15 @@ class DoPhpDataTable {
 								url = url.replace("{{"+key+"}}", row[key]);
 
 							let href;
+							let oc;
 							if( btn.post )
-								href = "javascript:onDTPostRowButton('" + encodeURI(name) + "', " + row.id + ")";
+								//href = "javascript:onDTPostRowButton('" + encodeURI(name) + "', " + row.id + ")";
+								oc = this.onDTPostRowButton(encodeURI(name) + row.id);
 							else
 								href = url;
 
 							// Trailing space to separate next
-							html += `<a class="fa ${btn.icon}" href="${href}" title="${btn.label}"></a> `;
+							html += `<a class="fa ${btn.icon}" href="${href}" onclick="${oc}" title="${btn.label}"></a> `;
 						}
 					}
 					return html;
@@ -804,6 +806,77 @@ class DoPhpDataTable {
 
 	// ============================= Buttons methods =============================
 
+	/**
+	 * Handles a POST row button click
+	 */
+	 onDTPostRowButton(name, rowid) {
+		let ud = this.getDTPostButtonUrlData(name, this.rbtns);
+		if ( ! ud)
+			return;
+
+		let url = ud.url;
+		let data = ud.data;
+
+		url = url.replace("{{id}}", rowid);
+		for(let key in data)
+			if( data[key] == "{{id}}" )
+				data[key] = rowid;
+
+		$.post(url, data, () => {
+			this.table.ajax.reload();
+		});
+	}
+
+	/**
+	 * Handles a POST button click
+	 */
+	onDTPostButton(name) {
+		let ud = this.getDTPostButtonUrlData(name, this.btns);
+		if ( ! ud)
+			return;
+
+		let url = ud.url;
+		let data = ud.data;
+
+		$.post(url, data, () => {
+			this.table.ajax.reload();
+		});
+	}
+
+	/**
+	 * Finds a DTPostButton by name and returns its url and data values
+	 * Throws an error if not found.
+	 * @param name The button unique name
+	 * @param btns The buttons definition object
+	 * @returns Object containing url and data fields
+	 */
+	getDTPostButtonUrlData(name, btns) {
+		let url;
+		let data;
+
+		let found = false;
+		for (var btnName in btns) {
+			let btn = btns[btnName];
+			if ( ! btn.post)
+				continue;
+
+			if ( btnName == name) {
+				url = btn.url;
+				data = btn.data;
+				found = true;
+			}
+		}
+
+		if ( ! found) {
+			console.error('URL for ', name, 'not found');
+			return;
+		}
+
+		return {
+			'url': url,
+			'data': data,
+		}
+	}
 
 }
 

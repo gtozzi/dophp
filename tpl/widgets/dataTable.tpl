@@ -1,62 +1,5 @@
 <script type="text/javascript">
 
-
-	/**
-	 * Handles a POST row button click
-	 */
-	function onDTPostRowButton(name, rowid) {
-		let url;
-		let data;
-
-		switch(name) {
-		{{foreach $rbtns as $name => $btn}}
-			{{if $btn->isPost()}}
-				case {{$name|json_encode}}:
-					url = {{$btn->getUrl()|json_encode}};
-					data = {{$btn->getPost()|json_encode}};
-					break;
-				default:
-					console.error('URL for ', name, 'not found');
-					return;
-			{{/if}}
-		{{/foreach}}
-		}
-		url = url.replace("{{'{{id}}'}}", rowid);
-		for(let key in data)
-			if( data[key] == "{{'{{id}}'}}" )
-				data[key] = rowid;
-
-		$.post(url, data, function(data) {
-			$("#" + {{$id|json_encode}}).DoPhpDataTable().table.ajax.reload();
-		});
-	}
-
-	/**
-	 * Handles a POST button click
-	 */
-	function onDTPostButton(name) {
-		let url;
-		let data;
-
-		switch(name) {
-		{{foreach $btns as $name => $btn}}
-			{{if $btn->isPost()}}
-				case {{$name|json_encode}}:
-					url = {{$btn->getUrl()|json_encode}};
-					data = {{$btn->getPost()|json_encode}};
-					break;
-				default:
-					console.error('URL for ', name, 'not found');
-					return;
-			{{/if}}
-		{{/foreach}}
-		}
-
-		$.post(url, data, function(data) {
-			$("#" + {{$id|json_encode}}).DoPhpDataTable().table.ajax.reload();
-		});
-	}
-
 	// Sets up the table
 	$(document).ready(function() {
 
@@ -80,6 +23,12 @@
 						'post': {{$btn->isPost()|json_encode}},
 						'icon': {{$btn->icon|json_encode}},
 						'label': {{$btn->label|json_encode}},
+					},
+				{{/foreach}} },
+				'btns': { {{foreach $btns as $name => $btn}}
+					{{$name|json_encode}}: {
+						'url': {{$btn->getUrl()|json_encode}},
+						'post': {{$btn->getPost()|json_encode}},
 					},
 				{{/foreach}} },
 				'cols': [ {{foreach $cols as $c}} {
