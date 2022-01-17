@@ -675,12 +675,13 @@ class DoPhpDataTable {
 	prepareServerData(data, settings) {
 		// Add the global superfilter info
 		data.filter = {};
-		if (this.sfilter.length > 0) {
+		if ( ! jQuery.isEmptyObject(this.sfilter) ) {
 			for (var sfId in this.sfilter) {
 				let sfName = this.sfilter[sfId];
 				data.filter[sfName] = $('#'+sfId).prop('checked') ? '1' : '0';
 			}
 		}
+
 
 		// Add visibility info for each column
 		this.table.columns().every((index) => {
