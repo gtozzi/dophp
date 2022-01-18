@@ -41,6 +41,7 @@ class DoPhpDataTable {
 
 		this.btnKey = settings['btnKey'];
 		this.totKey = settings['totKey'];
+		this.btns = settings['btns'];
 		this.rbtns = settings['rbtns'];
 		this.cols = settings['cols'];
 		this.dFilterDivider = settings['dFilterDivider'];

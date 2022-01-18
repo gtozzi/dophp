@@ -29,7 +29,10 @@
 				'btns': { {{foreach $btns as $name => $btn}}
 					{{$name|json_encode}}: {
 						'url': {{$btn->getUrl()|json_encode}},
+						'ispost': {{$btn->isPost()|json_encode}},
 						'post': {{$btn->getPost()|json_encode}},
+						'icon': {{$btn->icon|json_encode}},
+						'label': {{$btn->label|json_encode}},
 					},
 				{{/foreach}} },
 				'cols': [ {{foreach $cols as $c}} {
