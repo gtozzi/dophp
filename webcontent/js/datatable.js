@@ -67,7 +67,6 @@ class DoPhpDataTable {
 
 		// Default order
 		initOpts['order'] = settings['order'];
-
 		initOpts['columns'] = [
 			// Buttons column
 			{
@@ -94,15 +93,13 @@ class DoPhpDataTable {
 								url = url.replace("{{"+key+"}}", row[key]);
 
 							let href;
-							let oc;
 							if( btn.post )
-								//href = "javascript:onDTPostRowButton('" + encodeURI(name) + "', " + row.id + ")";
-								oc = this.onDTPostRowButton(encodeURI(name) + row.id);
+								href = "javascript:$(\"#" + element.attr('id') + "\").DoPhpDataTable().onDTPostRowButton('" + encodeURI(name) + "', " + row.id + ")";
 							else
 								href = url;
 
 							// Trailing space to separate next
-							html += `<a class="fa ${btn.icon}" href="${href}" onclick="${oc}" title="${btn.label}"></a> `;
+							html += `<a class="fa ${btn.icon}" href="${href}" title="${btn.label}"></a> `;
 						}
 					}
 					return html;

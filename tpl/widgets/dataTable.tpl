@@ -272,7 +272,7 @@
 			{{foreach $btns as $name => $b}}
 				<a class="btn btn-primary"
 				{{if $b->isPost()}}
-					href="javascript:onDTPostButton({{$name|json_encode|urlencode}});"
+					href='javascript:$("#" + {{$id|json_encode}}).DoPhpDataTable().onDTPostButton({{$name|json_encode|urlencode}});'
 				{{else}}
 					href="{{$b->getUrl()}}"
 				{{/if}}
@@ -429,7 +429,7 @@
 					{{foreach $btns as $name => $b}}
 						<a class="fa {{$b->icon}}" title="{{$b->label|htmlentities}}"
 						{{if $b->isPost()}}
-							href="javascript:onDTPostButton({{$name|json_encode|urlencode}});"
+							href='javascript:$("#" + {{$id|json_encode}}).DoPhpDataTable().onDTPostButton({{$name|json_encode|urlencode}});'
 						{{else}}
 							href="{{$b->getUrl()}}"
 						{{/if}}
