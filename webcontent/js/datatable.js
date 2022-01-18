@@ -81,7 +81,7 @@ class DoPhpDataTable {
 					if( row[this.totKey] )
 						return 'Tot';
 
-					let html = ''
+					let html = '';
 					if( this.selectable ) {
 						let cls = this.isRowSelected(this.table.row(row)) ? DoPhpDataTable.selClass : DoPhpDataTable.deselClass;
 						html += '<span class="fa ' + cls + ' selectbox"></span>';
@@ -93,8 +93,8 @@ class DoPhpDataTable {
 								url = url.replace("{{"+key+"}}", row[key]);
 
 							let href;
-							if( btn.post )
-								href = "javascript:$(\"#" + element.attr('id') + "\").DoPhpDataTable().onDTPostRowButton('" + encodeURI(name) + "', " + row.id + ")";
+							if( btn.ispost )
+								href = "javascript:$('#" + element.attr('id') + "').DoPhpDataTable().onDTPostRowButton('" + encodeURI(name) + "', " + row.id + ")";
 							else
 								href = url;
 
@@ -812,7 +812,7 @@ class DoPhpDataTable {
 			return;
 
 		let url = ud.url;
-		let data = ud.data;
+		let data = $.extend({}, ud.data);
 
 		url = url.replace("{{id}}", rowid);
 		for(let key in data)
@@ -854,12 +854,12 @@ class DoPhpDataTable {
 		let found = false;
 		for (var btnName in btns) {
 			let btn = btns[btnName];
-			if ( ! btn.post)
+			if ( ! btn.ispost)
 				continue;
 
 			if ( btnName == name) {
 				url = btn.url;
-				data = btn.data;
+				data = btn.post;
 				found = true;
 			}
 		}
