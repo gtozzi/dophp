@@ -359,11 +359,15 @@ class Request {
 		}
 		$out .= '</ul>';
 		if( $this->_actions ) {
-			$out .= '<h2>Actions</h2>';
+			$out .= '
+				<details>
+				<h2>Actions</h2>
+			';
 			foreach( $this->_actions as $act )
 				$out .= $act->asHtml($this);
+			$out .= '</div>';
 		}
-		$out .= "</div>\n";
+		$out .= "</details>\n";
 		return $out;
 	}
 
